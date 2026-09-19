@@ -124,8 +124,8 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                       text-ellipsis
                       ${
                         isPersianTitle
-                          ? "fa-title-3 text-right"
-                          : "en-title-3 text-left"
+                          ? "fa-body text-right"
+                          : "en-body text-left"
                       }
                       text-black dark:text-neutral-scale70
                     `}
