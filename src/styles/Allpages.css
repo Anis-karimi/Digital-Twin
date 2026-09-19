@@ -1,0 +1,371 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    @apply appearance-none bg-transparent border-0 outline-none;
+  }
+}
+
+
+:root {
+  --effects-drop-shadow-bottom: 0px 1.5px 3px 0px rgba(0, 0, 0, 0.25);
+  --effects-drop-shadow-top: 0px -1.5px 3px 0px rgba(0, 0, 0, 0.25);
+  --EN-inter-body-body-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-font-size: 14px;
+  --EN-inter-body-body-font-style: normal;
+  --EN-inter-body-body-font-weight: 400;
+  --EN-inter-body-body-large-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-large-font-size: 16px;
+  --EN-inter-body-body-large-font-style: normal;
+  --EN-inter-body-body-large-font-weight: 400;
+  --EN-inter-body-body-large-letter-spacing: 0px;
+  --EN-inter-body-body-large-line-height: 24px;
+  --EN-inter-body-body-letter-spacing: 0px;
+  --EN-inter-body-body-line-height: 22px;
+  --EN-inter-body-body-medium-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-medium-font-size: 14px;
+  --EN-inter-body-body-medium-font-style: normal;
+  --EN-inter-body-body-medium-font-weight: 500;
+  --EN-inter-body-body-medium-letter-spacing: 0px;
+  --EN-inter-body-body-medium-line-height: 22px;
+  --EN-inter-caption-1-font-family: "Inter", Helvetica;
+  --EN-inter-caption-1-font-size: 12px;
+  --EN-inter-caption-1-font-style: normal;
+  --EN-inter-caption-1-font-weight: 400;
+  --EN-inter-caption-1-letter-spacing: 0px;
+  --EN-inter-caption-1-line-height: 18px;
+  --EN-inter-caption-2-font-family: "Inter", Helvetica;
+  --EN-inter-caption-2-font-size: 11px;
+  --EN-inter-caption-2-font-style: normal;
+  --EN-inter-caption-2-font-weight: 400;
+  --EN-inter-caption-2-letter-spacing: 0px;
+  --EN-inter-caption-2-line-height: 16px;
+  --EN-inter-caption-3-font-family: "Inter", Helvetica;
+  --EN-inter-caption-3-font-size: 12px;
+  --EN-inter-caption-3-font-style: normal;
+  --EN-inter-caption-3-font-weight: 600;
+  --EN-inter-caption-3-letter-spacing: 0px;
+  --EN-inter-caption-3-line-height: 18px;
+  --EN-inter-caption-4-font-family: "Inter", Helvetica;
+  --EN-inter-caption-4-font-size: 10px;
+  --EN-inter-caption-4-font-style: normal;
+  --EN-inter-caption-4-font-weight: 400;
+  --EN-inter-caption-4-letter-spacing: 0px;
+  --EN-inter-caption-4-line-height: 14px;
+  --EN-inter-caption-5-font-family: "Inter", Helvetica;
+  --EN-inter-caption-5-font-size: 8px;
+  --EN-inter-caption-5-font-style: normal;
+  --EN-inter-caption-5-font-weight: 400;
+  --EN-inter-caption-5-letter-spacing: 0px;
+  --EN-inter-caption-5-line-height: 12px;
+  --EN-inter-caption-6-font-family: "Inter", Helvetica;
+  --EN-inter-caption-6-font-size: 6px;
+  --EN-inter-caption-6-font-style: normal;
+  --EN-inter-caption-6-font-weight: 400;
+  --EN-inter-caption-6-letter-spacing: 0px;
+  --EN-inter-caption-6-line-height: 10px;
+  --EN-inter-display-font-family: "Inter", Helvetica;
+  --EN-inter-display-font-size: 22px;
+  --EN-inter-display-font-style: normal;
+  --EN-inter-display-font-weight: 800;
+  --EN-inter-display-letter-spacing: 0px;
+  --EN-inter-display-line-height: 30px;
+  --EN-inter-titles-1-font-family: "Inter", Helvetica;
+  --EN-inter-titles-1-font-size: 20px;
+  --EN-inter-titles-1-font-style: normal;
+  --EN-inter-titles-1-font-weight: 600;
+  --EN-inter-titles-1-letter-spacing: 0px;
+  --EN-inter-titles-1-line-height: 28px;
+  --EN-inter-titles-2-font-family: "Inter", Helvetica;
+  --EN-inter-titles-2-font-size: 17px;
+  --EN-inter-titles-2-font-style: normal;
+  --EN-inter-titles-2-font-weight: 600;
+  --EN-inter-titles-2-letter-spacing: 0px;
+  --EN-inter-titles-2-line-height: 24px;
+  --EN-inter-titles-3-font-family: "Inter", Helvetica;
+  --EN-inter-titles-3-font-size: 16px;
+  --EN-inter-titles-3-font-style: normal;
+  --EN-inter-titles-3-font-weight: 500;
+  --EN-inter-titles-3-letter-spacing: 0px;
+  --EN-inter-titles-3-line-height: 24px;
+  --error-100: rgba(240, 144, 142, 1);
+  --error-1000: rgba(136, 20, 17, 1);
+  --error-200: rgba(238, 122, 119, 1);
+  --error-300: rgba(235, 100, 97, 1);
+  --error-400: rgba(232, 78, 74, 1);
+  --error-500: rgba(229, 56, 52, 1);
+  --error-600: rgba(226, 34, 29, 1);
+  --error-700: rgba(203, 30, 26, 1);
+  --error-800: rgba(181, 27, 23, 1);
+  --error-900: rgba(158, 23, 20, 1);
+  --FA-vazirmatn-body-body-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-font-size: 14px;
+  --FA-vazirmatn-body-body-font-style: normal;
+  --FA-vazirmatn-body-body-font-weight: 400;
+  --FA-vazirmatn-body-body-large-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-large-font-size: 16px;
+  --FA-vazirmatn-body-body-large-font-style: normal;
+  --FA-vazirmatn-body-body-large-font-weight: 400;
+  --FA-vazirmatn-body-body-large-letter-spacing: 0px;
+  --FA-vazirmatn-body-body-large-line-height: 24px;
+  --FA-vazirmatn-body-body-letter-spacing: 0px;
+  --FA-vazirmatn-body-body-line-height: 22px;
+  --FA-vazirmatn-body-body-medium-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-medium-font-size: 14px;
+  --FA-vazirmatn-body-body-medium-font-style: normal;
+  --FA-vazirmatn-body-body-medium-font-weight: 500;
+  --FA-vazirmatn-body-body-medium-letter-spacing: 0px;
+  --FA-vazirmatn-body-body-medium-line-height: 22px;
+  --FA-vazirmatn-caption-1-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-1-font-size: 12px;
+  --FA-vazirmatn-caption-1-font-style: normal;
+  --FA-vazirmatn-caption-1-font-weight: 400;
+  --FA-vazirmatn-caption-1-letter-spacing: 0px;
+  --FA-vazirmatn-caption-1-line-height: 18px;
+  --FA-vazirmatn-caption-2-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-2-font-size: 11px;
+  --FA-vazirmatn-caption-2-font-style: normal;
+  --FA-vazirmatn-caption-2-font-weight: 400;
+  --FA-vazirmatn-caption-2-letter-spacing: 0px;
+  --FA-vazirmatn-caption-2-line-height: 16px;
+  --FA-vazirmatn-caption-3-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-3-font-size: 12px;
+  --FA-vazirmatn-caption-3-font-style: normal;
+  --FA-vazirmatn-caption-3-font-weight: 600;
+  --FA-vazirmatn-caption-3-letter-spacing: 0px;
+  --FA-vazirmatn-caption-3-line-height: 18px;
+  --FA-vazirmatn-caption-4-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-4-font-size: 10px;
+  --FA-vazirmatn-caption-4-font-style: normal;
+  --FA-vazirmatn-caption-4-font-weight: 400;
+  --FA-vazirmatn-caption-4-letter-spacing: 0px;
+  --FA-vazirmatn-caption-4-line-height: 14px;
+  --FA-vazirmatn-caption-5-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-5-font-size: 8px;
+  --FA-vazirmatn-caption-5-font-style: normal;
+  --FA-vazirmatn-caption-5-font-weight: 400;
+  --FA-vazirmatn-caption-5-letter-spacing: 0px;
+  --FA-vazirmatn-caption-5-line-height: 12px;
+  --FA-vazirmatn-caption-6-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-6-font-size: 6px;
+  --FA-vazirmatn-caption-6-font-style: normal;
+  --FA-vazirmatn-caption-6-font-weight: 400;
+  --FA-vazirmatn-caption-6-letter-spacing: 0px;
+  --FA-vazirmatn-caption-6-line-height: 10px;
+  --FA-vazirmatn-display-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-display-font-size: 22px;
+  --FA-vazirmatn-display-font-style: normal;
+  --FA-vazirmatn-display-font-weight: 600;
+  --FA-vazirmatn-display-letter-spacing: 0px;
+  --FA-vazirmatn-display-line-height: 30px;
+  --FA-vazirmatn-titles-1-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-1-font-size: 20px;
+  --FA-vazirmatn-titles-1-font-style: normal;
+  --FA-vazirmatn-titles-1-font-weight: 600;
+  --FA-vazirmatn-titles-1-letter-spacing: 0px;
+  --FA-vazirmatn-titles-1-line-height: 28px;
+  --FA-vazirmatn-titles-2-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-2-font-size: 17px;
+  --FA-vazirmatn-titles-2-font-style: normal;
+  --FA-vazirmatn-titles-2-font-weight: 600;
+  --FA-vazirmatn-titles-2-letter-spacing: 0px;
+  --FA-vazirmatn-titles-2-line-height: 24px;
+  --FA-vazirmatn-titles-3-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-3-font-size: 16px;
+  --FA-vazirmatn-titles-3-font-style: normal;
+  --FA-vazirmatn-titles-3-font-weight: 500;
+  --FA-vazirmatn-titles-3-letter-spacing: 0px;
+  --FA-vazirmatn-titles-3-line-height: 24px;
+  --neutral-scale100: rgba(213, 217, 221, 1);
+  --neutral-scale1000: rgba(91, 102, 113, 1);
+  --neutral-scale1100: rgba(80, 89, 99, 1);
+  --neutral-scale1200: rgba(68, 77, 85, 1);
+  --neutral-scale1300: rgba(57, 64, 71, 1);
+  --neutral-scale1400: rgba(46, 51, 57, 1);
+  --neutral-scale1500: rgba(34, 38, 42, 1);
+  --neutral-scale1600: rgba(23, 25, 28, 1);
+  --neutral-scale1700: rgba(11, 13, 14, 1);
+  --neutral-scale1800: rgba(0, 0, 0, 1);
+  --neutral-scale200: rgba(198, 204, 209, 1);
+  --neutral-scale300: rgba(184, 191, 198, 1);
+  --neutral-scale400: rgba(170, 178, 187, 1);
+  --neutral-scale500: rgba(156, 166, 175, 1);
+  --neutral-scale600: rgba(142, 153, 164, 1);
+  --neutral-scale70: rgba(255, 255, 255, 1);
+  --neutral-scale700: rgba(128, 140, 153, 1);
+  --neutral-scale80: rgba(241, 242, 244, 1);
+  --neutral-scale800: rgba(114, 128, 141, 1);
+  --neutral-scale90: rgba(227, 229, 232, 1);
+  --neutral-scale900: rgba(102, 115, 127, 1);
+  --primery-100: rgba(144, 207, 238, 1);
+  --primery-1000: rgba(20, 96, 133, 1);
+  --primery-200: rgba(122, 198, 235, 1);
+  --primery-300: rgba(100, 188, 232, 1);
+  --primery-400: rgba(78, 179, 228, 1);
+  --primery-500: rgba(56, 169, 225, 1);
+  --primery-600: rgba(33, 160, 222, 1);
+  --primery-700: rgba(30, 144, 199, 1);
+  --primery-800: rgba(27, 128, 177, 1);
+  --primery-90: rgba(211, 236, 248, 1);
+  --primery-900: rgba(23, 112, 155, 1);
+  --success-100: rgba(166, 216, 168, 1);
+  --success-1000: rgba(46, 107, 49, 1);
+  --success-200: rgba(148, 209, 151, 1);
+  --success-300: rgba(131, 201, 133, 1);
+  --success-400: rgba(113, 193, 116, 1);
+  --success-500: rgba(95, 186, 99, 1);
+  --success-600: rgba(77, 178, 81, 1);
+  --success-700: rgba(69, 160, 73, 1);
+  --success-800: rgba(69, 160, 73, 1);
+  --success-900: rgba(54, 124, 57, 1);
+  --warning-100: rgba(254, 232, 180, 1);
+  --warning-1000: rgba(200, 144, 4, 1);
+  --warning-200: rgba(253, 225, 155, 1);
+  --warning-300: rgba(253, 225, 155, 1);
+  --warning-400: rgba(252, 210, 105, 1);
+  --warning-500: rgba(252, 202, 80, 1);
+  --warning-600: rgba(251, 195, 55, 1);
+  --warning-700: rgba(251, 187, 30, 1);
+  --warning-800: rgba(250, 180, 5, 1);
+  --warning-900: rgba(225, 162, 4, 1);
+}
+
+:root {
+  --animate-spin: spin 1s linear infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+  animation: var(--animate-spin);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes image-glow {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.74, 0.25, 0.76, 1);
+  }
+
+  10% {
+    opacity: 0.7;
+    animation-timing-function: cubic-bezier(0.12, 0.01, 0.08, 0.99);
+  }
+
+  to {
+    opacity: 0.4;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  90%,
+  to {
+    background-position: calc(-100% - var(--shimmer-width)) 0;
+  }
+
+  30%,
+  60% {
+    background-position: calc(100% + var(--shimmer-width)) 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+/* Custom Scrollbar */
+
+/* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 140, 153, 0.45) transparent;
+}
+
+/* Chrome / Edge / Safari */
+::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 140, 153, 0.45);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 140, 153, 0.65);
+}

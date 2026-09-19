@@ -1,0 +1,169 @@
+/* =========================================
+   VARIABLE LOCAL FONTS
+   (ADD THIS SECTION AT THE VERY TOP)
+========================================= */
+@font-face {
+  font-family: "Inter";
+  src: url("./assets/fonts/inter/InterVariable.woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/fonts/vazirmatn/Vazirmatn[wght].woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* =========================================
+   GLOBAL FONT RENDER FIX
+========================================= */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+
+  font-family:
+    "Vazirmatn",
+    "Inter",
+    sans-serif;
+}
+
+/* =========================================
+   YOUR ORIGINAL FILE
+========================================= */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================
+   ROOT VARIABLES (FULL)
+========================= */
+:root {
+
+/* ========== COLORS ========== */
+--error-100: rgba(240, 144, 142, 1);
+--error-200: rgba(238, 122, 119, 1);
+--error-300: rgba(235, 100, 97, 1);
+--error-400: rgba(232, 78, 74, 1);
+--error-500: rgba(229, 56, 52, 1);
+--error-600: rgba(226, 34, 29, 1);
+--error-700: rgba(203, 30, 26, 1);
+--error-800: rgba(181, 27, 23, 1);
+--error-900: rgba(158, 23, 20, 1);
+--error-1000: rgba(136, 20, 17, 1);
+
+--neutral-scale70: rgba(255, 255, 255, 1);
+--neutral-scale80: rgba(241, 242, 244, 1);
+--neutral-scale90: rgba(227, 229, 232, 1);
+--neutral-scale100: rgba(213, 217, 221, 1);
+--neutral-scale200: rgba(198, 204, 209, 1);
+--neutral-scale300: rgba(184, 191, 198, 1);
+--neutral-scale400: rgba(170, 178, 187, 1);
+--neutral-scale500: rgba(156, 166, 175, 1);
+--neutral-scale600: rgba(142, 153, 164, 1);
+--neutral-scale700: rgba(128, 140, 153, 1);
+--neutral-scale800: rgba(114, 128, 141, 1);
+--neutral-scale900: rgba(102, 115, 127, 1);
+--neutral-scale1000: rgba(91, 102, 113, 1);
+--neutral-scale1100: rgba(80, 89, 99, 1);
+--neutral-scale1200: rgba(68, 77, 85, 1);
+--neutral-scale1300: rgba(57, 64, 71, 1);
+--neutral-scale1400: rgba(46, 51, 57, 1);
+--neutral-scale1500: rgba(34, 38, 42, 1);
+--neutral-scale1600: rgba(23, 25, 28, 1);
+--neutral-scale1700: rgba(11, 13, 14, 1);
+--neutral-scale1800: rgba(0, 0, 0, 1);
+
+--primery-100: rgba(144, 207, 238, 1);
+--primery-200: rgba(122, 198, 235, 1);
+--primery-300: rgba(100, 188, 232, 1);
+--primery-400: rgba(78, 179, 228, 1);
+--primery-500: rgba(56, 169, 225, 1);
+--primery-600: rgba(33, 160, 222, 1);
+--primery-700: rgba(30, 144, 199, 1);
+--primery-800: rgba(27, 128, 177, 1);
+--primery-900: rgba(23, 112, 155, 1);
+--primery-1000: rgba(20, 96, 133, 1);
+
+--success-100: rgba(166, 216, 168, 1);
+--success-200: rgba(148, 209, 151, 1);
+--success-300: rgba(131, 201, 133, 1);
+--success-400: rgba(113, 193, 116, 1);
+--success-500: rgba(95, 186, 99, 1);
+--success-600: rgba(77, 178, 81, 1);
+--success-700: rgba(69, 160, 73, 1);
+--success-800: rgba(69, 160, 73, 1);
+--success-900: rgba(54, 124, 57, 1);
+--success-1000: rgba(46, 107, 49, 1);
+
+--warning-100: rgba(254, 232, 180, 1);
+--warning-200: rgba(253, 225, 155, 1);
+--warning-300: rgba(253, 225, 155, 1);
+--warning-400: rgba(252, 210, 105, 1);
+--warning-500: rgba(252, 202, 80, 1);
+--warning-600: rgba(251, 195, 55, 1);
+--warning-700: rgba(251, 187, 30, 1);
+--warning-800: rgba(250, 180, 5, 1);
+--warning-900: rgba(225, 162, 4, 1);
+--warning-1000: rgba(200, 144, 4, 1);
+
+/* ========== FONT FAMILIES ========== */
+--EN-inter-body-body-font-family: "Inter", Helvetica;
+--EN-inter-body-body-large-font-family: "Inter", Helvetica;
+--EN-inter-body-body-medium-font-family: "Inter", Helvetica;
+
+--EN-inter-caption-1-font-family: "Inter", Helvetica;
+--EN-inter-caption-2-font-family: "Inter", Helvetica;
+--EN-inter-caption-3-font-family: "Inter", Helvetica;
+--EN-inter-caption-4-font-family: "Inter", Helvetica;
+--EN-inter-caption-5-font-family: "Inter", Helvetica;
+--EN-inter-caption-6-font-family: "Inter", Helvetica;
+
+--EN-inter-display-font-family: "Inter", Helvetica;
+
+--EN-inter-titles-1-font-family: "Inter", Helvetica;
+--EN-inter-titles-2-font-family: "Inter", Helvetica;
+--EN-inter-titles-3-font-family: "Inter", Helvetica;
+
+--FA-vazirmatn-body-body-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-body-body-large-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-body-body-medium-font-family: "Vazirmatn", sans-serif;
+
+--FA-vazirmatn-caption-1-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-caption-2-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-caption-3-font-family: "Vazirmatn", sans-serif;
+
+--FA-vazirmatn-display-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-titles-1-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-titles-2-font-family: "Vazirmatn", sans-serif;
+--FA-vazirmatn-titles-3-font-family: "Vazirmatn", sans-serif;
+
+/* ========== FONT STYLE FIX (IMPORTANT FOR YOUR ERROR) ========== */
+--EN-inter-titles-1-font-style: normal;
+--EN-inter-titles-2-font-style: normal;
+--EN-inter-titles-3-font-style: normal;
+
+--EN-inter-caption-1-font-style: normal;
+--EN-inter-caption-2-font-style: normal;
+--EN-inter-caption-3-font-style: normal;
+--EN-inter-caption-4-font-style: normal;
+--EN-inter-caption-5-font-style: normal;
+--EN-inter-caption-6-font-style: normal;
+
+--FA-vazirmatn-caption-1-font-style: normal;
+--FA-vazirmatn-caption-2-font-style: normal;
+--FA-vazirmatn-caption-3-font-style: normal;
+}
