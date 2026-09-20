@@ -3,100 +3,58 @@ import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
-import ResourseManagment from "@/assets/icons/ResourseManagment.svg";
 import LogOut from "@/assets/icons/Log_Out.svg";
-import PauseCircle from "@/assets/icons/PauseCircle.svg?react";
-// import menu from "../assets/icons/menuBlack.svg";
-import PlayCircle from "@/assets/icons/PlayCircle.svg?react";
-import Microphon from "@/assets/icons/mic.svg?react";
 import Language from "@/assets/icons/Language.svg";
 import PaintBrush from "@/assets/icons/paint-brush.svg";
-import TrashFull from "@/assets/icons/Trash_Full.svg?react";
 import { FooterGlass } from "@/Components/FooterGlass";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 import { BACKEND_URL, DGTW_URL } from "@/Services/BackendConfige";
 
 const settingsItems = [
   {
     id: "theme",
     title: "Theme",
+    titleFa: "پوسته",
     subtitle: "Dark, Light",
-    path: "/Theme", // مسیر صفحه
+    subtitleFa: "تاریک، روشن",
+    path: "/Theme",
     icon: (
-      <img className="relative w-[23px] h-[23px]" alt="" src={PaintBrush} />
+      <img className="w-[23px] h-[23px] object-contain" alt="" src={PaintBrush} />
     ),
   },
   {
     id: "language",
     title: "Language",
+    titleFa: "زبان",
     subtitle: "English, فارسی",
-    path: "/Language", // مسیر صفحه
-    icon: <img className="relative w-[23px] h-[23px]" src={Language} />,
+    subtitleFa: "فارسی، انگلیسی",
+    path: "/Language",
+    icon: <img className="w-[23px] h-[23px] object-contain" alt="Language" src={Language} />,
   },
 ];
 
 export const StudentSettings = () => {
+  const { isRTL } = useContext(AppContext);
   const fileInputRef = useRef(null);
 
   const [photoPreview, setPhotoPreview] = useState("");
   const [settings, setSettings] = useState(null);
 
-
   const loadSettings = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/admin/settings`);
-
       const data = await res.json();
-
       console.log("settings:", data);
-
       setSettings(data);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // const getUserFiles = async () => {
-  //   try {
-  //     const res = await fetch(`${BACKEND_URL}/api/get-user-files/`);
-
-  //     const data = await res.json();
-
-  //     console.log("user files:", data);
-
-  //     if (data.photo_url) {
-  //       const photoUrl = `${DGTW_URL}${data.photo_url}?t=${Date.now()}`;
-
-  //       console.log(photoUrl);
-
-  //       setPhotoPreview(photoUrl);
-  //     }
-
-  //     if (data.audio_url) {
-  //       const audioUrl = `${DGTW_URL}${data.audio_url}?t=${Date.now()}`;
-  //       console.log(audioUrl);
-
-  //       setRecordedUrl(audioUrl);
-
-  //       setVoiceState("uploaded");
-
-  //       setHasAudio(true);
-  //     } else {
-  //       setRecordedUrl("");
-
-  //       setVoiceState("idle");
-
-  //       setHasAudio(false);
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-
   useEffect(() => {
     const loadPageData = async () => {
       await loadSettings();
-      // await getUserFiles();
     };
 
     loadPageData();
@@ -119,9 +77,6 @@ export const StudentSettings = () => {
       if (!res.ok) {
         throw new Error("Upload failed");
       }
-
-      // await getUserFiles();
-      // console.log("after upload");
     } catch (error) {
       console.error(error);
     }
@@ -129,39 +84,26 @@ export const StudentSettings = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
-
     uploadPhoto(file);
   };
 
   return (
     <main
       className="bg-[#f1f0f0] dark:bg-neutral-scale1500 w-full md:w-[360px] mx-auto flex flex-col h-dvh overflow-hidden"
-      aria-label="Teacher settings page"
+      aria-label={isRTL ? "صفحه تنظیمات دانشجو" : "Student settings page"}
+      dir={isRTL ? "rtl" : "ltr"}
     >
-      <header className="sticky top-0 left-0 w-full h-11 flex justify-end bg-transparent">
-        {/* <button
-          type="button"
-          aria-label="More options"
-          className="mt-[49px] h-6 w-6"
-        >
-          <img
-            src={menu}
-            alt="More options"
-            className="w-6 h-6"
-          />
-        </button> */}
-      </header>
+      <header className="sticky top-0 left-0 w-full h-8 flex justify-end bg-transparent" />
       <section
         className="flex-1 overflow-y-auto overflow-x-hidden pt-[10px] pb-[105px]"
-        aria-label="Profile and settings"
+        aria-label={isRTL ? "پروفایل و تنظیمات" : "Profile and settings"}
       >
         {/* // ---------------------- Profile photo ---------------------------- */}
         <div className="flex w-[104px] h-[143px] relative mt-1.5 mx-auto flex-col items-center gap-[15px]">
           {photoPreview ? (
             <img
-              className="relative self-stretch w-full rounded-full aspect-[1] object-cover"
+              className="relative self-stretch w-full rounded-full aspect-[1] object-cover border-[3px] border-neutral-scale100"
               alt="Profile photo"
               src={photoPreview}
             />
@@ -172,8 +114,8 @@ export const StudentSettings = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current.click()}
-            aria-label="Change profile photo"
-            className="absolute top-20 left-[72px] w-6 h-6"
+            aria-label={isRTL ? "تغییر تصویر پروفایل" : "Change profile photo"}
+            className="absolute top-20 left-[72px] w-6 h-6 cursor-pointer"
           >
             <img src={Camera} alt="Camera" className="w-6 h-6" />
           </button>
@@ -185,94 +127,136 @@ export const StudentSettings = () => {
             hidden
             onChange={handleImageChange}
           />
-          <h1 className="relative self-stretch fa-title-2 text-center text-neutral-scale1800 dark:text-neutral-scale70 [direction:rtl]">
+          <h1 className="relative self-stretch fa-title-2 text-center text-neutral-scale1800 dark:text-neutral-scale70">
             محیا محمدی
           </h1>
         </div>
-        <div className="w-full h-[510px] flex flex-col">
+
+        <div className="w-full flex flex-col gap-2">
           {/* // ---------------------- Name Section ---------------------- */}
           <section
-            className="mx-3.5 w-auto h-[104px] relative mt-[5px] bg-neutral-scale70 dark:bg-neutral-scale1400 rounded-[13px] overflow-hidden"
+            className="mx-3.5 w-auto h-[104px] relative bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden px-4 py-2.5 flex flex-col justify-between"
             aria-labelledby="name-section-title"
           >
             <div
               id="name-section-title"
-              className="absolute top-2.5 left-[15px] en-caption-3 text-primery-800 dark:text-neutral-scale70 whitespace-nowrap"
+              className={`text-primery-800 dark:text-neutral-scale70 whitespace-nowrap ${
+                isRTL ? "fa-caption-3 text-right" : "en-caption-3 text-left"
+              }`}
             >
-              Your name
+              {isRTL ? "نام و نام خانوادگی" : "Your name"}
             </div>
-            <div className="absolute top-10 left-[15px] fa-caption-1 text-left whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 [direction:rtl]">
+            <div
+              className={`fa-caption-1 whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
+                isRTL ? "text-right" : "text-left"
+              }`}
+            >
               محیا
             </div>
-            <div className="absolute top-[66px] left-[15px] right-[15px] border-t border-neutral-scale300 dark:border-neutral-scale1000" />
-            <div className="absolute top-[74px] left-[15px] fa-caption-1 text-left whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 [direction:rtl]">
+            <div className="w-full border-t border-neutral-scale300 dark:border-neutral-scale1000 my-0.5" />
+            <div
+              className={`fa-caption-1 whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
+                isRTL ? "text-right" : "text-left"
+              }`}
+            >
               محمدی
             </div>
           </section>
 
           {/* // ----------------------- Email Section ------------------------ */}
           <section
-            className="text-left flex mx-3.5 w-auto h-[68px] relative mt-1.5 flex-col items-start gap-3 px-[15px] py-2.5 bg-neutral-scale70 dark:bg-neutral-scale1400 rounded-[13px] overflow-hidden"
+            className="flex mx-3.5 w-auto h-[68px] relative flex-col justify-between px-4 py-2.5 bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden"
             aria-labelledby="email-section-title"
           >
             <div
               id="email-section-title"
-              className="relative self-stretch mt-[-1.00px] en-caption-3 text-primery-800 dark:text-neutral-scale70"
+              className={`text-primery-800 dark:text-neutral-scale70 ${
+                isRTL ? "fa-caption-3 text-right" : "en-caption-3 text-left"
+              }`}
             >
-              Your email
+              {isRTL ? "ایمیل شما" : "Your email"}
             </div>
-            <div className="relative self-stretch fa-caption-1 text-neutral-scale1800 dark:text-neutral-scale70">
+            <div
+              className={`fa-caption-1 text-neutral-scale1800 dark:text-neutral-scale70 ${
+                isRTL ? "text-right" : "text-left"
+              }`}
+              dir="ltr"
+              style={{ textAlign: isRTL ? "right" : "left" }}
+            >
               mahyamohamdy@gmail.com
             </div>
           </section>
 
           {/* // ---------------- Preferences Section --------------------------- */}
           <section
-            className="mx-3.5 w-auto h-[105px] relative mt-[5px] bg-neutral-scale70 dark:bg-neutral-scale1400 rounded-[13px] overflow-hidden"
-            aria-label="Preferences"
+            className="mx-3.5 w-auto relative mt-2 bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden p-3.5"
+            aria-label={isRTL ? "تنظیمات و گزینه‌ها" : "Preferences"}
           >
-            <div className="flex flex-col w-[203px] items-start gap-3 pl-[5px] pr-0 py-0 relative top-[9px] left-3">
+            <div className="flex flex-col w-full gap-3.5">
               {settingsItems.map((item) => (
                 <Link
                   key={item.id}
                   to={item.path}
-                  className="flex items-center gap-3.5 relative self-stretch w-full flex-[0_0_auto] text-left"
-                  aria-label={`${item.title}, ${item.subtitle}`}
+                  className={`flex items-center gap-3.5 w-full ${
+                    isRTL ? "flex-row text-right" : "flex-row text-left"
+                  }`}
+                  aria-label={`${isRTL ? item.titleFa : item.title}, ${
+                    isRTL ? item.subtitleFa : item.subtitle
+                  }`}
                 >
-                  {item.icon}
-                  <div className="flex flex-col w-36 items-start relative">
-                    <div className="relative self-stretch mt-[-1.00px] en-body text-neutral-scale1800 dark:text-neutral-scale70">
-                      {item.title}
-                    </div>
+                  <div className="w-[24px] h-[24px] shrink-0 flex items-center justify-center">
+                    {item.icon}
+                  </div>
+                  <div
+                    className={`flex flex-col flex-1 min-w-0 ${
+                      isRTL ? "items-start text-right" : "items-start text-left"
+                    }`}
+                  >
                     <div
-                      className={`relative self-stretch en-caption-2 text-neutral-scale1100 dark:text-neutral-scale300  ${
-                        item.id === "language"
-                          ? "text-left [direction:rtl]"
-                          : ""
+                      className={`w-full truncate text-neutral-scale1800 dark:text-neutral-scale70 ${
+                        isRTL ? "fa-body" : "en-body"
                       }`}
                     >
-                      {item.subtitle}
+                      {isRTL ? item.titleFa : item.title}
+                    </div>
+                    <div
+                      className={`w-full truncate text-neutral-scale1100 dark:text-neutral-scale300 ${
+                        isRTL ? "fa-caption-2" : "en-caption-2"
+                      }`}
+                    >
+                      {isRTL ? item.subtitleFa : item.subtitle}
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
           </section>
+
+          {/* // ---------------- Log out Button --------------------------- */}
           <button
             type="button"
-            className="mx-3.5 w-auto h-[31px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1400 rounded-[7px] overflow-hidden text-left"
-            aria-label="Log out"
+            className="mx-3.5 w-auto h-[38px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[8px] overflow-hidden cursor-pointer hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors"
+            aria-label={isRTL ? "خروج" : "Log out"}
           >
-            <div className="inline-flex items-center gap-[14px] relative top-[3px] left-[15px]">
+            <div
+              className={`h-full flex items-center gap-3 px-4 ${
+                isRTL ? "flex-row text-right" : "flex-row text-left"
+              }`}
+            >
               <img
                 src={LogOut}
                 alt="Log out"
-                className="relative w-[25px] h-[25px]"
+                className={`w-[22px] h-[22px] shrink-0 ${
+                  isRTL ? "rotate-180" : ""
+                }`}
               />
-
-              <div className="relative w-[85px] en-body text-neutral-scale1800 dark:text-neutral-scale70">
-                Log out
-              </div>
+              <span
+                className={`${
+                  isRTL ? "fa-body" : "en-body"
+                } text-neutral-scale1800 dark:text-neutral-scale70`}
+              >
+                {isRTL ? "خروج" : "Log out"}
+              </span>
             </div>
           </button>
         </div>

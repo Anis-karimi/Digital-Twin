@@ -117,7 +117,7 @@ export const ChatArea = () => {
 
     const [settings, setSettings] = useState(null);
 
-    const { language } = useContext(AppContext);
+    const { language, isRTL } = useContext(AppContext);
     const [llmModel] = useState("gemma4");
     const [teacherName] = useState("Teacher");
 
@@ -187,13 +187,13 @@ export const ChatArea = () => {
       otherMessageRow: "flex justify-start w-full",
 
       myBubble:
-        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
 
       otherBubble:
-        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
 
       messageText:
-        "text-neutral-scale1800 dark:text-neutral-scale100 fa-body text-[14px] leading-[22px] whitespace-pre-wrap break-words",
+        "text-neutral-scale1800 dark:text-neutral-scale100 text-[14px] leading-[22px] whitespace-pre-wrap break-words",
 
       messageTime:
         "en-caption-4 text-primery-1000 dark:text-neutral-scale200 text-[10px] leading-[14px]",
@@ -684,79 +684,103 @@ export const ChatArea = () => {
         </section>
 
         {/* Header */}
-        <header className="absolute top-0 left-0 w-full h-[65px] flex z-50">
-          <div className="w-full h-[65px] bg-neutral-scale70 dark:bg-neutral-scale1400 border-b dark:border-neutral-scale1000  relative">
-            {/* Back */}
+        <header
+          className="absolute top-0 left-0 w-full h-[65px] flex z-50"
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <div className="w-full h-[65px] bg-neutral-scale70 dark:bg-neutral-scale1400 border-b dark:border-neutral-scale1000 relative flex items-center px-2.5">
+            {/* Back Button */}
             <button
               onClick={handleBack}
-              className="absolute top-1/2 -translate-y-1/2 left-2.5 w-6 h-6 flex items-center justify-center"
+              aria-label={isRTL ? "بازگشت" : "Back"}
+              className="w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer"
             >
-              <ArrowLeft className="!w-6 !h-6 dark:text-neutral-scale70" />
+              <ArrowLeft
+                className={`!w-6 !h-6 dark:text-neutral-scale70 ${
+                  isRTL ? "rotate-180" : ""
+                }`}
+              />
             </button>
 
             {/* Avatar */}
-            {isStudentChat ? (
-              currentStudent.photo_url ? (
-                <img
-                  className="absolute top-1/2 -translate-y-1/2 left-[61px] w-[38px] h-[38px] rounded-full object-cover"
-                  src={currentStudent.photo_url}
-                  alt={currentStudent.title}
-                />
+            <div className="mx-2 shrink-0 flex items-center justify-center">
+              {isStudentChat ? (
+                currentStudent.photo_url ? (
+                  <img
+                    className="w-[38px] h-[38px] rounded-full object-cover"
+                    src={currentStudent.photo_url}
+                    alt={currentStudent.title}
+                  />
+                ) : (
+                  <div
+                    className={`w-[38px] h-[38px] rounded-full flex items-center justify-center ${getAvatarColor(
+                      currentStudent.id,
+                    )} text-white fa-caption-3`}
+                  >
+                    {getInitials(currentStudent.title)}
+                  </div>
+                )
               ) : (
-                <div
-                  className={`absolute top-1/2 -translate-y-1/2 left-[61px] w-[38px] h-[38px] rounded-full flex items-center justify-center ${getAvatarColor(currentStudent.id)} text-white fa-caption-3`}
-                >
-                  {getInitials(currentStudent.title)}
-                </div>
-              )
-            ) : (
-              <img
-                className="absolute top-1/2 -translate-y-1/2 left-[61px] w-[38px] h-[38px] rounded-full object-cover"
-                src={AI}
-                alt="AI"
-              />
-            )}
+                <img
+                  className="w-[38px] h-[38px] rounded-full object-cover"
+                  src={AI}
+                  alt="AI"
+                />
+              )}
+            </div>
 
             {/* Title */}
             <h1
-              dir={isPersianTitle ? "rtl" : "ltr"}
-              className="absolute top-1/2 -translate-y-1/2 left-[108px] w-[150px] truncate fa-title-3 dark:text-neutral-scale70 text-left cursor-pointer"
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`flex-1 min-w-0 truncate fa-title-3 dark:text-neutral-scale70 ${
+                isRTL ? "text-right" : "text-left"
+              } cursor-pointer`}
               onClick={() => navigate(`/CourseDetail`)}
             >
               {chatTitle}
             </h1>
 
-            {/* Menu */}
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              className="absolute top-1/2 -translate-y-1/2 right-3 w-7 h-7"
-            >
-              <Menu className="!w-7 !h-7 dark:text-neutral-scale70" />
-            </button>
+            {/* Actions: AI Toggle & Menu */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* AI Toggle */}
+              <button
+                type="button"
+                onClick={toggleAI}
+                aria-label={isRTL ? "تغییر حالت هوش مصنوعی" : "Toggle AI"}
+                className={`w-7 h-7 flex items-center justify-center transition-all duration-300 ${
+                  aiEnabled ? "scale-125 animate-pulse" : "scale-100"
+                }`}
+              >
+                {aiEnabled ? (
+                  <AIenable className="!w-6 !h-6" />
+                ) : (
+                  <AIdisable className="!w-6 !h-6 [--icon-bg:black] [--icon-fg:white] dark:[--icon-bg:white] dark:[--icon-fg:black]" />
+                )}
+              </button>
 
+              {/* Menu Button */}
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                aria-label={isRTL ? "منو" : "Menu"}
+                className="w-7 h-7 flex items-center justify-center cursor-pointer"
+              >
+                <Menu className="!w-7 !h-7 dark:text-neutral-scale70" />
+              </button>
+            </div>
+
+            {/* Dropdown Menu */}
             {isMenuOpen && (
-              <div className="absolute top-[20px] right-3 z-50">
+              <div
+                className={`absolute top-[58px] ${
+                  isRTL ? "left-2" : "right-2"
+                } z-50`}
+              >
                 <ChatDropdownMenu
                   onClearHistory={handleClearHistory}
                   onDownloadPdf={handleDownloadPDF}
                 />
               </div>
             )}
-
-            {/* AI Toggle */}
-            <button
-              type="button"
-              onClick={toggleAI}
-              className={`absolute top-1/2 -translate-y-1/2 right-14 w-6 h-6 transition-all duration-300
-        ${aiEnabled ? "scale-125 animate-pulse" : "scale-100"}
-      `}
-            >
-              {aiEnabled ? (
-                <AIenable className="!w-6 !h-6" />
-              ) : (
-                <AIdisable className="!w-6 !h-6 [--icon-bg:black] [--icon-fg:white] dark:[--icon-bg:white] dark:[--icon-fg:black]" />
-              )}
-            </button>
           </div>
         </header>
 
@@ -769,8 +793,12 @@ export const ChatArea = () => {
         )}
         {recording && (
           <div className="absolute bottom-[95px] left-1/2 -translate-x-1/2 z-50">
-            <div className="bg-neutral-scale600 text-white px-3 py-1 rounded-full text-xs animate-pulse">
-              🎙 Recording...
+            <div
+              className={`bg-neutral-scale600 text-white px-3 py-1 rounded-full ${
+                isRTL ? "fa-caption-2" : "text-xs"
+              } animate-pulse`}
+            >
+              🎙 {isRTL ? "در حال ضبط..." : "Recording..."}
             </div>
           </div>
         )}
@@ -786,26 +814,32 @@ export const ChatArea = () => {
         {/* Input */}
         <form
           className="absolute left-1/2 -translate-x-1/2 bottom-[15px] w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100"
+          dir={isRTL ? "rtl" : "ltr"}
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage();
           }}
         >
           <label htmlFor={composerInputId} className="sr-only">
-            Message
+            {isRTL ? "پیام" : "Message"}
           </label>
 
           <textarea
             id={composerInputId}
             ref={textareaRef}
-            dir="ltr"
+            dir={isRTL ? "rtl" : "ltr"}
             value={message}
-            placeholder={"Message"}
+            placeholder={isRTL ? "پیام خود را بنویسید..." : "Message..."}
             rows={1}
-            className="absolute bottom-0 left-0 w-full pr-[78px] pl-[19.6px] pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words fa-body-large text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]"
+            className={`absolute bottom-0 w-full ${
+              isRTL
+                ? "right-0 pr-[18px] pl-[84px] text-right"
+                : "left-0 pl-[18px] pr-[84px] text-left"
+            } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${
+              isRTL ? "fa-body" : "en-body"
+            } text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
             style={{
               minHeight: "37px",
-              textAlign: "left",
               resize: "none",
             }}
             onChange={(event) => {
@@ -836,9 +870,12 @@ export const ChatArea = () => {
             disabled={isLoading || recording}
           />
 
+          {/* Send / Mic button */}
           <button
             type="button"
-            className={`absolute bottom-[1px] right-[1px] w-[35px] h-[35px] transition-all duration-300 ${
+            className={`absolute bottom-[1px] ${
+              isRTL ? "left-[1px]" : "right-[1px]"
+            } w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
               recording ? "animate-pulse" : ""
             }`}
             onClick={() => {
@@ -858,12 +895,15 @@ export const ChatArea = () => {
             {recording ? (
               <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
             ) : isTyping ? (
-              <Send className="!w-[35px] !h-[35px]" />
+              <Send
+                className={`!w-[35px] !h-[35px] ${isRTL ? "rotate-180" : ""}`}
+              />
             ) : (
               <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
             )}
           </button>
 
+          {/* Quiz button */}
           <button
             type="button"
             onClick={() => {
@@ -881,7 +921,9 @@ export const ChatArea = () => {
 
               navigate("/QuizFirstPage");
             }}
-            className="absolute bottom-[6.5px] right-12 w-7 h-7"
+            className={`absolute bottom-[6.5px] ${
+              isRTL ? "left-12" : "right-12"
+            } w-7 h-7 flex items-center justify-center cursor-pointer`}
           >
             <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
           </button>

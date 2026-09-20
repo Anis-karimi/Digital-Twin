@@ -1,16 +1,87 @@
-# React + Vite
+# Digital-Twin Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Digital-Twin web application built with React, Vite, and Tailwind CSS.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Running with Docker (Recommended for All Systems)
 
-## React Compiler
+Using Docker guarantees that the application runs identically on **Linux, macOS, and Windows** without version conflicts, missing native binaries, or messing up your host environment.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Development Mode (with Live Reload / HMR)
+Run the development server inside an isolated container:
 
-## Expanding the ESLint configuration
+```bash
+docker compose up
+```
+*(Or with npm: `npm run docker:dev`)*
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript with type-aware lint rules.
+- **URL**: [http://localhost:5173](http://localhost:5173)
+- Any edits you make in `src/` will automatically hot-reload in real-time.
+- `node_modules` stays isolated inside the container volume.
+
+To stop the development container:
+```bash
+docker compose down
+```
+
+---
+
+### 2. Production Mode (Optimized with Nginx)
+Run the high-performance Nginx production build:
+
+```bash
+docker compose --profile prod up --build -d prod
+```
+*(Or with npm: `npm run docker:prod`)*
+
+- **URL**: [http://localhost:8080](http://localhost:8080)
+- Uses an ultra-lightweight Alpine Nginx image with SPA client-side routing, gzip compression, and asset caching.
+
+To stop the production container:
+```bash
+docker compose --profile prod down
+```
+
+---
+
+## 💻 Running Locally (Without Docker)
+
+If you prefer to run natively on your host machine:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the Vite dev server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+---
+
+## ⚙️ Backend & Environment Configuration
+
+Configuration for API endpoints is located in:
+- `src/Services/BackendConfige.jsx`
+
+Default endpoints:
+- `BACKEND_URL`: `http://172.20.13.39:8506`
+- `DGTW_URL`: `https://dgtw.um.ac.ir`
+
+To customize endpoints for your local environment or other servers, copy `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
+and edit the URLs as needed:
+```env
+VITE_BACKEND_URL=http://172.20.13.39:8506
+VITE_DGTW_URL=https://dgtw.um.ac.ir
+```
+*(Note: `.env.local` is git-ignored and will not be pushed to remote repositories).*

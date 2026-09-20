@@ -1,0 +1,32 @@
+services:
+  # Development service with Hot Module Replacement (HMR)
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: digital-twin-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
+      - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+
+  # Production service served with Nginx
+  prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
+        - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
+    container_name: digital-twin-prod
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    profiles:
+      - prod

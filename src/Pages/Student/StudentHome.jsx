@@ -1,10 +1,11 @@
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 import { HomeDropdownMenu } from "@/Components/HomeDropdownMenu";
 import { HomeChatFeedSection } from "@/Components/HomeChatFeedSection";
 import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
-import menu from "@/assets/icons/menu.svg?react";
+import menu from "@/assets/icons/menuWhite.svg?react";
 import Bell from "@/assets/icons/Bell.svg?react";
 import { FooterGlass } from "@/Components/FooterGlass";
 import { useNavigate } from "react-router-dom";
@@ -13,11 +14,13 @@ const headerActions = [
   {
     id: "notifications",
     label: "Notifications",
+    labelFa: "اعلان‌ها",
     icon: Bell,
   },
   {
     id: "more",
     label: "More options",
+    labelFa: "گزینه‌های بیشتر",
     icon: menu,
   },
 ];
@@ -25,27 +28,35 @@ const headerActions = [
 export const StudentHome = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { isRTL } = useContext(AppContext);
 
   return (
     <main
       className="bg-[#f9f9f9] dark:bg-neutral-scale1500 w-full md:w-[360px] h-dvh relative overflow-hidden mx-auto"
-      data-id="teacher-home-page-en"
+      data-id={isRTL ? "student-home-page-fa" : "student-home-page-en"}
     >
       <header
         className="absolute top-0 left-0 w-full h-[84px] flex z-10"
-        aria-label="Page header"
+        aria-label={isRTL ? "سربرگ صفحه" : "Page header"}
       >
-        <div className="w-full h-[84px] relative bg-primery-700 dark:bg-neutral-scale1500">
-          <h1 className="absolute top-[calc(50.00%_+_2px)] left-0 w-[149px] en-title-1 text-[#f7f7f7] text-center whitespace-nowrap">
-            Digital Twin
+        <div
+          className="w-full h-[84px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1500"
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <h1
+            className={`${
+              isRTL ? "fa-title-1" : "en-title-1"
+            } text-[#f7f7f7] text-center whitespace-nowrap`}
+          >
+            {isRTL ? "دوقلوی دیجیتال" : "Digital Twin"}
           </h1>
 
-          <div className="absolute top-[calc(50.00%_+_3px)] right-0 flex items-center gap-3 pr-4">
-            {headerActions.map(({ id, label, icon: Icon }) => (
+          <div className="flex items-center gap-3">
+            {headerActions.map(({ id, label, labelFa, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
-                aria-label={label}
+                aria-label={isRTL ? labelFa : label}
                 onClick={() => {
                   if (id === "more") {
                     setIsMenuOpen(true);

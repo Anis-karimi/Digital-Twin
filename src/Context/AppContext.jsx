@@ -1,11 +1,36 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 
 export const AppContext = createContext();
 
 export function AppProvider({ children }) {
   const [role, setRole] = useState("teacher"); // پیش‌فرض: استاد
-  const [language, setLanguage] = useState("en"); // پیش‌فرض: انگلیسی
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem("language") || "fa";
+  });
   const [selectedResources, setSelectedResources] = useState([]); // منابع انتخاب شده استاد
+
+  const isRTL = language === "fa";
+
+  useEffect(() => {
+    localStorage.setItem("language", language);
+    const root = document.documentElement;
+
+    if (language === "fa") {
+      root.setAttribute("dir", "rtl");
+      root.setAttribute("lang", "fa");
+      root.classList.add("rtl");
+      root.classList.remove("ltr");
+    } else {
+      root.setAttribute("dir", "ltr");
+      root.setAttribute("lang", "en");
+      root.classList.add("ltr");
+      root.classList.remove("rtl");
+    }
+  }, [language]);
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => (prev === "fa" ? "en" : "fa"));
+  };
 
   return (
     <AppContext.Provider
@@ -14,6 +39,8 @@ export function AppProvider({ children }) {
         setRole,
         language,
         setLanguage,
+        toggleLanguage,
+        isRTL,
         selectedResources,
         setSelectedResources,
       }}
@@ -22,4 +49,3 @@ export function AppProvider({ children }) {
     </AppContext.Provider>
   );
 }
-
