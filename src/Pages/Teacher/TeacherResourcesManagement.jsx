@@ -1,57 +1,77 @@
+import { useContext } from "react";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import courseImage from "@/assets/images/course.jpg";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { courses } from "@/data/courses";
+import { AppContext } from "@/Context/AppContext";
 
 export const TeacherResource = () => {
   const navigate = useNavigate();
+  const { isRTL } = useContext(AppContext);
 
   return (
-    <main className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden">
-      <header className="w-full h-[65px] flex">
-        <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
+    <main
+      dir={isRTL ? "rtl" : "ltr"}
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden"
+    >
+      <header className="w-full h-[65px] flex shrink-0">
+        <div className="w-full h-[65px] relative flex items-center px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
           <button
-            onClick={() => navigate("/TeacherSettings")}
+            onClick={() => navigate(-1)}
             type="button"
-            aria-label="Go back"
-            className="text-white absolute top-1/2 -translate-y-1/2 left-[15px] w-6 h-6 flex items-center justify-center cursor-pointer"
+            aria-label={isRTL ? "بازگشت" : "Go back"}
+            className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
-            <ArrowLeft className="!w-6 !h-6 text-neutral-scale70" />
+            <ArrowLeft
+              className={`!w-6 !h-6 text-neutral-scale70 ${
+                isRTL ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
-          <h1 className="absolute top-1/2 -translate-y-1/2 left-16 en-title-1 text-neutral-scale70 text-center whitespace-nowrap">
-            Courses Information
+          <h1
+            className={`flex-1 mx-2 text-neutral-scale70 ${
+              isRTL ? "fa-title-1 text-right" : "en-title-1 text-left"
+            } truncate whitespace-nowrap`}
+          >
+            {isRTL ? "اطلاعات دروس" : "Courses Information"}
           </h1>
         </div>
       </header>
 
       <section
         aria-labelledby="resource-course-selection"
-        className="w-full flex-1 min-h-0 mt-[15px] mb-[20px]"
+        className="w-full flex-1 min-h-0 mt-[15px] mb-[75px]"
       >
         <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden">
-          <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[25px]">
+          <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             <p
               id="resource-course-selection"
-              className="text-left ml-[23px] fa-body-medium text-primery-800 dark:text-neutral-scale70 whitespace-nowrap [direction:rtl]"
+              className={`px-4 ${
+                isRTL ? "fa-body-medium text-right" : "en-body-medium text-left"
+              } text-primery-800 dark:text-neutral-scale70`}
             >
-              Select a course to upload your file
+              {isRTL
+                ? "برای بارگذاری فایل، یک درس را انتخاب کنید"
+                : "Select a course to upload your file"}
             </p>
 
-            <div className="flex flex-col w-full gap-[15px] mt-[20px] px-[22px]">
+            <div className="flex flex-col w-full gap-[12px] mt-[16px] px-3.5">
               {courses.map((course) => (
                 <button
                   key={course.id}
                   type="button"
                   aria-label={`Select course ${course.title}`}
-                  className="flex items-center rounded-[10px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200 justify-between w-full cursor-pointer px-[12px] py-[12px] text-left"
+                  className={`flex items-center rounded-[10px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200 justify-between w-full cursor-pointer p-3 ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}
                   onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
                 >
-                  <div className="flex items-center gap-[14px] min-w-0">
+                  <div className="flex items-center gap-[12px] min-w-0 flex-1">
                     {/* Course Image */}
-                    <div className="w-[75px] h-[75px] flex-shrink-0 overflow-hidden rounded-[9px] border border-neutral-scale200 bg-neutral-scale100 dark:bg-neutral-scale1100">
+                    <div className="w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-[9px] border border-neutral-scale200 bg-neutral-scale100 dark:bg-neutral-scale1100">
                       <img
                         src={course.photo_url || courseImage}
                         alt=""
@@ -60,7 +80,7 @@ export const TeacherResource = () => {
                     </div>
 
                     {/* Course Information */}
-                    <div className="flex flex-col min-w-0 gap-[3px] [direction:rtl]">
+                    <div className="flex flex-col min-w-0 gap-[2px] flex-1">
                       {/* Title */}
                       <span className="fa-body-medium text-neutral-scale1800 dark:text-neutral-scale70 truncate">
                         {course.title}
@@ -68,7 +88,7 @@ export const TeacherResource = () => {
 
                       {/* Degree */}
                       <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale300">
-                        کارشناسی/مهندسی کامپیوتر
+                        کارشناسی / مهندسی کامپیوتر
                       </span>
 
                       {/* Privacy */}
@@ -79,12 +99,16 @@ export const TeacherResource = () => {
                       {/* Description */}
                       <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0">
                         {course.description ||
-                          "این دوره شامل مطالب آموزشی و منابع مرتبط با درس می‌باشد و برای یادگیری بهتر مطالب طراحی شده است."}
+                          "این دوره شامل مطالب آموزشی و منابع مرتبط با درس می‌باشد."}
                       </span>
                     </div>
                   </div>
 
-                  <ChevronRight className="!w-4 !h-4 flex-shrink-0 text-neutral-scale1800 dark:text-neutral-scale70 ml-[8px]" />
+                  <ChevronRight
+                    className={`!w-4 !h-4 flex-shrink-0 text-neutral-scale1800 dark:text-neutral-scale70 mx-1 ${
+                      isRTL ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
               ))}
             </div>
