@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import background from "@/assets/images/Quiz-Background.jpg";
 import CloseIcon from "@/assets/icons/X.svg?react";
-import { BACKEND_URL} from "@/Services/BackendConfige";
+import { quizApi } from "@/api";
 import "@/styles/fonts.css";
 
 const fieldClassName =
@@ -42,73 +42,32 @@ export const QuizFirstPage = ({ language }) => {
           ? selectedResources.join(",")
           : "";
 
-      // تبدیل مقدار slider به difficulty مورد نیاز API
+      // Convert slider value to target API difficulty
       const quizDifficulty =
         difficulty <= 33 ? "easy" : difficulty >= 67 ? "hard" : "normal";
 
-      const formData = new FormData();
-
-      formData.append("topic", topic);
-      formData.append("difficulty", quizDifficulty);
-      formData.append("count", parseInt(questionCount, 10));
-      formData.append("contexts", contextsString);
-      formData.append("language", language || "en");
-      formData.append("llm_model", "gemma4");
-
-      const res = await fetch(`${BACKEND_URL}/api/generate-quiz`, {
-        method: "POST",
-        body: formData,
+      const rawQuiz = await quizApi.generateQuiz({
+        topic,
+        count: parseInt(questionCount, 10),
+        difficulty: quizDifficulty,
+        contexts: contextsString,
+        language: language || "en",
+        llmModel: "gemma4",
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      console.log("✅ Raw LLM response:", data.quiz);
-
-      let rawQuiz = data.quiz;
-
-      if (typeof rawQuiz === "string") {
-        rawQuiz = rawQuiz.trim();
-
-        try {
-          rawQuiz = JSON.parse(rawQuiz);
-        } catch (err) {
-          console.warn("⚠️ First parse failed, trying double parse");
-
-          try {
-            rawQuiz = JSON.parse(JSON.parse(rawQuiz));
-          } catch (err2) {
-            console.error("❌ Failed to parse quiz JSON:", err2);
-
-            rawQuiz = [];
-          }
-        }
-      }
-
-      console.log("✅ Parsed quiz array:", rawQuiz);
 
       if (!Array.isArray(rawQuiz) || rawQuiz.length === 0) {
         throw new Error("No quiz questions were generated.");
       }
 
-      rawQuiz.forEach((q, i) => {
-        console.log(`Q${i + 1}:`, q.question);
-        console.log("Options:", q.options);
-        console.log("Answer from LLM:", q.answer);
-      });
-
       setSubmissionMessage(
         `✅ Quiz generated successfully! (${rawQuiz.length} questions)`,
       );
 
-      // فرستادن سوال‌های واقعی به صفحه QuizQuestionsPage
+      // Navigate to QuizQuestionsPage with real questions
       navigate("/QuizQuestionsPage", {
         replace: true,
         state: {
-        quizData: rawQuiz,
+          quizData: rawQuiz,
         },
       });
     } catch (err) {
@@ -305,7 +264,7 @@ export const QuizFirstPage = ({ language }) => {
               } catch (error) {
                 console.error("Invalid quiz return data:", error);
 
-                // برای سازگاری با داده‌های قدیمی
+                // Fallback for backward compatibility with legacy return data
                 navigate(savedReturn, { replace: true });
                 return;
               }

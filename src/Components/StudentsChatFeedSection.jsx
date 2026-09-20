@@ -1,6 +1,6 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import "@/styles/Allpages.css";
-import { students } from "@/data/students";
+import { studentsApi } from "@/api";
 import { useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
@@ -52,10 +52,19 @@ const getInitials = (title) => {
 export const StudentsChatFeedSection = ({ lessonId }) => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
+  const [chats, setChats] = useState([]);
 
-  const chats = students.filter(
-    (student) => String(student.lessonId) === String(lessonId),
-  );
+  useEffect(() => {
+    let isMounted = true;
+    studentsApi.getStudentsByCourse(lessonId).then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setChats(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [lessonId]);
 
   const handleStudentClick = (studentId) => {
     navigate(`/ChatArea/student/${studentId}`, {
@@ -106,9 +115,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                     <div
                       className={`w-[47px] h-[47px] rounded-full flex items-center justify-center shrink-0 ${getAvatarColor(
                         item.id,
-                      )} text-white font-semibold ${
-                        isRTL ? "fa-caption-1" : "en-caption-1"
-                      }`}
+                      )} text-white font-semibold fa-caption-1 font-vazir`}
                     >
                       {getInitials(item.title)}
                     </div>
@@ -117,9 +124,10 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                   {/* Info */}
                   <div className="flex flex-col flex-1 min-w-0 justify-center">
                     <h2
-                      className={`truncate text-black dark:text-neutral-scale70 ${
-                        isRTL ? "fa-body text-right" : "en-body text-left"
+                      className={`truncate text-black dark:text-neutral-scale70 fa-body font-vazir ${
+                        isRTL ? "text-right" : "text-left"
                       }`}
+                      dir="rtl"
                     >
                       {item.title}
                     </h2>
@@ -127,8 +135,8 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                     <p
                       className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${
                         isRTL
-                          ? "fa-caption-2 text-right"
-                          : "en-caption-2 text-left"
+                          ? "fa-caption-2 text-right font-vazir"
+                          : "en-caption-2 text-left font-inter"
                       }`}
                     >
                       {item.preview ||

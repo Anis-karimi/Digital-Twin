@@ -11,7 +11,7 @@ export const lessonItems = [
     id: "os",
     label: "سیستم عامل",
     labelFa: "سیستم عامل",
-    labelEn: "Operating System",
+    labelEn: "سیستم عامل",
     unreadCount: 1,
   },
 ];

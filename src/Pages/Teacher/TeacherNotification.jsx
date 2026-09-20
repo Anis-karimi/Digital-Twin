@@ -1,51 +1,43 @@
 import { ArrowLeft } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import X from "@/assets/icons/X.svg?react";
+import { notificationsApi } from "@/api";
 
 export const TeacherNotification = () => {
   const navigate = useNavigate();
+  const [joinRequests, setJoinRequests] = useState([]);
 
-  const initialJoinRequests = useMemo(
-    () => [
-      {
-        id: 1,
-        name: "Anis Karimi",
-        subject: "OS",
-        avatarClassName: "bg-error-100",
-        icon: X,
-        iconAlt: "Remove request",
-      },
-      {
-        id: 2,
-        name: "محمد رسولی",
-        subject: "امنیت",
-        avatarClassName: "bg-warning-100",
-        icon: X,
-        iconAlt: "Remove request",
-      },
-      {
-        id: 3,
-        name: "ملیکا یزدان پناه",
-        subject: "هوش مصنوعی",
-        avatarClassName: "bg-success-100",
-        icon: X,
-        iconAlt: "Remove request",
-      },
-    ],
-    [],
-  );
+  useEffect(() => {
+    let isMounted = true;
+    notificationsApi.getJoinRequests().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setJoinRequests(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const [joinRequests, setJoinRequests] = useState(initialJoinRequests);
-
-  const handleAccept = (id) => {
+  const handleAccept = async (id) => {
     setJoinRequests((prev) => prev.filter((request) => request.id !== id));
+    try {
+      await notificationsApi.acceptJoinRequest(id);
+    } catch (error) {
+      console.error("Failed to accept join request:", error);
+    }
   };
 
-  const handleRemove = (id) => {
+  const handleRemove = async (id) => {
     setJoinRequests((prev) => prev.filter((request) => request.id !== id));
+    try {
+      await notificationsApi.rejectJoinRequest(id);
+    } catch (error) {
+      console.error("Failed to reject join request:", error);
+    }
   };
 
   return (

@@ -3,40 +3,35 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import background from "@/assets/images/Quiz-Background.jpg";
-
 import CloseIcon from "@/assets/icons/X.svg?react";
+import { quizApi } from "@/api";
 
 export const QuizQuestionsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
  const handleExitQuiz = () => {
-   // به handler مربوط به Back می‌فهمانیم که در حال خروج واقعی هستیم
-   isExitingQuizRef.current = true;
+    // Flag to the back handler that this is an intentional exit
+    isExitingQuizRef.current = true;
 
-   const savedReturn = sessionStorage.getItem("quizReturnToChat");
+    const savedReturn = sessionStorage.getItem("quizReturnToChat");
 
-   if (savedReturn) {
-     try {
-       const returnData = JSON.parse(savedReturn);
+    if (savedReturn) {
+      try {
+        const returnData = JSON.parse(savedReturn);
 
-       // در حالت عادی:
-       // Home → TeacherLessons → Chat → QuizQuestions → Guard
-       //
-       // با go(-2):
-       // Guard → QuizQuestions → Chat
-       //
-       // بنابراین بعد از خروج، Back از Chat مستقیماً
-       // به TeacherLessons می‌رود.
-       window.history.go(-2);
+        // Standard flow: Home -> TeacherLessons -> Chat -> QuizQuestions -> Guard
+        // With history.go(-2): Guard -> QuizQuestions -> Chat
+        // Exiting quiz navigates straight back to previous Chat
+        window.history.go(-2);
 
-       sessionStorage.removeItem("quizReturnToChat");
+        sessionStorage.removeItem("quizReturnToChat");
 
-       return;
-     } catch (error) {
-       console.error("Invalid quiz return data:", error);
-     }
-   }
+        return;
+      } catch (error) {
+        console.error("Invalid quiz return data:", error);
+      }
+    }
 
    // fallback
    navigate("/", { replace: true });
@@ -48,24 +43,24 @@ export const QuizQuestionsPage = () => {
     return /[\u0600-\u06FF]/.test(String(text || ""));
   };
 
-  // دریافت سوال‌های تولیدشده از QuizFirstPage
+  // Retrieve generated questions passed from QuizFirstPage
   const quizData = location.state?.quizData || [];
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  // ذخیره جواب انتخاب‌شده برای هر سوال
+  // Store user-selected option per question index
   const [selectedAnswers, setSelectedAnswers] = useState({});
 
-  // ذخیره اینکه برای هر سوال Show Answer زده شده یا نه
+  // Track whether "Show Answer" was clicked per question
   const [answeredQuestions, setAnsweredQuestions] = useState({});
 
-  // ذخیره وضعیت explanation برای هر سوال
+  // Track whether explanation accordion is expanded per question
   const [showExplanations, setShowExplanations] = useState({});
 
-  // ذخیره متن explanation برای هر سوال
+  // Store AI explanation text per question
   const [explanations, setExplanations] = useState({});
 
-  // ذخیره loading explanation برای هر سوال
+  // Store AI explanation loading state per question
   const [loadingExplanations, setLoadingExplanations] = useState({});
 
   const totalQuestions = quizData.length;
@@ -78,15 +73,13 @@ export const QuizQuestionsPage = () => {
   const pendingResultRef = useRef(null);
 
   useEffect(() => {
-    // یک entry جدید در history می‌سازیم
-    // ولی state مربوط به quizData را هم حفظ می‌کنیم
+    // Push a new history entry while retaining the existing quizData state
     navigate(location.pathname + location.search + location.hash, {
       state: location.state,
     });
 
     const handlePopState = () => {
-      // اگر کاربر در حال تمام کردن عادی آزمون است،
-      // از Guard عبور می‌کنیم و Result را جایگزین می‌کنیم
+      // If user is finishing the quiz normally, pass guard and replace with Result
       if (isFinishingQuizRef.current) {
         isFinishingQuizRef.current = false;
 
@@ -102,22 +95,21 @@ export const QuizQuestionsPage = () => {
         return;
       }
 
-      // اگر کاربر با Yes در حال خروج واقعی از آزمون است،
-      // دیگر Confirmation مربوط به Back را اجرا نکن.
+      // If user confirmed exiting, skip the back guard
       if (isExitingQuizRef.current) {
         return;
       }
 
-      // وقتی خودمان history.forward() را اجرا می‌کنیم
+      // When history.forward() was triggered programmatically
       if (isHandlingBackRef.current) {
         isHandlingBackRef.current = false;
         return;
       }
 
-      // Back گوشی یا مرورگر زده شده
+      // Mobile or browser Back button was pressed -> show exit confirmation
       setShowExitConfirmation(true);
 
-      // برگرداندن کاربر به QuizQuestionsPage
+      // Keep the user on QuizQuestionsPage
       isHandlingBackRef.current = true;
       window.history.forward();
     };
@@ -129,7 +121,7 @@ export const QuizQuestionsPage = () => {
     };
   }, []);
 
-  // اگر سوالی وجود نداشت
+  // Empty state if no questions are available
   if (totalQuestions === 0) {
     return (
       <main className="w-full md:w-[360px] min-h-dvh mx-auto relative">
@@ -153,27 +145,25 @@ export const QuizQuestionsPage = () => {
 
   const currentQuestion = quizData[currentQuestionIndex];
 
-  // جواب انتخاب‌شده برای سوال فعلی
-  // اگر قبلاً انتخاب شده باشد، حتی بعد از رفتن به سوال بعدی
-  // و برگشتن به این سوال، همان جواب را نشان می‌دهد
+  // Selected option for current question (preserves answer when navigating between questions)
   const selectedAnswer = selectedAnswers[currentQuestionIndex] || "";
 
-  // آیا برای سوال فعلی Show Answer زده شده؟
+  // Has "Show Answer" been clicked for the current question
   const showAnswer = answeredQuestions[currentQuestionIndex] || false;
 
-  // آیا explanation برای سوال فعلی نمایش داده شود؟
+  // Should explanation be visible for current question
   const showExplanation = showExplanations[currentQuestionIndex] || false;
 
-  // explanation سوال فعلی
+  // Explanation text for current question
   const explanation = explanations[currentQuestionIndex] || "";
 
-  // loading explanation سوال فعلی
+  // Loading state for current question explanation
   const loadingExplanation = loadingExplanations[currentQuestionIndex] || false;
 
-  // تبدیل options دریافتی از API به فرمت مورد نیاز صفحه
+  // Normalize options array from API into structured { id, letter, text } objects
   const normalizedAnswers = (currentQuestion.options || []).map(
     (option, index) => {
-      // اگر API آبجکت برگرداند
+      // If API returned an object
       if (typeof option === "object" && option !== null) {
         return {
           id: option.id || String(index),
@@ -182,10 +172,10 @@ export const QuizQuestionsPage = () => {
         };
       }
 
-      // اگر API متن ساده برگرداند
+      // If API returned a plain string
       const optionText = String(option);
 
-      // تشخیص A) / A. / A- / A:
+      // Detect prefix letter patterns like A) / A. / A- / A:
       const letterMatch = optionText.match(/^\s*([A-Da-d])\s*[)\.\-:]\s*/);
 
       if (letterMatch) {
@@ -196,7 +186,7 @@ export const QuizQuestionsPage = () => {
         };
       }
 
-      // اگر هیچ حرفی قبل گزینه نبود
+      // Fallback if no prefix exists
       return {
         id: String(index),
         letter: String.fromCharCode(65 + index),
@@ -205,7 +195,7 @@ export const QuizQuestionsPage = () => {
     },
   );
 
-  // تبدیل جواب درست API به A/B/C/D
+  // Convert API correct answer representation to A/B/C/D letter
   const getCorrectAnswerLetter = () => {
     const rawAnswer = currentQuestion.answer;
 
@@ -213,14 +203,14 @@ export const QuizQuestionsPage = () => {
 
     const answerString = String(rawAnswer).trim();
 
-    // اگر مستقیماً A/B/C/D باشد
+    // If answer is already a direct letter (e.g., 'A', 'B')
     const letterMatch = answerString.match(/^([A-Da-d])(?:[)\.\-:]|\s|$)/);
 
     if (letterMatch) {
       return letterMatch[1].toUpperCase();
     }
 
-    // اگر خود متن جواب ارسال شده باشد
+    // If answer is the full string text of the matching option
     const matchingOption = normalizedAnswers.find(
       (option) =>
         option.text.trim().toLowerCase() === answerString.toLowerCase(),
@@ -230,7 +220,7 @@ export const QuizQuestionsPage = () => {
       return matchingOption.letter;
     }
 
-    // fallback
+    // Fallback
     return answerString.charAt(0).toUpperCase();
   };
 
@@ -242,10 +232,10 @@ export const QuizQuestionsPage = () => {
       : 0;
 
   const handleSelectAnswer = (answerLetter) => {
-    // اگر Show Answer زده شده، دیگر امکان تغییر جواب نیست
+    // Prevent changing answer if already submitted via Show Answer
     if (showAnswer) return;
 
-    // جواب این سوال را در index خودش ذخیره می‌کنیم
+    // Save answer at current question index
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentQuestionIndex]: answerLetter,
@@ -255,7 +245,7 @@ export const QuizQuestionsPage = () => {
   const handleShowAnswer = () => {
     if (!selectedAnswer) return;
 
-    // Show Answer فقط برای همین سوال ذخیره می‌شود
+    // Mark current question as answered
     setAnsweredQuestions((prev) => ({
       ...prev,
       [currentQuestionIndex]: true,
@@ -265,7 +255,7 @@ export const QuizQuestionsPage = () => {
   const handleShowExplanation = async () => {
     if (!showAnswer) return;
 
-    // اگر قبلاً explanation گرفته شده فقط نمایش/مخفی شود
+    // Toggle visibility if explanation was already fetched
     if (explanation) {
       setShowExplanations((prev) => ({
         ...prev,
@@ -286,25 +276,11 @@ export const QuizQuestionsPage = () => {
         [currentQuestionIndex]: true,
       }));
 
-      const res = await fetch("/api/explain-answer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question: currentQuestion.question,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
+      const explanation = await quizApi.explainAnswer(currentQuestion.question);
 
       setExplanations((prev) => ({
         ...prev,
-        [currentQuestionIndex]: data.explanation || "No explanation available.",
+        [currentQuestionIndex]: explanation || "No explanation available.",
       }));
     } catch (err) {
       console.error("Explain error:", err);
@@ -333,14 +309,14 @@ export const QuizQuestionsPage = () => {
 
         if (!selectedAnswer) return;
 
-        // پیدا کردن جواب صحیح برای همین سوال
+        // Determine correct answer for this question
         const rawAnswer = question.answer;
 
         if (!rawAnswer) return;
 
         const answerString = String(rawAnswer).trim();
 
-        // گزینه‌های همین سوال را normalize می‌کنیم
+        // Normalize options for this question
         const normalizedOptions = (question.options || []).map(
           (option, optionIndex) => {
             if (typeof option === "object" && option !== null) {
@@ -370,13 +346,13 @@ export const QuizQuestionsPage = () => {
 
         let correctAnswer = "";
 
-        // اگر answer خودش A/B/C/D باشد
+        // Check if answer is directly A/B/C/D
         const letterMatch = answerString.match(/^([A-Da-d])(?:[)\.\-:]|\s|$)/);
 
         if (letterMatch) {
           correctAnswer = letterMatch[1].toUpperCase();
         } else {
-          // اگر answer متن کامل گزینه باشد
+          // If answer is the full option text
           const matchingOption = normalizedOptions.find(
             (option) =>
               option.text.trim().toLowerCase() === answerString.toLowerCase(),
@@ -397,7 +373,7 @@ export const QuizQuestionsPage = () => {
         }
       });
 
-      // نتیجه آزمون را موقتاً نگه می‌داریم
+      // Temporarily store quiz statistics in ref
       pendingResultRef.current = {
         correctCount,
         incorrectCount,
@@ -406,12 +382,10 @@ export const QuizQuestionsPage = () => {
         quizData,
       };
 
-      // به Guard اعلام می‌کنیم که این Back، خروج کاربر نیست؛
-      // فقط برای حذف entry اضافی QuizQuestions است.
+      // Signal back handler that this is not an exit, just clearing the extra history entry
       isFinishingQuizRef.current = true;
 
-      // از Guard به QuizQuestions قبلی برمی‌گردیم.
-      // سپس popstate، همان entry را با Quiz-result جایگزین می‌کند.
+      // Pop guard and navigate to Quiz-result via popstate
       window.history.back();
     }
   };
@@ -426,7 +400,7 @@ export const QuizQuestionsPage = () => {
     const isSelected = selectedAnswer === answerLetter;
     const isCorrect = correctAnswer === answerLetter;
 
-    // قبل از Show Answer
+    // Prior to Show Answer
     if (!showAnswer) {
       if (isSelected) {
         return "border-[#6aaee8] bg-[#f3f8fd]";
@@ -435,12 +409,12 @@ export const QuizQuestionsPage = () => {
       return "border-neutral-scale200 bg-neutral-scale100";
     }
 
-    // بعد از Show Answer - جواب درست
+    // After Show Answer - Correct option
     if (isCorrect) {
       return "border-[#63b867] bg-[#f2fbf2]";
     }
 
-    // بعد از Show Answer - جواب غلط انتخاب شده
+    // After Show Answer - Incorrect option selected
     if (isSelected && !isCorrect) {
       return "border-[#e57373] bg-[#fff5f5]";
     }

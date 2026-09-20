@@ -3,14 +3,13 @@ import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
 import ResourseManagment from "@/assets/icons/ResourseManagment.svg";
 import LogOut from "@/assets/icons/Log_Out.svg";
-// import menu from "../assets/icons/menuBlack.svg";
 import Language from "@/assets/icons/Language.svg";
 import PaintBrush from "@/assets/icons/paint-brush.svg";
 import TrashFull from "@/assets/icons/Trash_Full.svg?react";
 import { Mic, Play, Pause } from "lucide-react";
 import { useRef, useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
-import { BACKEND_URL, DGTW_URL } from "@/Services/BackendConfige";
+import { adminApi, userApi, voiceApi } from "@/api";
 
 const settingsItems = [
   {
@@ -55,82 +54,58 @@ export const TeacherSettings = () => {
   const fileInputRef = useRef(null);
 
   const [photoPreview, setPhotoPreview] = useState("");
-  const [settings, setSettings] = useState(null);
-
-  const [recording, setRecording] = useState(false);
-  const [audioStatus, setAudioStatus] = useState("");
-
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const audioChunksRef = useRef([]);
-
+  const [voiceState, setVoiceState] = useState("idle");
   const [recordTime, setRecordTime] = useState(0);
   const [waveform, setWaveform] = useState([]);
-
-  const timerRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-
+  const [audioStatus, setAudioStatus] = useState("");
   const [hasAudio, setHasAudio] = useState(false);
 
-  const [voiceState, setVoiceState] = useState("idle");
-  // idle | recording | recorded | uploading
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const timerRef = useRef(null);
+  const streamRef = useRef(null);
 
+  const [recording, setRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
+
+  const [settings, setSettings] = useState(null);
   const [recordedUrl, setRecordedUrl] = useState("");
 
   const audioRef = useRef(null);
-
   const [isPlaying, setIsPlaying] = useState(false);
 
   const loadSettings = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/settings`);
-
-      const data = await res.json();
-
+      const data = await adminApi.getSettings();
       console.log("settings:", data);
-
       setSettings(data);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load admin settings:", err);
     }
   };
 
   const getUserFiles = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/get-user-files/`);
-
-      const data = await res.json();
-
+      const data = await userApi.getUserFiles();
       console.log("user files:", data);
 
-      if (data.photo_url) {
-        const photoUrl = `${DGTW_URL}${data.photo_url}?t=${Date.now()}`;
-
-        console.log(photoUrl);
-
-        setPhotoPreview(photoUrl);
+      if (data?.photo_url) {
+        setPhotoPreview(data.photo_url);
       }
 
-      if (data.audio_url) {
-        const audioUrl = `${DGTW_URL}${data.audio_url}?t=${Date.now()}`;
-        console.log(audioUrl);
-
-        setRecordedUrl(audioUrl);
-
+      if (data?.audio_url) {
+        setRecordedUrl(data.audio_url);
         setVoiceState("uploaded");
-
         setHasAudio(true);
       } else {
         setRecordedUrl("");
-
         setVoiceState("idle");
-
         setHasAudio(false);
       }
     } catch (error) {
-      console.error(error);
+      console.error("Failed to get user files:", error);
     }
   };
 
@@ -148,23 +123,10 @@ export const TeacherSettings = () => {
 
     setPhotoPreview(URL.createObjectURL(file));
 
-    const fd = new FormData();
-    fd.append("file", file);
-
     try {
-      const res = await fetch(`${BACKEND_URL}/api/upload-photo/`, {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        throw new Error("Upload failed");
-      }
-
-      // await getUserFiles();
-      // console.log("after upload");
+      await userApi.uploadPhoto(file);
     } catch (error) {
-      console.error(error);
+      console.error("Upload photo error:", error);
     }
   };
 
@@ -205,51 +167,24 @@ export const TeacherSettings = () => {
   const uploadAudioFile = async (wavBlob) => {
     setAudioStatus("Uploading...");
 
-    const fd = new FormData();
-
-    fd.append(
-      "file",
-      new File([wavBlob], "teacher_audio.wav", {
-        type: "audio/wav",
-      }),
-    );
-
     try {
-      const res = await fetch(`${BACKEND_URL}/api/upload-audio`, {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        throw new Error("Upload failed");
-      }
-
+      await voiceApi.uploadAudio(wavBlob);
       setAudioStatus("Uploaded");
-
       await getUserFiles();
     } catch (err) {
-      console.error(err);
+      console.error("Upload audio error:", err);
       setAudioStatus("Upload failed");
     }
   };
 
   const deleteAudio = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/delete-audio/`, {
-        method: "DELETE",
-      });
+      await voiceApi.deleteAudio();
 
-      if (!res.ok) {
-        throw new Error("Failed to delete audio");
-      }
-
-      const data = await res.json();
-      console.log("Delete audio response:", data);
-
-      // دوباره وضعیت فایل‌های کاربر را از بک‌اند بگیر
+      // Refresh user files status from backend
       await getUserFiles();
 
-      // پاک کردن audio player قبلی
+      // Clear previous audio player
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -277,7 +212,7 @@ export const TeacherSettings = () => {
     } catch (error) {
       console.error(error);
 
-      // برگرد به حالت آماده ارسال
+      // Reset state to recorded so user can retry
       setVoiceState("recorded");
     }
   };

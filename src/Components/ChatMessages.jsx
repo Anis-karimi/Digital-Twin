@@ -6,7 +6,7 @@ import "@/styles/Allpages.css";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatDate } from "@/utils/dateFormatter";
 
-// تابع تشخیص راست‌چین/فارسی
+// Utility to detect if text requires RTL layout
 const isTextRTL = (text) => {
   return /[\u0600-\u06FF]/.test(text);
 };
@@ -35,7 +35,12 @@ export const ChatMessages = ({ messages, classNames, isLoading, onFeedback }) =>
           <div key={message.id}>
             {showDate && (
               <div className={classNames.dateContainer}>
-                <div className={classNames.dateBadge}>
+                <div
+                  className={`${classNames.dateBadge} ${
+                    isRTL ? "font-vazir" : "font-inter"
+                  }`}
+                  dir={isRTL ? "rtl" : "ltr"}
+                >
                   {formatChatDate(message.date, isRTL)}
                 </div>
               </div>
@@ -94,7 +99,7 @@ export const ChatMessages = ({ messages, classNames, isLoading, onFeedback }) =>
         );
       })}
 
-      {/* 👇 این بخش فقط برای وقتی AI در حال تایپ است */}
+      {/* AI streaming thinking indicator */}
       {isLoading && (
         <div className="flex justify-start w-full px-2 py-1">
           <div

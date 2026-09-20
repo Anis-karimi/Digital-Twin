@@ -69,7 +69,7 @@ export const TeacherNavigationBar = () => {
     if (location.pathname === "/TeacherExams") return "exams";
     if (location.pathname === "/TeacherSettings") return "settings";
 
-    // صفحات داخلی که نباید هیچ Nav Item ای فعال باشد
+    // Internal sub-routes where no primary nav item should be active
     return null;
   };
 

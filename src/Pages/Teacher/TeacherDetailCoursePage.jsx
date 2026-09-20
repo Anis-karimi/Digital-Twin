@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -6,54 +6,15 @@ import Calendar from "@/assets/icons/Calendar_Days.svg?react";
 import Edit from "@/assets/icons/Edit.svg?react";
 import Enable from "@/assets/icons/Enable.svg";
 import Disable from "@/assets/icons/Disable.svg";
-import { useNavigate } from "react-router-dom";
-
-const detailCards = [
-  {
-    id: "course-name",
-    title: "Course name",
-    type: "text-with-action",
-    value: "سیستم عامل",
-    actionIcon: Edit,
-    actionAlt: "Edit course name",
-    cardClassName: "h-[68px]",
-  },
-  {
-    id: "course-start-date",
-    title: "Course start date",
-    type: "date",
-    value: "1 March 2026",
-    icon: Calendar,
-    iconAlt: "Calendar",
-    cardClassName: "h-[68px]",
-  },
-  {
-    id: "course-end-date",
-    title: "Course end date",
-    type: "date",
-    value: "1 July 2026",
-    icon: Calendar,
-    iconAlt: "Calendar",
-    cardClassName: "h-[68px]",
-  },
-  {
-    id: "description",
-    title: "Description",
-    type: "description-with-action",
-    value:
-      "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
-    actionIcon: Edit,
-    actionAlt: "Edit description",
-    cardClassName: "h-[111px]",
-  },
-];
+import { useNavigate, useParams } from "react-router-dom";
+import { coursesApi } from "@/api";
 
 const accessLevels = [
   { id: "private", label: "Private" },
   { id: "public", label: "Public" },
 ];
 
-const InfoCard = ({ card }) => {
+const InfoCard = ({ card, onEdit }) => {
   if (card.type === "text-with-action") {
     return (
       <section
@@ -74,6 +35,7 @@ const InfoCard = ({ card }) => {
         <button
           type="button"
           aria-label={card.actionAlt}
+          onClick={onEdit}
           className="absolute top-2.5 right-[25px] w-4 h-[17px] cursor-pointer"
         >
           <span className="w-full h-full flex">
@@ -94,7 +56,7 @@ const InfoCard = ({ card }) => {
     return (
       <section
         aria-labelledby={card.id}
-        className={`text-left flex w-full relative flex-col items-start gap-3 px-[15px] py-2.5 bg-white  dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden shrink-0 ${card.cardClassName}`}
+        className={`text-left flex w-full relative flex-col items-start gap-3 px-[15px] py-2.5 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden shrink-0 ${card.cardClassName}`}
       >
         <h2
           id={card.id}
@@ -142,6 +104,7 @@ const InfoCard = ({ card }) => {
       <button
         type="button"
         aria-label={card.actionAlt}
+        onClick={onEdit}
         className="absolute top-2.5 right-[25px] w-4 h-[17px] cursor-pointer"
       >
         <span className="w-full h-full flex">
@@ -158,9 +121,8 @@ const InfoCard = ({ card }) => {
   );
 };
 
-const AccessLevelCard = () => {
+const AccessLevelCard = ({ value = "private", onChange }) => {
   const name = useId();
-  const [selectedAccessLevel, setSelectedAccessLevel] = useState("private");
 
   return (
     <section
@@ -178,7 +140,7 @@ const AccessLevelCard = () => {
         <legend className="sr-only">Course access level</legend>
 
         {accessLevels.map((option) => {
-          const checked = selectedAccessLevel === option.id;
+          const checked = value === option.id;
 
           return (
             <label
@@ -191,7 +153,7 @@ const AccessLevelCard = () => {
                   name={name}
                   value={option.id}
                   checked={checked}
-                  onChange={() => setSelectedAccessLevel(option.id)}
+                  onChange={() => onChange?.(option.id)}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
 
@@ -216,8 +178,101 @@ const AccessLevelCard = () => {
 
 export const TeacherDetail = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [courseDetails, setCourseDetails] = useState({
+    name: "سیستم عامل",
+    startDate: "1 March 2026",
+    endDate: "1 July 2026",
+    description:
+      "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
+    accessLevel: "private",
+  });
 
   const navigate = useNavigate();
+  const { courseId = "os" } = useParams();
+
+  // Load course details from API
+  useEffect(() => {
+    let isMounted = true;
+    coursesApi
+      .getCourseDetails(courseId)
+      .then((data) => {
+        if (isMounted && data) {
+          setCourseDetails((prev) => ({
+            ...prev,
+            name: data.name || prev.name,
+            startDate: data.startDate || prev.startDate,
+            endDate: data.endDate || prev.endDate,
+            description: data.description || prev.description,
+            accessLevel: data.accessLevel || prev.accessLevel,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn("Using default course details due to error:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId]);
+
+  const handleAccessLevelChange = async (newLevel) => {
+    setCourseDetails((prev) => ({ ...prev, accessLevel: newLevel }));
+    try {
+      await coursesApi.updateCourseDetails(courseId, { accessLevel: newLevel });
+    } catch (err) {
+      console.error("Failed to update access level:", err);
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    const nextVal = !notificationsEnabled;
+    setNotificationsEnabled(nextVal);
+    try {
+      await coursesApi.updateCourseDetails(courseId, { notificationsEnabled: nextVal });
+    } catch (err) {
+      console.error("Failed to update notifications state:", err);
+    }
+  };
+
+  const detailCards = [
+    {
+      id: "course-name",
+      title: "Course name",
+      type: "text-with-action",
+      value: courseDetails.name,
+      actionIcon: Edit,
+      actionAlt: "Edit course name",
+      cardClassName: "h-[68px]",
+    },
+    {
+      id: "course-start-date",
+      title: "Course start date",
+      type: "date",
+      value: courseDetails.startDate,
+      icon: Calendar,
+      iconAlt: "Calendar",
+      cardClassName: "h-[68px]",
+    },
+    {
+      id: "course-end-date",
+      title: "Course end date",
+      type: "date",
+      value: courseDetails.endDate,
+      icon: Calendar,
+      iconAlt: "Calendar",
+      cardClassName: "h-[68px]",
+    },
+    {
+      id: "description",
+      title: "Description",
+      type: "description-with-action",
+      value: courseDetails.description,
+      actionIcon: Edit,
+      actionAlt: "Edit description",
+      cardClassName: "h-[111px]",
+    },
+  ];
 
   return (
     <main className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden">
@@ -236,18 +291,18 @@ export const TeacherDetail = () => {
             </button>
 
             <h1 className="absolute top-1/2 -translate-y-1/2 left-[59px] fa-title-1 text-white text-center whitespace-nowrap [direction:rtl]">
-              سیستم عامل
+              {courseDetails.name}
             </h1>
           </div>
 
-          {/* Toggle */}
+          {/* Status Switch Toggle */}
           <div className="mr-[15px] w-[30px] h-4 relative">
             <button
               type="button"
               role="switch"
               aria-checked={notificationsEnabled}
               aria-label="Toggle course status"
-              onClick={() => setNotificationsEnabled((prev) => !prev)}
+              onClick={handleToggleNotifications}
               className="absolute inset-0 cursor-pointer"
             >
               <img
@@ -271,7 +326,10 @@ export const TeacherDetail = () => {
             <InfoCard key={card.id} card={card} />
           ))}
 
-          <AccessLevelCard />
+          <AccessLevelCard
+            value={courseDetails.accessLevel}
+            onChange={handleAccessLevelChange}
+          />
 
           <InfoCard card={detailCards[3]} />
         </div>

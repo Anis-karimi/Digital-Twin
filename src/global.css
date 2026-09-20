@@ -40,6 +40,14 @@ body {
     sans-serif;
 }
 
+.font-vazir {
+  font-family: "Vazirmatn", sans-serif !important;
+}
+
+.font-inter {
+  font-family: "Inter", sans-serif !important;
+}
+
 /* =========================================
    YOUR ORIGINAL FILE
 ========================================= */

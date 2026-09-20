@@ -9,7 +9,7 @@ import Edit from "@/assets/icons/Edit.svg?react";
 import Enable from "@/assets/icons/Enable.svg";
 import Disable from "@/assets/icons/Disable.svg";
 import { useNavigate, useParams } from "react-router-dom";
-import { BACKEND_URL } from "@/Services/BackendConfige";
+import { contextsApi } from "@/api";
 import { courses } from "@/data/courses";
 
 const detailCards = [
@@ -241,8 +241,7 @@ export const TeacherCourseDoc = () => {
 
   const loadDocuments = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/contexts`);
-      const data = await res.json();
+      const data = await contextsApi.getDocuments();
 
       const apiFiles = data.map((item, index) => ({
         id: Date.now() + index,
@@ -269,17 +268,7 @@ export const TeacherCourseDoc = () => {
 
     try {
       for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch(`${BACKEND_URL}/api/upload`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Upload failed");
-        }
+        await contextsApi.uploadDocument(file);
       }
 
       const nextFiles = selectedFiles.map((file, index) => ({
@@ -298,16 +287,7 @@ export const TeacherCourseDoc = () => {
 
   const handleDelete = async (file) => {
     try {
-      await fetch(`${BACKEND_URL}/api/contexts/delete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contexts: [file.name],
-        }),
-      });
-
+      await contextsApi.deleteDocuments([file.name]);
       setFiles((prev) => prev.filter((item) => item.id !== file.id));
     } catch (error) {
       console.error("Delete failed:", error);
@@ -401,9 +381,7 @@ export const TeacherCourseDoc = () => {
                   >
                     {/* Document name */}
                     <a
-                      href={`${BACKEND_URL}/tmp/${encodeURIComponent(
-                        file.name,
-                      )}`}
+                      href={contextsApi.getDownloadUrl(file.name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="en-body text-neutral-scale1800 dark:text-neutral-scale70 whitespace-nowrap cursor-pointer"

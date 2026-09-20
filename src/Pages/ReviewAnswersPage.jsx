@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import background from "@/assets/images/Quiz-Background.jpg";
 import { ArrowLeft } from "lucide-react";
+import { quizApi } from "@/api";
 
 export const ReviewAnswers = () => {
   const location = useLocation();
@@ -16,8 +17,7 @@ export const ReviewAnswers = () => {
         return;
       }
 
-      // Back گوشی / مرورگر در Review
-      // → برگرد به Quiz Result
+      // Mobile or browser Back button in Review -> Return to Quiz Result
       isHandlingBackRef.current = true;
 
       navigate("/Quiz-result", {
@@ -43,20 +43,42 @@ export const ReviewAnswers = () => {
   const quizData = location.state?.quizData || [];
   const selectedAnswers = location.state?.selectedAnswers || {};
 
-  // ذخیره وضعیت باز/بسته بودن Explanation برای هر سوال
+  // Store open/close state for explanations per question
   const [openExplanations, setOpenExplanations] = useState({});
+  const [explanations, setExplanations] = useState({});
+  const [loadingExplanations, setLoadingExplanations] = useState({});
 
-  const toggleExplanation = (questionIndex) => {
+  const toggleExplanation = async (questionIndex, question) => {
+    const nextState = !openExplanations[questionIndex];
     setOpenExplanations((prev) => ({
       ...prev,
-      [questionIndex]: !prev[questionIndex],
+      [questionIndex]: nextState,
     }));
+
+    if (nextState && !explanations[questionIndex]) {
+      try {
+        setLoadingExplanations((prev) => ({ ...prev, [questionIndex]: true }));
+        const res = await quizApi.explainAnswer(question);
+        setExplanations((prev) => ({
+          ...prev,
+          [questionIndex]: res.explanation || "No explanation provided.",
+        }));
+      } catch (err) {
+        console.error("Failed to load explanation:", err);
+        setExplanations((prev) => ({
+          ...prev,
+          [questionIndex]: "Failed to retrieve explanation from AI.",
+        }));
+      } finally {
+        setLoadingExplanations((prev) => ({ ...prev, [questionIndex]: false }));
+      }
+    }
   };
 
-  // تبدیل گزینه‌های API به فرمت استاندارد
+  // Convert API options into standard format
   const normalizeOptions = (options = []) => {
     return options.map((option, index) => {
-      // اگر API آبجکت برگرداند
+      // If API returned an object
       if (typeof option === "object" && option !== null) {
         return {
           letter: option.letter || String.fromCharCode(65 + index),
@@ -66,7 +88,7 @@ export const ReviewAnswers = () => {
 
       const optionText = String(option);
 
-      // تشخیص A) / A. / A- / A:
+      // Detect prefix letter patterns like A) / A. / A- / A:
       const letterMatch = optionText.match(/^\s*([A-Da-d])[\)\.\-:]\s*/);
 
       if (letterMatch) {
@@ -83,7 +105,7 @@ export const ReviewAnswers = () => {
     });
   };
 
-  // پیدا کردن جواب صحیح
+  // Find correct answer option
   const getCorrectAnswerLetter = (question, options) => {
     const rawAnswer = question.answer;
 
@@ -91,14 +113,14 @@ export const ReviewAnswers = () => {
 
     const answerString = String(rawAnswer).trim();
 
-    // اگر answer خودش A/B/C/D باشد
+    // If answer is already A/B/C/D letter
     const letterMatch = answerString.match(/^([A-Da-d])(?:[\)\.\-:]|\s|$)/);
 
     if (letterMatch) {
       return letterMatch[1].toUpperCase();
     }
 
-    // اگر answer متن کامل گزینه باشد
+    // If answer is the full string text of the matching option
     const matchingOption = options.find(
       (option) =>
         option.text.trim().toLowerCase() === answerString.toLowerCase(),
@@ -111,7 +133,7 @@ export const ReviewAnswers = () => {
     return answerString.charAt(0).toUpperCase();
   };
 
-  // اگر سوالی وجود نداشت
+  // Empty state if no questions were provided
   if (quizData.length === 0) {
     return (
       <main className="w-full md:w-[360px] min-h-dvh mx-auto relative">
@@ -189,6 +211,8 @@ export const ReviewAnswers = () => {
               const correctAnswer = getCorrectAnswerLetter(question, options);
 
               const explanationOpen = openExplanations[questionIndex] || false;
+              const isLoadingExp = loadingExplanations[questionIndex] || false;
+              const explanationText = explanations[questionIndex] || "";
 
               return (
                 <article
@@ -284,27 +308,32 @@ export const ReviewAnswers = () => {
                   {/* Explain Button */}
                   <button
                     type="button"
-                    onClick={() => toggleExplanation(questionIndex)}
-                    className="w-full h-[38px] mt-[15px] rounded-[8px] bg-white border border-primery-700 text-primery-700 text-[13px] font-medium transition hover:bg-[#f4f9fc]"
+                    onClick={() => toggleExplanation(questionIndex, question)}
+                    className="w-full h-[38px] mt-[15px] rounded-[8px] bg-white border border-primery-700 text-primery-700 text-[13px] font-medium transition hover:bg-[#f4f9fc] flex items-center justify-center gap-2"
                   >
-                    {explanationOpen ? "Hide Explanation" : "Explain Answer"}
+                    {isLoadingExp ? (
+                      <span className="inline-block w-4 h-4 border-2 border-primery-700 border-t-transparent rounded-full animate-spin" />
+                    ) : explanationOpen ? (
+                      "Hide Explanation"
+                    ) : (
+                      "Explain Answer"
+                    )}
                   </button>
 
-                  {/* Temporary Explanation */}
+                  {/* AI Explanation Content */}
                   {explanationOpen && (
                     <div className="mt-[12px] px-3 py-3 rounded-[8px] bg-[#f5f9fc] border border-[#d8e8f1]">
                       <p
-                        className={`text-[13px] text-black leading-[1.5] text-center ${
-                          isPersianText(
-                            "This is a temporary explanation for preview purposes. The real explanation will be provided by the AI when the explanation API is connected.",
-                          )
-                            ? "fa-body"
-                            : "en-body"
+                        className={`text-[13px] text-black leading-[1.5] ${
+                          isPersianText(explanationText)
+                            ? "fa-body text-right"
+                            : "en-body text-left"
                         }`}
+                        dir={isPersianText(explanationText) ? "rtl" : "ltr"}
                       >
-                        This is a temporary explanation for preview purposes.
-                        The real explanation will be provided by the AI when the
-                        explanation API is connected.
+                        {isLoadingExp
+                          ? "Loading explanation from AI..."
+                          : explanationText || "No explanation available."}
                       </p>
                     </div>
                   )}

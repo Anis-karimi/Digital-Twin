@@ -1,6 +1,6 @@
 
 export const RadioGroup = ({
-  options = [], // ✅ جلوگیری از crash
+  options = [], // Default empty array to prevent runtime crash
   name,
   value,
   onChange,

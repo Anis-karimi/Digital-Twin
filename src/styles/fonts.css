@@ -232,3 +232,12 @@
   line-height: var(--EN-inter-caption-6-line-height);
 }
 
+.font-vazir {
+  font-family: "Vazirmatn", sans-serif !important;
+}
+
+.font-inter {
+  font-family: "Inter", sans-serif !important;
+}
+
+

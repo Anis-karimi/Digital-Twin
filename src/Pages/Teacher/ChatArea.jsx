@@ -1,8 +1,7 @@
 import { useId, useState, useRef, useContext, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import axios from "axios";
 import "@/styles/Allpages.css";
-import "@/styles/fonts.css"
+import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
 import { courses } from "@/data/courses";
 import { students } from "@/data/students";
@@ -20,7 +19,7 @@ import Quiz from "@/assets/icons/quiz-icon1.svg?react";
 import Send from "@/assets/icons/Send.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
-import { BACKEND_URL, DGTW_URL } from "@/Services/BackendConfige";
+import { adminApi, chatApi, voiceApi } from "@/api";
 
 
 const avatarColors = [
@@ -84,14 +83,13 @@ export const ChatArea = () => {
     const isStudentChat = location.pathname.startsWith("/ChatArea/student/");
     
     const handleBack = () => {
-      // اگر مسیر برگشت مشخص شده، همان را استفاده کن
+      // If a specific return route was provided in state, navigate there
       if (location.state?.backTo) {
         navigate(location.state.backTo, { replace: true });
         return;
       }
 
-      // اگر چت مربوط به یک دانشجوست،
-      // lessonId همان دانشجو را پیدا کن
+      // If chatting with a student, return to that student's course page
       if (isStudentChat && currentStudent?.lessonId) {
         navigate(`/TeacherLessonsPage/${currentStudent.lessonId}`, {
           replace: true,
@@ -99,7 +97,7 @@ export const ChatArea = () => {
         return;
       }
 
-      // اگر چت Course بود و backTo نداشت
+      // Default fallback for course chats
       navigate("/", { replace: true });
     };
 
@@ -122,26 +120,17 @@ export const ChatArea = () => {
     const [teacherName] = useState("Teacher");
 
     useEffect(() => {
-
         const loadSettings = async () => {
             try {
-
-                const res = await fetch(`${BACKEND_URL}/api/admin/settings`);
-
-                const data = await res.json();
-
+                const data = await adminApi.getSettings();
                 console.log("settings:", data);
-
                 setSettings(data);
-
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load admin settings:", err);
             }
         };
 
-
         loadSettings();
-
     }, []);
 
     useEffect(() => {
@@ -196,12 +185,12 @@ export const ChatArea = () => {
         "text-neutral-scale1800 dark:text-neutral-scale100 text-[14px] leading-[22px] whitespace-pre-wrap break-words",
 
       messageTime:
-        "en-caption-4 text-primery-1000 dark:text-neutral-scale200 text-[10px] leading-[14px]",
+        `${isRTL ? "fa-caption-4 font-vazir" : "en-caption-4 font-inter"} text-primery-1000 dark:text-neutral-scale200 text-[10px] leading-[14px]`,
 
-      dateContainer: "en-caption-4 flex justify-center my-2",
+      dateContainer: `${isRTL ? "fa-caption-4 font-vazir" : "en-caption-4 font-inter"} flex justify-center my-2`,
 
       dateBadge:
-        "en-caption-3 bg-primery-1000 text-neutral-scale100 px-3 py-1 text-[10px] rounded-full",
+        `${isRTL ? "fa-caption-3 font-vazir" : "en-caption-3 font-inter"} bg-primery-1000 text-neutral-scale100 px-3 py-1 text-[10px] rounded-full`,
     };
 
     const currentCourse = courses.find(
@@ -249,21 +238,7 @@ export const ChatArea = () => {
         }));
 
         try {
-            const res = await fetch(`${BACKEND_URL}/api/generate-pdf/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    messages: pdfMessages,
-                }),
-            });
-
-            if (!res.ok) {
-                throw new Error(`HTTP Error: ${res.status}`);
-            }
-
-            const blob = await res.blob();
+            const blob = await chatApi.generatePdf(pdfMessages);
 
             const url = window.URL.createObjectURL(blob);
 
@@ -296,35 +271,15 @@ export const ChatArea = () => {
         setMessage("");
         setIsTyping(false);
 
-        ws.current = new WebSocket("wss://172.20.13.39:8881/ws");
-
-        ws.current.onopen = () => {
-            console.log("[WS] Connected");
-        };
-
-        ws.current.onmessage = (e) => {
-          const data = JSON.parse(e.data);
-
-          const msg = data.text || data.result || data.transcript || "";
-
-          if (msg) {
-            setMessage(msg.trim());
-          }
-
-          console.log("[WS]", msg);
-        };
-
-        ws.current.onerror = (e) => {
-
-            console.error("[WS]", e);
-
-        };
-
-        ws.current.onclose = () => {
-
-            console.log("[WS] Closed");
-
-        };
+        ws.current = voiceApi.createSTTWebSocket({
+            onOpen: () => console.log("[WS] Connected"),
+            onTranscript: (msg) => {
+                if (msg) setMessage(msg);
+                console.log("[WS]", msg);
+            },
+            onError: (e) => console.error("[WS] Error:", e),
+            onClose: () => console.log("[WS] Closed"),
+        });
 
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: true
@@ -457,54 +412,20 @@ export const ChatArea = () => {
             textareaRef.current.parentElement.style.height = "39px";
         }
         try {
-            const chatHistory = [...messages, newMessage].map(msg => ({
-                role: msg.sender === "me" ? "user" : "assistant",
-                content: msg.text
-            }));
+            const answer = await chatApi.askAI({
+                query: userMessage,
+                contexts: "",
+                language,
+                llmModel,
+                courseName: chatTitle,
+                teacherName,
+            });
 
-            const formData = new FormData();
-
-            formData.append("query", userMessage);
-
-            formData.append(
-                "contexts",
-                ""
-            );
-
-            formData.append("language", language);
-
-            formData.append(
-                "llm_model",
-                llmModel
-            );
-
-            formData.append(
-                "courseName",
-                chatTitle
-            );
-
-            formData.append(
-                "teacherName",
-                teacherName
-            );
-
-            const response = await axios.post(
-                `${BACKEND_URL}/api/ask`,
-                formData
-            );
-
-            console.log("API RESPONSE =>", response.data);
-
-            const answer =
-                response.data?.answer ||
-                response.data?.response ||
-                response.data?.message ||
-                response.data?.data ||
-                response.data;
+            console.log("API RESPONSE =>", answer);
 
             const aiMessage = {
               id: Date.now() + 1,
-              text: String(answer || "پاسخی از سرور دریافت نشد."),
+              text: String(answer || (isRTL ? "پاسخی از سرور دریافت نشد." : "No response from server.")),
               sender: "other",
               feedback: null,
               time: new Date().toLocaleTimeString([], {
@@ -576,11 +497,11 @@ export const ChatArea = () => {
         }
 
         try {
-            // ⚡️ ایجاد AudioContext در صورت نیاز
+            // Instantiate AudioContext on demand
             if (!audioCtxRef.current) {
                 audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
                 console.log("AudioContext created:", audioCtxRef.current);
-                // برخی مرورگرها نیاز دارند کاربر interaction انجام داده باشد
+                // Resume AudioContext if suspended by browser autoplay policy
                 if (audioCtxRef.current.state === "suspended") {
                     console.log("Resuming AudioContext...");
                     await audioCtxRef.current.resume();
@@ -588,13 +509,7 @@ export const ChatArea = () => {
                 nextStartRef.current = audioCtxRef.current.currentTime + 0.1;
             }
 
-            const fd = new FormData();
-            fd.append("text", text);
-
-            const res = await fetch(`${DGTW_URL}/tts_stream`, {
-                method: "POST",
-                body: fd
-            });
+            const res = await voiceApi.streamTTS(text);
             if (!res.body) throw new Error("Streaming not supported");
 
             const reader = res.body.getReader();
@@ -613,7 +528,7 @@ export const ChatArea = () => {
                         leftover = new Uint8Array(0);
                     }
 
-                    // پردازش header X-PCM
+                    // Process X-PCM header on initial chunk
                     if (seq === 1) {
                         const txt = new TextDecoder("ascii").decode(chunkBytes.subarray(0, Math.min(128, chunkBytes.length)));
                         if (txt.startsWith("X-PCM:")) {
@@ -632,7 +547,7 @@ export const ChatArea = () => {
                         }
                     }
 
-                    // بررسی leftover برای 4-byte alignment
+                    // Ensure 4-byte alignment for 32-bit float audio buffer
                     const rem = chunkBytes.byteLength % 4;
                     if (rem !== 0) {
                         leftover = chunkBytes.subarray(chunkBytes.byteLength - rem);
@@ -731,10 +646,12 @@ export const ChatArea = () => {
 
             {/* Title */}
             <h1
-              dir={isRTL ? "rtl" : "ltr"}
+              dir={/[\u0600-\u06FF]/.test(chatTitle) ? "rtl" : (isRTL ? "rtl" : "ltr")}
               className={`flex-1 min-w-0 truncate ${
-                isRTL ? "fa-title-3 text-right" : "en-title-3 text-left"
-              } dark:text-neutral-scale70 cursor-pointer`}
+                /[\u0600-\u06FF]/.test(chatTitle)
+                  ? "fa-title-3 font-vazir"
+                  : (isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter")
+              } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70 cursor-pointer`}
               onClick={() => {
                 if (!isStudentChat) {
                   navigate(`/TeacherCourseDoc/${id}`);
@@ -828,51 +745,65 @@ export const ChatArea = () => {
             {isRTL ? "پیام" : "Message"}
           </label>
 
-          <textarea
-            id={composerInputId}
-            ref={textareaRef}
-            dir={isRTL ? "rtl" : "ltr"}
-            value={message}
-            placeholder={isRTL ? "پیام خود را بنویسید..." : "Message..."}
-            rows={1}
-            className={`absolute bottom-0 w-full ${
-              isRTL
-                ? "right-0 pr-[18px] pl-[84px] text-right"
-                : "left-0 pl-[18px] pr-[84px] text-left"
-            } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${
-              isRTL ? "fa-body" : "en-body"
-            } text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
-            style={{
-              minHeight: "37px",
-              resize: "none",
-            }}
-            onChange={(event) => {
-              const value = event.target.value;
+          {/* Dynamic typing font & direction detection */}
+          {(() => {
+            const isTypedPersian = /[\u0600-\u06FF]/.test(message);
+            const textareaFontClass = message
+              ? (isTypedPersian ? "fa-body font-vazir" : "en-body font-inter")
+              : (isRTL ? "fa-body font-vazir" : "en-body font-inter");
+            const textareaDir = message
+              ? (isTypedPersian ? "rtl" : "ltr")
+              : (isRTL ? "rtl" : "ltr");
+            const textareaAlign = message
+              ? (isTypedPersian ? "text-right" : "text-left")
+              : (isRTL ? "text-right" : "text-left");
 
-              setMessage(value);
-              setIsTyping(value.length > 0);
+            return (
+              <textarea
+                id={composerInputId}
+                ref={textareaRef}
+                dir={textareaDir}
+                value={message}
+                placeholder={isRTL ? "پیام خود را بنویسید..." : "Message..."}
+                rows={1}
+                className={`absolute bottom-0 w-full ${
+                  isRTL
+                    ? "right-0 pr-[18px] pl-[84px]"
+                    : "left-0 pl-[18px] pr-[84px]"
+                } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
+                style={{
+                  minHeight: "37px",
+                  resize: "none",
+                }}
+                onChange={(event) => {
+                  const value = event.target.value;
 
-              if (!value && textareaRef.current) {
-                textareaRef.current.style.height = "37px";
-                textareaRef.current.parentElement.style.height = "39px";
-              }
-            }}
-            onInput={(e) => {
-              const el = e.target;
+                  setMessage(value);
+                  setIsTyping(value.length > 0);
 
-              el.style.height = "auto";
-              el.style.height = el.scrollHeight + "px";
+                  if (!value && textareaRef.current) {
+                    textareaRef.current.style.height = "37px";
+                    textareaRef.current.parentElement.style.height = "39px";
+                  }
+                }}
+                onInput={(e) => {
+                  const el = e.target;
 
-              el.parentElement.style.height = el.scrollHeight + "px";
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            disabled={isLoading || recording}
-          />
+                  el.style.height = "auto";
+                  el.style.height = el.scrollHeight + "px";
+
+                  el.parentElement.style.height = el.scrollHeight + "px";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                disabled={isLoading || recording}
+              />
+            );
+          })()}
 
           {/* Send / Mic button */}
           <button
@@ -900,7 +831,7 @@ export const ChatArea = () => {
               <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
             ) : isTyping ? (
               <Send
-                className={`!w-[35px] !h-[35px] ${isRTL ? "rotate-180" : ""}`}
+                className={`!w-[35px] !h-[35px] ${isRTL ? "scale-x-[-1]" : ""}`}
               />
             ) : (
               <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
@@ -934,7 +865,7 @@ export const ChatArea = () => {
         </form>
 
         {/* Footer blur */}
-        <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[55px] flex bg-transparent backdrop-blur-[1px]" />
+        <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[55px] flex bg-transparent backdrop-blur-[1px] pointer-events-none" />
       </main>
     );
 };

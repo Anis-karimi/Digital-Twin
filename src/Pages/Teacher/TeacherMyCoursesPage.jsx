@@ -3,6 +3,7 @@ import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { TeacherNavigationBar } from "@/Components/TeacherNavigationBar";
 import { CoursesOverviewSection } from "@/Components/CoursesOverviewSection";
+import { FooterGlass } from "@/Components/FooterGlass";
 import vector2 from "./vector-2.svg";
 import vector5 from "./vector-5.svg";
 import { MobileFrameLayout } from "@/Components/MobileFrameLayout";

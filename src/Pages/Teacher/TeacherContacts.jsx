@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { ArrowLeft, MoreVertical } from "lucide-react";
+import { ArrowLeft, ArrowRight, MoreVertical } from "lucide-react";
 import Block from "@/assets/icons/Block.svg?react";
-import { useParams } from "react-router-dom";
-import { students } from "@/data/students";
-import { courses } from "@/data/courses";
+import { useParams, useNavigate } from "react-router-dom";
+import { studentsApi, coursesApi } from "@/api";
+import { AppContext } from "@/Context/AppContext";
 
 const avatarColors = [
   "bg-red-400",
@@ -33,15 +33,15 @@ const avatarColors = [
 const getAvatarColor = (id) => {
   let hash = 0;
 
-  for (let i = 0; i < id.length; i++) {
-    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < String(id).length; i++) {
+    hash = String(id).charCodeAt(i) + ((hash << 5) - hash);
   }
 
   return avatarColors[Math.abs(hash) % avatarColors.length];
 };
 
 const getInitials = (title) => {
-  const words = title.trim().split(/\s+/);
+  const words = (title || "").trim().split(/\s+/);
 
   if (words.length >= 2) {
     return `${words[0][0]}\u200C${words[1][0]}`;
@@ -52,80 +52,117 @@ const getInitials = (title) => {
 
 export const TeacherContacts = () => {
   const [openMenu, setOpenMenu] = useState(null);
-
-  // وضعیت ظاهری Block / Unblock
-  // مقدار اولیه از student.blocked خوانده می‌شود
   const [blockedStudents, setBlockedStudents] = useState({});
+  const [lessonStudents, setLessonStudents] = useState([]);
+  const [currentCourse, setCurrentCourse] = useState(null);
 
   const { lessonId } = useParams();
+  const navigate = useNavigate();
+  const { isRTL } = useContext(AppContext);
 
-  const lessonStudents = students.filter(
-    (student) => student.lessonId === lessonId,
-  );
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
-  const currentCourse = courses.find((course) => course.id === lessonId);
+  useEffect(() => {
+    let isMounted = true;
+    studentsApi.getStudentsByCourse(lessonId).then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setLessonStudents(data);
+      }
+    });
+
+    coursesApi.getCourseById(lessonId).then((course) => {
+      if (isMounted) {
+        setCurrentCourse(course);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [lessonId]);
 
   const handleBack = () => {
-    if (typeof window !== "undefined") {
-      window.history.back();
+    navigate(-1);
+  };
+
+  // Toggle student blocked state
+  const handleBlockToggle = async (studentId) => {
+    const isCurrentlyBlocked =
+      blockedStudents[studentId] !== undefined
+        ? blockedStudents[studentId]
+        : Boolean(lessonStudents.find((s) => s.id === studentId)?.blocked);
+
+    const nextBlocked = !isCurrentlyBlocked;
+
+    setBlockedStudents((prev) => ({
+      ...prev,
+      [studentId]: nextBlocked,
+    }));
+    setOpenMenu(null);
+
+    try {
+      await studentsApi.toggleBlockStudent(lessonId, studentId, nextBlocked);
+    } catch (error) {
+      console.error("Failed to toggle block status:", error);
     }
   };
 
-  // تغییر ظاهری وضعیت Block / Unblock
-  const handleBlockToggle = (studentId) => {
-    setBlockedStudents((prev) => ({
-      ...prev,
-      [studentId]:
-        prev[studentId] !== undefined
-          ? !prev[studentId]
-          : !students.find((student) => student.id === studentId)?.blocked,
-    }));
-
-    setOpenMenu(null);
-  };
-
   return (
-    <main className="bg-[#f1f0f0] dark:bg-neutral-scale1400 overflow-hidden w-full md:w-[360px] h-dvh mx-auto flex flex-col">
-      <header className="w-full h-[65px] flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
-        <div className="w-full h-full relative">
-          <button
-            type="button"
-            aria-label="بازگشت"
-            onClick={handleBack}
-            className="absolute top-1/2 -translate-y-1/2 left-[15px] w-6 h-6 text-white"
-          >
-            <ArrowLeft className="!w-6 !h-6" />
-          </button>
+    <main
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 overflow-hidden w-full md:w-[360px] h-dvh mx-auto flex flex-col"
+      dir={isRTL ? "rtl" : "ltr"}
+    >
+      <header className="w-full h-[65px] flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
+        <button
+          type="button"
+          aria-label={isRTL ? "بازگشت" : "Go back"}
+          onClick={handleBack}
+          className="text-white w-6 h-6 cursor-pointer flex items-center justify-center shrink-0"
+        >
+          <BackIcon className="!w-6 !h-6" />
+        </button>
 
-          <h1 className="absolute top-1/2 -translate-y-1/2 left-16 fa-title-1 text-white text-center whitespace-nowrap [direction:rtl]">
-            {currentCourse?.title}
-          </h1>
-        </div>
+        <h1
+          className={`mx-auto text-white text-center whitespace-nowrap font-vazir ${
+            isRTL ? "fa-title-1" : "en-title-1"
+          }`}
+          dir="rtl"
+        >
+          {currentCourse?.title}
+        </h1>
+
+        <div className="w-6 shrink-0" aria-hidden="true" />
       </header>
 
       <section
-        className="w-full min-h-0 px-3 pt-2.5 pb-20"
-        aria-label="فهرست دانشجویان"
+        className="w-full flex-1 min-h-0 px-3 pt-2.5 pb-20"
+        aria-label={isRTL ? "فهرست دانشجویان" : "Students list"}
       >
         <div className="w-full h-full overflow-y-auto rounded-[20px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100">
           <ul className="w-full list-none m-0 p-2.5">
             {lessonStudents.length === 0 ? (
               <li className="w-full h-full min-h-[500px] flex items-center justify-center">
                 <p
-                  className="fa-body-medium text-neutral-scale700 dark:text-neutral-scale200 text-center"
-                  dir="rtl"
+                  className={`text-neutral-scale700 dark:text-neutral-scale200 text-center ${
+                    isRTL ? "fa-body-medium font-vazir" : "en-body-medium font-inter"
+                  }`}
+                  dir={isRTL ? "rtl" : "ltr"}
                 >
-                  هنوز دانشجویی در این درس ثبت‌نام نکرده است.
+                  {isRTL
+                    ? "هنوز دانشجویی در این درس ثبت‌نام نکرده است."
+                    : "No students have enrolled in this course yet."}
                 </p>
               </li>
             ) : (
               lessonStudents.map((student, index) => {
-                // اگر دانشجو قبلاً در state تغییر کرده، همان را استفاده کن
-                // در غیر این صورت مقدار اولیه student.blocked را استفاده کن
                 const isBlocked =
                   blockedStudents[student.id] !== undefined
                     ? blockedStudents[student.id]
                     : student.blocked;
+
+                const displayStatus = isRTL
+                  ? student.statusFa || (student.status === "online" ? "آنلاین" : student.status)
+                  : student.statusEn || student.status;
 
                 return (
                   <li
@@ -146,49 +183,63 @@ export const TeacherContacts = () => {
                         )}`}
                         aria-hidden="true"
                       >
-                        <span className="text-white fa-titles-3">
+                        <span className="text-white fa-titles-3 font-vazir">
                           {getInitials(student.title)}
                         </span>
                       </div>
                     )}
 
-                    {/* Student information */}
-                    <div className="flex-1 min-w-0 ml-3 text-left">
+                    {/* Student information - student names from backend are always Persian and use Vazirmatn */}
+                    <div
+                      className={`flex-1 min-w-0 ${
+                        isRTL ? "mr-3 text-right" : "ml-3 text-left"
+                      }`}
+                    >
                       <div
-                        className="fa-body text-black dark:text-neutral-scale70 truncate"
-                        dir="ltr"
+                        className="fa-body font-vazir text-black dark:text-neutral-scale70 truncate"
+                        dir="rtl"
                       >
                         {student.title}
 
                         {isBlocked && (
                           <Block
-                            className="inline-block ml-1 w-[15px] h-[15px] text-neutral-scale1000 dark:text-neutral-scale300"
+                            className={`inline-block ${
+                              isRTL ? "mr-1.5" : "ml-1.5"
+                            } w-[15px] h-[15px] text-neutral-scale1000 dark:text-neutral-scale300`}
                             aria-hidden="true"
                           />
                         )}
                       </div>
 
                       <div
-                        className={`en-caption-2 truncate mt-0.5 ${
+                        className={`truncate mt-0.5 ${
+                          isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+                        } ${
                           student.status === "online"
                             ? "text-primery-800 dark:text-neutral-scale200"
                             : "text-neutral-scale800 dark:text-neutral-scale200"
                         }`}
-                        dir="ltr"
+                        dir={isRTL ? "rtl" : "ltr"}
                       >
-                        {student.status || ""}
+                        {displayStatus || ""}
                       </div>
                     </div>
 
-                    {/* Three dots */}
+                    {/* Three dots menu button */}
                     <button
                       type="button"
-                      aria-label={`گزینه‌های ${student.title}`}
+                      aria-label={
+                        isRTL
+                          ? `گزینه‌های ${student.title}`
+                          : `Options for ${student.title}`
+                      }
                       aria-expanded={openMenu === index}
                       onClick={() =>
                         setOpenMenu(openMenu === index ? null : index)
                       }
-                      className="w-6 h-6 shrink-0 flex items-center justify-center ml-2"
+                      className={`w-6 h-6 shrink-0 flex items-center justify-center ${
+                        isRTL ? "mr-auto ml-1" : "ml-auto mr-1"
+                      } cursor-pointer`}
                     >
                       <MoreVertical
                         className="w-4 h-4 dark:text-neutral-scale70"
@@ -207,15 +258,18 @@ export const TeacherContacts = () => {
 
                         <div
                           role="menu"
-                          className="absolute right-0 top-5 z-50 w-20 rounded-md bg-white shadow-effects-drop-shadow-bottom"
+                          className={`absolute ${
+                            isRTL ? "left-2" : "right-2"
+                          } top-8 z-50 min-w-[90px] rounded-md bg-white dark:bg-neutral-scale1200 shadow-effects-drop-shadow-bottom border border-neutral-scale100 dark:border-neutral-scale1000 py-1`}
                         >
                           <button
                             type="button"
                             role="menuitem"
                             onClick={() => handleBlockToggle(student.id)}
-                            className="w-full px-1 py-1 flex items-center justify-center gap-1 en-caption-1 text-neutral-scale1000"
+                            className={`w-full px-2.5 py-1.5 flex items-center justify-center gap-1.5 ${
+                              isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                            } text-neutral-scale1000 dark:text-neutral-scale200 hover:bg-neutral-scale80 dark:hover:bg-neutral-scale1100 cursor-pointer`}
                           >
-                            {/* آیکن فقط وقتی دانشجو Block نیست نمایش داده می‌شود */}
                             {!isBlocked && (
                               <Block
                                 aria-hidden="true"
@@ -223,8 +277,15 @@ export const TeacherContacts = () => {
                               />
                             )}
 
-                            {/* متن */}
-                            <span>{isBlocked ? "Unblock" : "Block"}</span>
+                            <span>
+                              {isRTL
+                                ? isBlocked
+                                  ? "رفع مسدودی"
+                                  : "مسدود کردن"
+                                : isBlocked
+                                ? "Unblock"
+                                : "Block"}
+                            </span>
                           </button>
                         </div>
                       </>
@@ -232,7 +293,11 @@ export const TeacherContacts = () => {
 
                     {/* Divider */}
                     {index < lessonStudents.length - 1 && (
-                      <div className="absolute bottom-0 left-[60px] right-0 h-px bg-neutral-scale90 dark:bg-neutral-scale1200" />
+                      <div
+                        className={`absolute bottom-0 ${
+                          isRTL ? "right-[60px] left-0" : "left-[60px] right-0"
+                        } h-px bg-neutral-scale90 dark:bg-neutral-scale1200`}
+                      />
                     )}
                   </li>
                 );
@@ -244,3 +309,4 @@ export const TeacherContacts = () => {
     </main>
   );
 };
+

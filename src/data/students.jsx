@@ -1,5 +1,5 @@
 export const students = [
-  // ==================== سیستم عامل ====================
+  // ==================== Operating System ====================
   {
     id: "100",
     lessonId: "os",
@@ -9,7 +9,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-06T09:30:00Z", // 17 فروردین
+    date: "2026-04-06T09:30:00Z", // April 6
     unreadCount: 1,
     blocked: false,
   },
@@ -22,7 +22,7 @@ export const students = [
     status: "Last seen recently",
     statusFa: "اخیراً آنلاین بوده",
     statusEn: "Last seen recently",
-    date: "2026-02-28T14:15:00Z", // 9 اسفند
+    date: "2026-02-28T14:15:00Z", // February 28
     unreadCount: 0,
     blocked: false,
   },
@@ -35,7 +35,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-02-20T11:00:00Z", // 1 اسفند
+    date: "2026-02-20T11:00:00Z", // February 20
     unreadCount: 0,
     blocked: false,
   },
@@ -48,7 +48,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-02-18T16:45:00Z", // 29 بهمن
+    date: "2026-02-18T16:45:00Z", // February 18
     unreadCount: 0,
     blocked: false,
   },
@@ -61,7 +61,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-14T10:20:00Z", // 25 فروردین
+    date: "2026-04-14T10:20:00Z", // April 14
     unreadCount: 0,
     blocked: true,
   },
@@ -74,7 +74,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-10T15:30:00Z", // 21 فروردین
+    date: "2026-04-10T15:30:00Z", // April 10
     unreadCount: 0,
     blocked: false,
   },
@@ -87,7 +87,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-04T12:00:00Z", // 15 فروردین
+    date: "2026-04-04T12:00:00Z", // April 4
     unreadCount: 0,
     blocked: false,
   },
@@ -100,7 +100,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-13T08:15:00Z", // 24 فروردین
+    date: "2026-04-13T08:15:00Z", // April 13
     unreadCount: 0,
     blocked: false,
   },
@@ -113,7 +113,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-07T13:40:00Z", // 18 فروردین
+    date: "2026-04-07T13:40:00Z", // April 7
     unreadCount: 2,
     blocked: false,
   },
@@ -126,7 +126,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-03T17:10:00Z", // 14 فروردین
+    date: "2026-04-03T17:10:00Z", // April 3
     unreadCount: 0,
     blocked: false,
   },
@@ -139,7 +139,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-03-28T09:00:00Z", // 8 فروردین
+    date: "2026-03-28T09:00:00Z", // March 28
     unreadCount: 0,
     blocked: false,
   },
@@ -152,12 +152,12 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-03-22T19:30:00Z", // 2 فروردین
+    date: "2026-03-22T19:30:00Z", // March 22
     unreadCount: 5,
     blocked: false,
   },
 
-  // ==================== هوش مصنوعی ====================
+  // ==================== Artificial Intelligence ====================
   {
     id: "112",
     lessonId: "ai",
@@ -167,7 +167,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-09T14:00:00Z", // 20 فروردین
+    date: "2026-04-09T14:00:00Z", // April 9
     unreadCount: 1,
     blocked: false,
   },
@@ -180,7 +180,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-04-05T11:25:00Z", // 16 فروردین
+    date: "2026-04-05T11:25:00Z", // April 5
     unreadCount: 0,
     blocked: false,
   },
@@ -193,7 +193,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-03-31T16:50:00Z", // 11 فروردین
+    date: "2026-03-31T16:50:00Z", // March 31
     unreadCount: 0,
     blocked: false,
   },
@@ -206,7 +206,7 @@ export const students = [
     status: "online",
     statusFa: "آنلاین",
     statusEn: "Online",
-    date: "2026-03-25T10:15:00Z", // 5 فروردین
+    date: "2026-03-25T10:15:00Z", // March 25
     unreadCount: 3,
     blocked: false,
   },

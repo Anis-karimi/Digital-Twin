@@ -11,7 +11,7 @@ export function useAnimatedText(active, type = "dots", speed = 600) {
 
         const interval = setInterval(() => {
 
-            // سه نقطه
+            // Cycling ellipses animation
             if (type === "dots") {
                 setValue(prev => {
                     if (prev === "") return ".";
@@ -21,7 +21,7 @@ export function useAnimatedText(active, type = "dots", speed = 600) {
                 });
             }
 
-            // چشمک زدن دایره
+            // Blinking record indicator
             if (type === "record") {
                 setValue(prev => (prev === "🔴" ? "⚪" : "🔴"));
             }

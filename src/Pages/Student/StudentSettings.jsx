@@ -9,7 +9,7 @@ import PaintBrush from "@/assets/icons/paint-brush.svg";
 import { FooterGlass } from "@/Components/FooterGlass";
 import { useRef, useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
-import { BACKEND_URL, DGTW_URL } from "@/Services/BackendConfige";
+import { adminApi, userApi } from "@/api";
 
 const settingsItems = [
   {
@@ -43,12 +43,11 @@ export const StudentSettings = () => {
 
   const loadSettings = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/settings`);
-      const data = await res.json();
+      const data = await adminApi.getSettings();
       console.log("settings:", data);
       setSettings(data);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load admin settings:", err);
     }
   };
 
@@ -65,20 +64,10 @@ export const StudentSettings = () => {
 
     setPhotoPreview(URL.createObjectURL(file));
 
-    const fd = new FormData();
-    fd.append("file", file);
-
     try {
-      const res = await fetch(`${BACKEND_URL}/api/upload-photo/`, {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) {
-        throw new Error("Upload failed");
-      }
+      await userApi.uploadPhoto(file);
     } catch (error) {
-      console.error(error);
+      console.error("Upload photo error:", error);
     }
   };
 

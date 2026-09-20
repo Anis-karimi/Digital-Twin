@@ -1,16 +1,28 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import "@/styles/Allpages.css";
 import AI from "@/assets/images/AI.png";
-import { courses } from "@/data/courses";
+import { coursesApi } from "@/api";
 import { useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatDate } from "@/utils/dateFormatter";
 
 export const HomeChatFeedSection = () => {
-  const chats = courses;
+  const [chats, setChats] = useState([]);
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
+
+  useEffect(() => {
+    let isMounted = true;
+    coursesApi.getCourses().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setChats(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section
@@ -21,9 +33,8 @@ export const HomeChatFeedSection = () => {
       <div className="flex flex-col w-full items-start gap-2.5 p-2.5 pb-[80px]">
         <div className="flex flex-col items-start gap-3 relative self-stretch w-full flex-[0_0_auto]">
           {chats.map((item, index) => {
-            const displayTitle = isRTL
-              ? item.titleFa || item.title
-              : item.titleEn || item.title;
+            // Course names always come from backend in Persian and do not translate on UI language change
+            const displayTitle = item.titleFa || item.title || "سیستم عامل";
 
             return (
               <article
@@ -43,9 +54,10 @@ export const HomeChatFeedSection = () => {
                 {/* Content info */}
                 <div className="flex flex-col flex-1 min-w-0 justify-center">
                   <h2
-                    className={`truncate text-black dark:text-neutral-scale70 ${
-                      isRTL ? "fa-title-3 text-right" : "en-title-3 text-left"
+                    className={`truncate text-black dark:text-neutral-scale70 fa-title-3 font-vazir ${
+                      isRTL ? "text-right" : "text-left"
                     }`}
+                    dir="rtl"
                   >
                     {displayTitle}
                   </h2>

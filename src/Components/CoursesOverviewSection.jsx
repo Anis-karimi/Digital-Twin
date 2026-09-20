@@ -160,7 +160,7 @@ export const CoursesOverviewSection = () => {
               />
               <span
                 dir="rtl"
-                className={`top-[43px] ${category.labelClassName} text-[length:var(--FA-vazirmatn-caption-5-font-size)] text-center leading-[var(--FA-vazirmatn-caption-5-line-height)] whitespace-nowrap absolute font-FA-vazirmatn-caption-5 font-[number:var(--FA-vazirmatn-caption-5-font-weight)] text-black tracking-[var(--FA-vazirmatn-caption-5-letter-spacing)] [direction:rtl] [font-style:var(--FA-vazirmatn-caption-5-font-style)]`}
+                className={`top-[43px] ${category.labelClassName} font-vazir text-[length:var(--FA-vazirmatn-caption-5-font-size)] text-center leading-[var(--FA-vazirmatn-caption-5-line-height)] whitespace-nowrap absolute font-FA-vazirmatn-caption-5 font-[number:var(--FA-vazirmatn-caption-5-font-weight)] text-black tracking-[var(--FA-vazirmatn-caption-5-letter-spacing)] [direction:rtl] [font-style:var(--FA-vazirmatn-caption-5-font-style)]`}
               >
                 {category.name}
               </span>
@@ -203,7 +203,7 @@ export const CoursesOverviewSection = () => {
                 />
                 <span
                   dir="rtl"
-                  className={`absolute ${course.nameClassName} text-[length:var(--FA-vazirmatn-caption-4-font-size)] text-left leading-[var(--FA-vazirmatn-caption-4-line-height)] font-FA-vazirmatn-caption-4 font-[number:var(--FA-vazirmatn-caption-4-font-weight)] text-black tracking-[var(--FA-vazirmatn-caption-4-letter-spacing)] [direction:rtl] [font-style:var(--FA-vazirmatn-caption-4-font-style)]`}
+                  className={`absolute ${course.nameClassName} font-vazir text-[length:var(--FA-vazirmatn-caption-4-font-size)] text-left leading-[var(--FA-vazirmatn-caption-4-line-height)] font-FA-vazirmatn-caption-4 font-[number:var(--FA-vazirmatn-caption-4-font-weight)] text-black tracking-[var(--FA-vazirmatn-caption-4-letter-spacing)] [direction:rtl] [font-style:var(--FA-vazirmatn-caption-4-font-style)]`}
                 >
                   {course.name}
                 </span>

@@ -30,13 +30,13 @@ export const formatChatDate = (timestamp, isRTL = true) => {
     }
 
     if (isRTL) {
-      // Persian Solar Hijri (شمسی)
+      // Persian Solar Hijri calendar formatting
       return new Intl.DateTimeFormat("fa-IR", {
         day: "numeric",
         month: "long",
       }).format(dateObj);
     } else {
-      // Gregorian (میلادی)
+      // Gregorian calendar formatting
       return new Intl.DateTimeFormat("en-US", {
         month: "short",
         day: "numeric",

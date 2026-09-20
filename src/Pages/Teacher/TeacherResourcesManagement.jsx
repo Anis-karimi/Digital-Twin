@@ -1,15 +1,28 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import courseImage from "@/assets/images/course.jpg";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
-import { courses } from "@/data/courses";
+import { coursesApi } from "@/api";
 import { AppContext } from "@/Context/AppContext";
 
 export const TeacherResource = () => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
+  const [courses, setCourses] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    coursesApi.getCourses().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setCourses(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <main

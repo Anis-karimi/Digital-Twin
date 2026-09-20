@@ -21,26 +21,25 @@ export const QuizResultPage = ({ onAction }) => {
   const isLeavingResultRef = useRef(false);
 
   useEffect(() => {
-    // یک entry جدید برای جلوگیری از خروج با Back می‌سازیم
+    // Create a new entry to prevent exiting via browser Back button
     navigate(location.pathname + location.search + location.hash, {
       state: location.state,
     });
 
     const handlePopState = () => {
-      // اگر خروج از طریق دکمه Back to Chat انجام شده،
-      // اجازه بده navigation عادی انجام شود.
+      // If exiting through "Back to Chat" button, allow standard navigation
       if (isLeavingResultRef.current) {
         isLeavingResultRef.current = false;
         return;
       }
 
-      // وقتی خودمان history.forward() را اجرا می‌کنیم
+      // When history.forward() was triggered programmatically
       if (isHandlingBackRef.current) {
         isHandlingBackRef.current = false;
         return;
       }
 
-      // Back گوشی یا مرورگر → هیچ اتفاقی نیفتد
+      // Mobile or browser Back button -> keep user on the page
       isHandlingBackRef.current = true;
       window.history.forward();
     };
@@ -61,8 +60,7 @@ export const QuizResultPage = ({ onAction }) => {
       try {
         const returnData = JSON.parse(savedReturn);
 
-        // Result + Result Guard را از history خارج می‌کنیم
-        // و مستقیماً به Chat قبلی برمی‌گردیم.
+        // Remove Result + Result Guard from history and navigate back to Chat
         window.history.go(-2);
 
         sessionStorage.removeItem("quizReturnToChat");
@@ -85,21 +83,21 @@ export const QuizResultPage = ({ onAction }) => {
 
   const [statusMessage, setStatusMessage] = useState("");
 
-  // دریافت نتیجه از QuizQuestionsPage
+  // Retrieve quiz evaluation stats from QuizQuestionsPage
   const {
     correctCount = 0,
     incorrectCount = 0,
     totalQuestions = 0,
   } = location.state || {};
 
-  // مجموع جواب‌های داده‌شده
+  // Total answered questions
   const totalAnswers = correctCount + incorrectCount;
 
-  // درصد درست
+  // Percentage of correct answers
   const correctPercentage =
     totalAnswers > 0 ? Math.round((correctCount / totalAnswers) * 100) : 0;
 
-  // درصد غلط
+  // Percentage of incorrect answers
   const incorrectPercentage =
     totalAnswers > 0 ? Math.round((incorrectCount / totalAnswers) * 100) : 0;
 
@@ -323,7 +321,7 @@ export const QuizResultPage = ({ onAction }) => {
           td.dir = "rtl";
           td.style.textAlign = "right";
 
-          // استفاده از فونت فارسی خود صفحه
+          // Use native Persian typography for RTL text
           td.style.fontFamily = "Vazirmatn, Arial, sans-serif";
         } else {
           td.dir = "ltr";
@@ -358,7 +356,7 @@ export const QuizResultPage = ({ onAction }) => {
       await document.fonts.ready;
     }
 
-    // کمی زمان برای رندر شدن فونت فارسی
+    // Brief delay to ensure Persian fonts are rendered properly
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     // --------------------------------------------------

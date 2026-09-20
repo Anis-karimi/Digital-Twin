@@ -104,13 +104,13 @@ export const TeacherLessonsPage = () => {
       <div className="relative">
         {isMenuOpen && (
           <>
-            {/* بک‌دراپ */}
+            {/* Backdrop */}
             <div
               className="fixed inset-0 z-40"
               onClick={() => setIsMenuOpen(false)}
             />
 
-            {/* منو */}
+            {/* Menu */}
             <div
               className={`absolute top-3 ${
                 isRTL ? "left-4" : "right-4"

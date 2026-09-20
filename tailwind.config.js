@@ -72,6 +72,8 @@ module.exports = {
         "warning-900": "var(--warning-900)",
       },
       fontFamily: {
+        vazir: ["Vazirmatn", "sans-serif"],
+        inter: ["Inter", "sans-serif"],
         "EN-inter-body-body": "var(--EN-inter-body-body-font-family)",
         "EN-inter-body-body-large":
           "var(--EN-inter-body-body-large-font-family)",

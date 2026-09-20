@@ -7,9 +7,9 @@ export const MessageBubble = ({ text, time, isMine, classNames }) => {
 
   const textClass = isPersian ? "text-right font-vazir" : "text-left font-inter";
 
-  // تبدیل Markdown به متن بولد
+  // Parse basic Markdown bold syntax and line breaks
   const formatText = (text) => {
-    // حذف ستاره‌های مربوط به bullet list
+    // Strip bullet asterisks from lists
     text = text.replace(/(^|\n)\s*\\?\*\s+/g, "$1");
 
     const paragraphs = text.split(/\n+/);

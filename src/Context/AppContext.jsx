@@ -3,11 +3,11 @@ import { createContext, useState, useEffect } from "react";
 export const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const [role, setRole] = useState("teacher"); // پیش‌فرض: استاد
+  const [role, setRole] = useState("teacher"); // Default: teacher
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem("language") || "fa";
   });
-  const [selectedResources, setSelectedResources] = useState([]); // منابع انتخاب شده استاد
+  const [selectedResources, setSelectedResources] = useState([]); // Teacher selected resource documents
 
   const isRTL = language === "fa";
 
