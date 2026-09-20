@@ -1,23 +1,28 @@
+import { useContext } from "react";
 import ClearHistory from "@/assets/icons/broom-cleaning-icon.svg?react";
 import Search from "@/assets/icons/Search-Black.svg?react";
 import Download from "@/assets/icons/Download.svg?react";
+import { AppContext } from "@/Context/AppContext";
 
 const menuItems = [
   {
     id: "search",
     label: "Search",
+    labelFa: "جستجو",
     type: "icon",
     Icon: Search,
   },
   {
     id: "download-pdf",
     label: "Download PDF",
+    labelFa: "دانلود PDF",
     type: "icon",
     Icon: Download,
   },
   {
     id: "clear-history",
     label: "Clear History",
+    labelFa: "پاک کردن تاریخچه",
     type: "icon",
     Icon: ClearHistory,
   },
@@ -29,6 +34,8 @@ export const ChatDropdownMenu = ({
   onClearHistory,
   className = "",
 }) => {
+  const { isRTL } = useContext(AppContext);
+
   const handlers = {
     search: onSearch,
     "download-pdf": onDownloadPdf,
@@ -36,44 +43,36 @@ export const ChatDropdownMenu = ({
   };
 
   return (
-    <div className={`flex min-h-[102px] w-full min-w-[132px] ${className}`}>
-      <div className="relative flex h-[102px] w-[132px] flex-col items-start gap-2.5 rounded-2xl bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 py-1.5 pl-2.5 pr-2 shadow-[0px_1px_5px_#00000040]">
-        <div className="relative mr-[-3.00px] flex w-[117px] flex-[0_0_auto] flex-col items-start gap-[15px]">
+    <div
+      className={`flex min-h-[102px] w-full min-w-[140px] ${className}`}
+      dir={isRTL ? "rtl" : "ltr"}
+    >
+      <div className="relative flex min-h-[102px] w-[140px] flex-col items-start gap-2.5 rounded-2xl bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 py-2 px-3 shadow-[0px_1px_5px_#00000040]">
+        <div className="flex w-full flex-col items-start gap-[12px]">
           {menuItems.map((item) => {
             const handleClick = handlers[item.id];
             const Icon = item.Icon;
-
-            if (item.type === "icon") {
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-label={item.label}
-                  onClick={handleClick}
-                  className="relative h-5 w-[115px] cursor-pointer text-left"
-                >
-                  <Icon className="h-5 w-5 text-black dark:text-neutral-scale70" />
-
-                  <span className="absolute left-[35px] top-0.5 text-center en-caption-2 whitespace-nowrap text-black dark:text-neutral-scale70">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            }
+            const displayLabel = isRTL ? item.labelFa : item.label;
 
             return (
               <button
                 key={item.id}
                 type="button"
-                aria-label={item.label}
+                aria-label={displayLabel}
                 onClick={handleClick}
-                className="relative flex-[0_0_auto] cursor-pointer"
+                className={`flex items-center gap-2.5 w-full cursor-pointer ${
+                  isRTL ? "flex-row text-right" : "flex-row text-left"
+                }`}
               >
-                <img
-                  className="relative flex-[0_0_auto]"
-                  alt={item.alt}
-                  src={item.src}
-                />
+                <Icon className="h-4 w-4 shrink-0 text-black dark:text-neutral-scale70" />
+
+                <span
+                  className={`${
+                    isRTL ? "fa-caption-2" : "en-caption-2"
+                  } whitespace-nowrap text-black dark:text-neutral-scale70`}
+                >
+                  {displayLabel}
+                </span>
               </button>
             );
           })}
@@ -82,4 +81,3 @@ export const ChatDropdownMenu = ({
     </div>
   );
 };
-

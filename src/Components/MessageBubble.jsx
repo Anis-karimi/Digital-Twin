@@ -5,7 +5,7 @@ export const MessageBubble = ({ text, time, isMine, classNames }) => {
 
   const dir = isPersian ? "rtl" : "ltr";
 
-  const textClass = isPersian ? "text-right" : "text-left";
+  const textClass = isPersian ? "text-right font-vazir" : "text-left font-inter";
 
   // تبدیل Markdown به متن بولد
   const formatText = (text) => {
@@ -32,17 +32,13 @@ export const MessageBubble = ({ text, time, isMine, classNames }) => {
   };
 
   return (
-    <div
-      className={isMine ? classNames.myMessageRow : classNames.otherMessageRow}
-    >
-      <div className={isMine ? classNames.myBubble : classNames.otherBubble}>
-        <p className={`${classNames.messageText} ${textClass}`} dir={dir}>
-          {formatText(text)}
-        </p>
+    <div className={isMine ? classNames.myBubble : classNames.otherBubble}>
+      <p className={`${classNames.messageText} ${textClass}`} dir={dir}>
+        {formatText(text)}
+      </p>
 
-        <div className="flex justify-end mt-1">
-          <span className={classNames.messageTime}>{time}</span>
-        </div>
+      <div className="flex justify-end mt-1" dir="ltr">
+        <span className={classNames.messageTime}>{time}</span>
       </div>
     </div>
   );
