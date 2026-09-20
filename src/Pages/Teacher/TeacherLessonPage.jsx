@@ -3,12 +3,10 @@ import "@/styles/fonts.css";
 import { useState } from "react";
 import { HomeDropdownMenu } from "@/Components/HomeDropdownMenu";
 import { StudentsChatFeedSection } from "@/Components/StudentsChatFeedSection";
-import { TeacherNavigationBar } from "@/Components/TeacherNavigationBar";
 import { LessonsNavBar } from "@/Components/LessonsNavBar";
 import menu from "@/assets/icons/menu.svg?react";
 import Bell from "@/assets/icons/Bell.svg?react";
 import user from "@/assets/icons/user2.svg?react";
-import { FooterGlass } from "@/Components/FooterGlass";
 import { useNavigate, useParams } from "react-router-dom";
 
 const headerActions = [

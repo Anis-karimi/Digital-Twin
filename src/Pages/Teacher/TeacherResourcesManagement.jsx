@@ -1,4 +1,5 @@
-import { ChevronRight, ArrowLeft, NotebookPen, GraduationCap, Library } from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
+import courseImage from "@/assets/images/course.jpg";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +22,7 @@ export const TeacherResource = () => {
           </button>
 
           <h1 className="absolute top-1/2 -translate-y-1/2 left-16 en-title-1 text-neutral-scale70 text-center whitespace-nowrap">
-            Resourse Managmant
+            Courses Information
           </h1>
         </div>
       </header>
@@ -45,20 +46,45 @@ export const TeacherResource = () => {
                   key={course.id}
                   type="button"
                   aria-label={`Select course ${course.title}`}
-                  className="flex items-center rounded-[7px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200 justify-between w-full cursor-pointer px-[12px] py-[10px]"
+                  className="flex items-center rounded-[10px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200 justify-between w-full cursor-pointer px-[12px] py-[12px] text-left"
                   onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 flex items-center justify-center rounded-[7px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200">
-                      <NotebookPen className="!w-4 !h-4 text-neutral-scale1800 dark:text-neutral-scale70" />
+                  <div className="flex items-center gap-[14px] min-w-0">
+                    {/* Course Image */}
+                    <div className="w-[75px] h-[75px] flex-shrink-0 overflow-hidden rounded-[9px] border border-neutral-scale200 bg-neutral-scale100 dark:bg-neutral-scale1100">
+                      <img
+                        src={course.photo_url || courseImage}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     </div>
 
-                    <span className="fa-body text-neutral-scale1800 dark:text-neutral-scale70 whitespace-nowrap [direction:rtl]">
-                      {course.title}
-                    </span>
+                    {/* Course Information */}
+                    <div className="flex flex-col min-w-0 gap-[3px] [direction:rtl]">
+                      {/* Title */}
+                      <span className="fa-body-medium text-neutral-scale1800 dark:text-neutral-scale70 truncate">
+                        {course.title}
+                      </span>
+
+                      {/* Degree */}
+                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale300">
+                        کارشناسی/مهندسی کامپیوتر
+                      </span>
+
+                      {/* Privacy */}
+                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale300">
+                        خصوصی
+                      </span>
+
+                      {/* Description */}
+                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0">
+                        {course.description ||
+                          "این دوره شامل مطالب آموزشی و منابع مرتبط با درس می‌باشد و برای یادگیری بهتر مطالب طراحی شده است."}
+                      </span>
+                    </div>
                   </div>
 
-                  <ChevronRight className="!w-4 !h-4 text-neutral-scale1800 dark:text-neutral-scale70" />
+                  <ChevronRight className="!w-4 !h-4 flex-shrink-0 text-neutral-scale1800 dark:text-neutral-scale70 ml-[8px]" />
                 </button>
               ))}
             </div>

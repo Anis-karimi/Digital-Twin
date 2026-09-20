@@ -104,7 +104,7 @@ export const TeacherContacts = () => {
       </header>
 
       <section
-        className="w-full min-h-0 px-3 pt-2.5 pb-4"
+        className="w-full min-h-0 px-3 pt-2.5 pb-20"
         aria-label="فهرست دانشجویان"
       >
         <div className="w-full h-full overflow-y-auto rounded-[20px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100">
@@ -137,11 +137,11 @@ export const TeacherContacts = () => {
                       <img
                         src={student.photo_url}
                         alt={student.title}
-                        className="w-12 h-12 rounded-full object-cover shrink-0"
+                        className="w-11 h-11 rounded-full object-cover shrink-0"
                       />
                     ) : (
                       <div
-                        className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center ${getAvatarColor(
+                        className={`w-11 h-11 rounded-full shrink-0 flex items-center justify-center ${getAvatarColor(
                           student.id,
                         )}`}
                         aria-hidden="true"
@@ -155,21 +155,21 @@ export const TeacherContacts = () => {
                     {/* Student information */}
                     <div className="flex-1 min-w-0 ml-3 text-left">
                       <div
-                        className="fa-title-3 text-black dark:text-neutral-scale70 truncate"
+                        className="fa-body text-black dark:text-neutral-scale70 truncate"
                         dir="ltr"
                       >
                         {student.title}
 
                         {isBlocked && (
                           <Block
-                            className="inline-block ml-1 text-neutral-scale1000 dark:text-neutral-scale300"
+                            className="inline-block ml-1 w-[15px] h-[15px] text-neutral-scale1000 dark:text-neutral-scale300"
                             aria-hidden="true"
                           />
                         )}
                       </div>
 
                       <div
-                        className={`en-caption-1 truncate mt-0.5 ${
+                        className={`en-caption-2 truncate mt-0.5 ${
                           student.status === "online"
                             ? "text-primery-800 dark:text-neutral-scale200"
                             : "text-neutral-scale800 dark:text-neutral-scale200"
@@ -191,7 +191,7 @@ export const TeacherContacts = () => {
                       className="w-6 h-6 shrink-0 flex items-center justify-center ml-2"
                     >
                       <MoreVertical
-                        className="w-5 h-5 dark:text-neutral-scale70"
+                        className="w-4 h-4 dark:text-neutral-scale70"
                         aria-hidden="true"
                       />
                     </button>
@@ -207,16 +207,21 @@ export const TeacherContacts = () => {
 
                         <div
                           role="menu"
-                          className="absolute right-0 top-5 z-50 w-24 rounded-md bg-white shadow-effects-drop-shadow-bottom"
+                          className="absolute right-0 top-5 z-50 w-20 rounded-md bg-white shadow-effects-drop-shadow-bottom"
                         >
                           <button
                             type="button"
                             role="menuitem"
                             onClick={() => handleBlockToggle(student.id)}
-                            className="w-full px-1 py-1 flex items-center justify-center gap-1  en-body text-neutral-scale1000"
+                            className="w-full px-1 py-1 flex items-center justify-center gap-1 en-caption-1 text-neutral-scale1000"
                           >
                             {/* آیکن فقط وقتی دانشجو Block نیست نمایش داده می‌شود */}
-                            {!isBlocked && <Block aria-hidden="true" />}
+                            {!isBlocked && (
+                              <Block
+                                aria-hidden="true"
+                                className="w-[15px] h-[15px]"
+                              />
+                            )}
 
                             {/* متن */}
                             <span>{isBlocked ? "Unblock" : "Block"}</span>

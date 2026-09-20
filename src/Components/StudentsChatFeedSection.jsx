@@ -98,13 +98,13 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
 
                   {item.photo_url ? (
                     <img
-                      className="absolute top-0 left-0 w-[50px] h-[50px] rounded-full object-cover"
+                      className="absolute top-0 left-0 w-[47px] h-[47px] rounded-full object-cover"
                       alt={item.title}
                       src={item.photo_url}
                     />
                   ) : (
                     <div
-                      className={`absolute top-0 left-0 w-[50px] h-[50px] rounded-full flex items-center justify-center ${getAvatarColor(
+                      className={`absolute top-0 left-0 w-[47px] h-[47px] rounded-full flex items-center justify-center ${getAvatarColor(
                         item.id,
                       )} text-white font-semibol`}
                     >

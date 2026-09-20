@@ -31,7 +31,7 @@ export const HomeChatFeedSection = () => {
                 )}
 
                 <img
-                  className="absolute top-0 left-0 w-[50px] h-[50px] rounded-full object-cover"
+                  className="absolute top-0 left-0 w-[47px] h-[47px] rounded-full object-cover"
                   alt={item.title}
                   src={AI}
                 />
@@ -48,7 +48,7 @@ export const HomeChatFeedSection = () => {
                   whitespace-nowrap
                   text-ellipsis
 
-                  ${isPersianTitle ? "fa-title-3 text-right" : "en-title-3 text-left"}
+                  ${isPersianTitle ? "fa-body text-right" : "en-body text-left"}
 
                    text-black dark:text-neutral-scale70
                   

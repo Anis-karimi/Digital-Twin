@@ -15,8 +15,8 @@ import { BACKEND_URL, DGTW_URL } from "@/Services/BackendConfige";
 
 const settingsItems = [
   {
-    id: "resource-management",
-    title: "Resourse Managmant",
+    id: "Courses Information",
+    title: "Courses Information",
     subtitle: "Upload resources",
     path: "/TeacherResource", // مسیر صفحه
     icon: (

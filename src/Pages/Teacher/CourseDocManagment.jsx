@@ -333,7 +333,7 @@ export const TeacherCourseDoc = () => {
           </h1>
 
           {/* Course Status Toggle */}
-          <div className="mr-[15px] w-[30px] h-4 relative">
+          <div className="absolute right-[15px] top-1/2 -translate-y-1/2 w-[30px] h-4">
             <button
               type="button"
               role="switch"
@@ -355,22 +355,13 @@ export const TeacherCourseDoc = () => {
 
       {/* All Course Content */}
       <section
-        className="w-full flex-1 min-h-0 px-3.5 pt-2.5 pb-5"
+        className="w-full flex-1 min-h-0 px-3.5 pt-2.5 pb-20 overflow-y-auto overflow-x-hidden"
         aria-label="Course content"
       >
-        <div className="w-full h-full flex flex-col gap-2.5 overflow-y-auto overflow-x-hidden">
-          {/* Course Details */}
-          {detailCards.slice(0, 3).map((card) => (
-            <InfoCard key={card.id} card={card} />
-          ))}
-
-          <AccessLevelCard />
-
-          <InfoCard card={detailCards[3]} />
-
+        <div className="w-full flex flex-col gap-2.5">
           {/* Course Documents */}
           <section
-            className="w-full shrink-0 mt-[5px] mb-[20px]"
+            className="w-full shrink-0 mt-[5px]"
             aria-label="Course documents"
           >
             <div className="relative w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[25px]">
@@ -434,6 +425,15 @@ export const TeacherCourseDoc = () => {
               </div>
             </div>
           </section>
+
+          {/* Course Details */}
+          {detailCards.slice(0, 3).map((card) => (
+            <InfoCard key={card.id} card={card} />
+          ))}
+
+          <AccessLevelCard />
+
+          <InfoCard card={detailCards[3]} />
         </div>
       </section>
     </main>

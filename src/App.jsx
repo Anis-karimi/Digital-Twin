@@ -7,7 +7,6 @@ import { Language } from "@/Pages/Language";
 import { Theme } from "@/Pages/Theme";
 import { TeacherCourseDoc } from "@/Pages/Teacher/CourseDocManagment";
 import { TeacherNotification } from "@/Pages/Teacher/TeacherNotification";
-import { TeacherDetail } from "@/Pages/Teacher/TeacherDetailCoursePage";
 import { TeacherHome } from "@/Pages/Teacher/TeacherHome";
 import { TeacherSettings } from "@/Pages/Teacher/TeacherSettings";
 import { ChatArea } from "@/Pages/Teacher/ChatArea";
@@ -56,8 +55,6 @@ function App() {
                 path="/TeacherNotification"
                 element={<TeacherNotification />}
               />
-
-              <Route path="/CourseDetail" element={<TeacherDetail />} />
 
               <Route path="/TeacherSettings" element={<TeacherSettings />} />
 
