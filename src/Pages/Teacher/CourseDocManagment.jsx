@@ -1,11 +1,11 @@
+
 import { useId, useRef, useState, useEffect } from "react";
 import Trash_Full from "@/assets/icons/Trash_Full.svg?react";
 import File_Add from "@/assets/icons/File_Add.svg?react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil, Save } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import Calendar from "@/assets/icons/Calendar_Days.svg?react";
-import Edit from "@/assets/icons/Edit.svg?react";
 import Enable from "@/assets/icons/Enable.svg";
 import Disable from "@/assets/icons/Disable.svg";
 import { useNavigate, useParams } from "react-router-dom";
@@ -16,29 +16,27 @@ const detailCards = [
   {
     id: "course-name",
     title: "Course name",
-    type: "text-with-action",
+    type: "text",
     value: "سیستم عامل",
-    actionIcon: Edit,
-    actionAlt: "Edit course name",
-    cardClassName: "h-[68px]",
+    cardClassName: "h-[75px]",
   },
   {
     id: "course-start-date",
     title: "Course start date",
     type: "date",
-    value: "1 March 2026",
+    value: "2026-03-01",
     icon: Calendar,
     iconAlt: "Calendar",
-    cardClassName: "h-[68px]",
+    cardClassName: "h-[75px]",
   },
   {
     id: "course-end-date",
     title: "Course end date",
     type: "date",
-    value: "1 July 2026",
+    value: "2026-07-01",
     icon: Calendar,
     iconAlt: "Calendar",
-    cardClassName: "h-[68px]",
+    cardClassName: "h-[75px]",
   },
   {
     id: "description",
@@ -46,7 +44,7 @@ const detailCards = [
     type: "description-with-action",
     value:
       "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
-    actionIcon: Edit,
+    actionIcon: Pencil,
     actionAlt: "Edit description",
     cardClassName: "h-[111px]",
   },
@@ -57,7 +55,45 @@ const accessLevels = [
   { id: "public", label: "Public" },
 ];
 
+const formatDate = (date) => {
+  if (!date) return "Select date";
+
+  const [year, month, day] = date.split("-");
+
+  const dateObject = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+  );
+
+  return dateObject.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 const InfoCard = ({ card }) => {
+  if (card.type === "text") {
+    return (
+      <section
+        aria-labelledby={card.id}
+        className={`text-left flex w-full relative flex-col items-start gap-3 px-[15px] py-2.5 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden shrink-0 ${card.cardClassName}`}
+      >
+        <h2
+          id={card.id}
+          className="relative self-stretch mt-[-1px] en-body-medium text-primery-800 dark:text-neutral-scale70"
+        >
+          {card.title}
+        </h2>
+
+        <p className="relative self-stretch h-[61px] fa-caption-1 text-neutral-scale1300 dark:text-neutral-scale100 [direction:rtl]">
+          {card.value}
+        </p>
+      </section>
+    );
+  }
+
   if (card.type === "text-with-action") {
     return (
       <section
@@ -66,7 +102,7 @@ const InfoCard = ({ card }) => {
       >
         <h2
           id={card.id}
-          className="relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70"
+          className="relative self-stretch mt-[-1px] en-body-medium text-primery-800 dark:text-neutral-scale70"
         >
           {card.title}
         </h2>
@@ -95,6 +131,8 @@ const InfoCard = ({ card }) => {
   }
 
   if (card.type === "date") {
+    const [selectedDate, setSelectedDate] = useState(card.value || "");
+
     return (
       <section
         aria-labelledby={card.id}
@@ -102,26 +140,33 @@ const InfoCard = ({ card }) => {
       >
         <h2
           id={card.id}
-          className="relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70"
+          className="relative self-stretch mt-[-1px] en-body-medium text-primery-800 dark:text-neutral-scale70"
         >
           {card.title}
         </h2>
 
-        <div
-          className="absolute top-[39px] left-3 w-[22px] h-[21px]"
-          aria-hidden="true"
-        >
-          {(() => {
-            const Icon = card.icon;
+        <div className="absolute top-[39px] left-3 w-[22px] h-[21px]">
+          <label className="relative block w-full h-full cursor-pointer">
+            {(() => {
+              const Icon = card.icon;
 
-            return (
-              <Icon className="absolute w-[83.33%] h-[91.67%] top-[8.33%] left-[16.67%] text-neutral-scale1000 dark:text-neutral-scale70" />
-            );
-          })()}
+              return (
+                <Icon className="absolute w-[83.33%] h-[91.67%] top-[8.33%] left-[16.67%] text-neutral-scale1000 dark:text-neutral-scale70 pointer-events-none" />
+              );
+            })()}
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              aria-label={card.title}
+            />
+          </label>
         </div>
 
-        <p className="absolute top-[41px] left-11 w-[102px] en-caption-1 text-neutral-scale1800 dark:text-neutral-scale70">
-          {card.value}
+        <p className="absolute top-[41px] left-11 w-[180px] en-caption-1 text-neutral-scale1800 dark:text-neutral-scale70 whitespace-nowrap">
+          {formatDate(selectedDate)}
         </p>
       </section>
     );
@@ -134,7 +179,7 @@ const InfoCard = ({ card }) => {
     >
       <h2
         id={card.id}
-        className="relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70"
+        className="relative self-stretch mt-[-1px] en-body-medium text-primery-800 dark:text-neutral-scale70"
       >
         {card.title}
       </h2>
@@ -173,7 +218,7 @@ const AccessLevelCard = () => {
     >
       <h2
         id="course-access-level"
-        className="relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70"
+        className="relative self-stretch mt-[-1px] en-body-medium text-primery-800 dark:text-neutral-scale70"
       >
         Course access level
       </h2>
@@ -373,9 +418,9 @@ export const TeacherCourseDoc = () => {
                   className="inline-flex items-center gap-[5px] cursor-pointer"
                   aria-label="Upload New File"
                 >
-                  <File_Add className="!relative !w-7 !h-7 text-primery-800 dark:text-neutral-scale70" />
+                  <File_Add className="!relative !w-7 !h-7 text-primery-700 dark:text-neutral-scale70" />
 
-                  <span className="relative w-fit fa-body-medium text-primery-800 dark:text-neutral-scale70 whitespace-nowrap">
+                  <span className="relative w-fit en-body-medium text-primery-800 dark:text-neutral-scale70 whitespace-nowrap">
                     Upload New File
                   </span>
                 </button>
@@ -391,37 +436,36 @@ export const TeacherCourseDoc = () => {
               </div>
 
               {/* Files */}
-              <div className="mt-[50px] w-full px-5 pb-4 min-h-0">
-                {files.map((file, index) => (
-                  <div
-                    key={file.id}
-                    className={`flex w-full items-center justify-between ${
-                      index === 0 ? "" : "mt-[15px]"
-                    }`}
-                  >
-                    {/* Document name */}
-                    <a
-                      href={`${BACKEND_URL}/tmp/${encodeURIComponent(
-                        file.name,
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="en-body text-neutral-scale1800 dark:text-neutral-scale70 whitespace-nowrap cursor-pointer"
+              <div className="mt-[50px] w-full px-5 min-h-0">
+                <div className="flex flex-col gap-[10px]">
+                  {files.map((file) => (
+                    <div
+                      key={file.id}
+                      className="group w-full flex items-center gap-[10px] px-[10px] py-[5px] rounded-[10px] border border-neutral-scale100 dark:border-neutral-scale1100 bg-neutral-scale80 dark:bg-neutral-scale1400 transition-colors duration-200 hover:bg-neutral-scale50 dark:hover:bg-neutral-scale1200"
                     >
-                      {file.name}
-                    </a>
+                      {/* Document */}
+                      <a
+                        href={`${BACKEND_URL}/tmp/${encodeURIComponent(file.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 text-left flex-1 en-body text-neutral-scale1800 dark:text-neutral-scale70 truncate cursor-pointer"
+                        title={file.name}
+                      >
+                        {file.name}
+                      </a>
 
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(file)}
-                      aria-label={`Delete ${file.name}`}
-                      className="shrink-0 w-[20px] h-[20px] flex items-center justify-center cursor-pointer"
-                    >
-                      <Trash_Full className="w-[20px] h-[20px]" />
-                    </button>
-                  </div>
-                ))}
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(file)}
+                        aria-label={`Delete ${file.name}`}
+                        className="shrink-0 w-[30px] h-[30px] rounded-[8px] flex items-center justify-center bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 cursor-pointer transition-colors duration-200 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1100"
+                      >
+                        <Trash_Full className="w-[17px] h-[17px]" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -439,3 +483,4 @@ export const TeacherCourseDoc = () => {
     </main>
   );
 };
+
