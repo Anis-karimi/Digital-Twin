@@ -35,20 +35,89 @@ export const HomeChatFeedSection = () => {
               >
                 {/* Avatar / Logo - on RIGHT in RTL, on LEFT in LTR */}
                 <img
-                  className="w-[50px] h-[50px] rounded-full object-cover shrink-0"
-                  alt={displayTitle}
+                  className="absolute top-0 left-0 w-[47px] h-[47px] rounded-full object-cover"
+                  alt={item.title}
                   src={AI}
                 />
 
-                {/* Content info */}
-                <div className="flex flex-col flex-1 min-w-0 justify-center">
-                  <h2
-                    className={`truncate text-black dark:text-neutral-scale70 ${
-                      isRTL ? "fa-title-3 text-right" : "en-title-3 text-left"
-                    }`}
-                  >
-                    {displayTitle}
-                  </h2>
+                <h2
+                  dir={isPersianTitle ? "rtl" : "ltr"}
+                  className={`
+                  absolute
+                  top-px
+                  left-[60px]
+                  max-w-[200px]
+
+                  overflow-hidden
+                  whitespace-nowrap
+                  text-ellipsis
+
+                  ${isPersianTitle ? "fa-body text-right" : "en-body text-left"}
+
+                   text-black dark:text-neutral-scale70
+                  
+                `}
+                >
+                  {item.title}
+                </h2>
+
+                <p
+                  dir={isPersian ? "rtl" : "ltr"}
+                  className={` 
+                  absolute
+                  top-[28px]
+                  left-[60px]
+                  max-w-[225px]
+
+                  overflow-hidden
+                  text-ellipsis
+                  whitespace-nowra                  
+                  ${isPersian ? "fa-caption-2  text-right" : "en-caption-2  text-left"}
+
+                  text-neutral-scale1000 dark:text-neutral-scale300
+                  
+              `}
+                >
+                  {item.preview || "Type something..."}
+                </p>
+
+                <time
+                  dir={isPersianDate ? "rtl" : "ltr"}
+                  className={` 
+                  absolute
+                  top-1
+                  right-[5px]
+
+                  w-fit
+                  max-w-[80px]
+
+                  ${isPersianDate ? "fa-caption-2 text-right" : "en-caption-2  text-left"}
+
+                  whitespace-nowrap
+
+                  text-neutral-scale700
+                  dark:text-neutral-scale300
+                  
+                `}
+                >
+                  {item.date}
+                </time>
+
+                {item.unreadCount > 0 && (
+                  <div
+                    className="
+                    absolute
+                    top-[25px]
+                    right-[5px]
+
+                    w-fit
+                    min-w-[18px]
+                    h-[18px]
+                    px-[4px]
+
+                    rounded-full
+                    bg-primery-1000
+                    dark:bg-neutral-scale400
 
                   <p
                     className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${

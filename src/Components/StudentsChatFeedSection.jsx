@@ -98,13 +98,13 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                   {/* Avatar / Logo - on RIGHT in RTL, on LEFT in LTR */}
                   {item.photo_url ? (
                     <img
-                      className="w-[50px] h-[50px] rounded-full object-cover shrink-0"
+                      className="absolute top-0 left-0 w-[47px] h-[47px] rounded-full object-cover"
                       alt={item.title}
                       src={item.photo_url}
                     />
                   ) : (
                     <div
-                      className={`w-[50px] h-[50px] rounded-full flex items-center justify-center shrink-0 ${getAvatarColor(
+                      className={`absolute top-0 left-0 w-[47px] h-[47px] rounded-full flex items-center justify-center ${getAvatarColor(
                         item.id,
                       )} text-white font-semibold ${
                         isRTL ? "fa-caption-1" : "en-caption-1"

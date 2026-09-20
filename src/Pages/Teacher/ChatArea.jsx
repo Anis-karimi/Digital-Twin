@@ -731,11 +731,8 @@ export const ChatArea = () => {
 
             {/* Title */}
             <h1
-              dir={isRTL ? "rtl" : "ltr"}
-              className={`flex-1 min-w-0 truncate fa-title-3 dark:text-neutral-scale70 ${
-                isRTL ? "text-right" : "text-left"
-              } cursor-pointer`}
-              onClick={() => navigate(`/CourseDetail`)}
+              dir={isPersianTitle ? "rtl" : "ltr"}
+              className="absolute top-1/2 -translate-y-1/2 left-[108px] w-[150px] truncate fa-title-3 dark:text-neutral-scale70 text-left cursor-pointer"
             >
               {chatTitle}
             </h1>
