@@ -16,6 +16,7 @@ const settingsItems = [
   {
     id: "Courses Information",
     title: "Courses Information",
+    titleFa: "اطلاعات دروس",
     subtitle: "Upload resources",
     subtitleFa: "بارگذاری منابع",
     path: "/TeacherResource",

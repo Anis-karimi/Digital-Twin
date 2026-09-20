@@ -731,8 +731,15 @@ export const ChatArea = () => {
 
             {/* Title */}
             <h1
-              dir={isPersianTitle ? "rtl" : "ltr"}
-              className="absolute top-1/2 -translate-y-1/2 left-[108px] w-[150px] truncate fa-title-3 dark:text-neutral-scale70 text-left cursor-pointer"
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`flex-1 min-w-0 truncate ${
+                isRTL ? "fa-title-3 text-right" : "en-title-3 text-left"
+              } dark:text-neutral-scale70 cursor-pointer`}
+              onClick={() => {
+                if (!isStudentChat) {
+                  navigate(`/TeacherCourseDoc/${id}`);
+                }
+              }}
             >
               {chatTitle}
             </h1>
