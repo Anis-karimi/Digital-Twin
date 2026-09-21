@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { authApi } from "@/api/new/auth.api";
 
 const ThemeContext = createContext();
 
@@ -8,9 +9,11 @@ export const ThemeProvider = ({ children }) => {
   });
 
   const toggleTheme = () => setIsDark((prev) => !prev);
+  const setTheme = (theme) => setIsDark(theme === "dark");
 
   useEffect(() => {
     const root = document.documentElement;
+    const themeStr = isDark ? "dark" : "light";
 
     if (isDark) {
       root.classList.add("dark");
@@ -20,12 +23,19 @@ export const ThemeProvider = ({ children }) => {
       localStorage.setItem("theme", "light");
     }
 
-    console.log("Theme:", isDark ? "Dark" : "Light");
-    console.log(root.className);
+    const token = localStorage.getItem("token") || localStorage.getItem("session_token");
+    if (token) {
+      authApi.updateUserSettings({
+        theme: themeStr,
+        appearance: { theme: themeStr },
+      }).catch((err) => {
+        console.warn("Failed to persist theme to new backend:", err);
+      });
+    }
   }, [isDark]);
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -1,6 +1,6 @@
 /**
  * @file courses.api.js
- * @description Courses management API module for the new backend with local mock fallback.
+ * @description Courses management API module connecting to backend endpoints with robust mock fallbacks.
  */
 
 import { requestWithFallback } from "../client";
@@ -12,56 +12,75 @@ import { courses as mockCourses } from "@/data/courses";
  * @returns {Promise<import("../types").Course[]>}
  */
 export async function getCourses() {
-  return requestWithFallback("/courses", { method: "GET" }, () => mockCourses);
+  const res = await requestWithFallback("/courses", { method: "GET" }, () => mockCourses);
+  return Array.isArray(res) && res.length > 0 ? res : mockCourses;
 }
 
 /**
- * Fetches a specific course by its identifier.
+ * Fetches a specific course by its identifier (UUID or 'os').
  * @endpoint GET /courses/:id
- * @param {string} courseId Course ID (e.g. 'os')
+ * @param {string} courseId Course UUID or 'os'
  * @returns {Promise<import("../types").Course>}
  */
 export async function getCourseById(courseId) {
-  return requestWithFallback(`/courses/${courseId}`, { method: "GET" }, () => {
-    const found = mockCourses.find((c) => String(c.id) === String(courseId));
+  const fallback = () => {
+    const found = mockCourses.find(
+      (c) => String(c.id) === String(courseId) || courseId === "os"
+    );
     return (
       found || {
-        id: courseId,
+        id: courseId || "os",
         title: "سیستم عامل",
         titleFa: "سیستم عامل",
-        titleEn: "سیستم عامل",
-        preview: "",
-        date: new Date().toISOString(),
+        titleEn: "Operating Systems",
+        preview:
+          "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
+        date: "2026-04-06T09:30:00Z",
         unreadCount: 0,
       }
     );
-  });
+  };
+
+  const res = await requestWithFallback(
+    `/courses/${courseId}`,
+    { method: "GET" },
+    fallback
+  );
+  return res || fallback();
 }
 
 /**
  * Fetches course metadata and timeline cards (start date, end date, description, access level).
  * @endpoint GET /courses/:id/details
- * @param {string} courseId Course ID
+ * @param {string} courseId Course UUID or 'os'
  * @returns {Promise<Object>}
  */
 export async function getCourseDetails(courseId) {
-  return requestWithFallback(`/courses/${courseId}/details`, { method: "GET" }, () => ({
-    courseId,
+  const fallback = () => ({
+    courseId: courseId || "os",
     name: "سیستم عامل",
     nameFa: "سیستم عامل",
-    nameEn: "سیستم عامل",
+    nameEn: "Operating Systems",
     startDate: "2026-03-01",
     endDate: "2026-07-01",
     description:
-      "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی)",
+      "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
     accessLevel: "private",
-  }));
+  });
+
+  const res = await requestWithFallback(
+    `/courses/${courseId}/details`,
+    { method: "GET" },
+    fallback
+  );
+
+  return res || fallback();
 }
 
 /**
  * Updates course metadata and settings.
  * @endpoint PUT /courses/:id/details
- * @param {string} courseId Course ID
+ * @param {string} courseId Course UUID
  * @param {Object} details Updated metadata
  * @returns {Promise<Object>}
  */

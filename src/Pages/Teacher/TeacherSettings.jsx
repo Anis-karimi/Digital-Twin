@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
 import ResourseManagment from "@/assets/icons/ResourseManagment.svg";
@@ -50,7 +50,8 @@ const settingsItems = [
 ];
 
 export const TeacherSettings = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, logoutUser } = useContext(AppContext);
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const [photoPreview, setPhotoPreview] = useState("");
@@ -727,6 +728,10 @@ export const TeacherSettings = () => {
           {/* // ---------------- Log out Button --------------------------- */}
           <button
             type="button"
+            onClick={() => {
+              if (logoutUser) logoutUser();
+              navigate("/login");
+            }}
             className="mx-3.5 w-auto h-[38px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[8px] overflow-hidden cursor-pointer hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors"
             aria-label={isRTL ? "خروج" : "Log out"}
           >

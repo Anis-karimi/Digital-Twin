@@ -46,7 +46,7 @@ export const TeacherResource = () => {
 
           <h1
             className={`flex-1 mx-2 text-neutral-scale70 ${
-              isRTL ? "fa-title-1 text-right" : "en-title-1 text-left"
+              isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
             {isRTL ? "اطلاعات دروس" : "Courses Information"}
@@ -63,7 +63,7 @@ export const TeacherResource = () => {
             <p
               id="resource-course-selection"
               className={`px-4 ${
-                isRTL ? "fa-body-medium text-right" : "en-body-medium text-left"
+                isRTL ? "fa-body-medium font-vazir text-right" : "en-body-medium font-inter text-left"
               } text-primery-800 dark:text-neutral-scale70`}
             >
               {isRTL
@@ -76,15 +76,15 @@ export const TeacherResource = () => {
                 <button
                   key={course.id}
                   type="button"
-                  aria-label={`Select course ${course.title}`}
-                  className={`flex items-center rounded-[10px] border border-neutral-scale200 bg-neutral-scale80 dark:bg-neutral-scale1200 justify-between w-full cursor-pointer p-3 ${
+                  aria-label={`Select course ${course.titleFa || course.title}`}
+                  className={`flex items-center rounded-[12px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale80 dark:bg-neutral-scale1300/40 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 justify-between w-full cursor-pointer p-3 transition-colors ${
                     isRTL ? "text-right" : "text-left"
                   }`}
                   onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
                 >
                   <div className="flex items-center gap-[12px] min-w-0 flex-1">
                     {/* Course Image */}
-                    <div className="w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-[9px] border border-neutral-scale200 bg-neutral-scale100 dark:bg-neutral-scale1100">
+                    <div className="w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-[10px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale100 dark:bg-neutral-scale1100 shadow-sm">
                       <img
                         src={course.photo_url || courseImage}
                         alt=""
@@ -93,26 +93,42 @@ export const TeacherResource = () => {
                     </div>
 
                     {/* Course Information */}
-                    <div className="flex flex-col min-w-0 gap-[2px] flex-1">
-                      {/* Title */}
-                      <span className="fa-body-medium text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                        {course.title}
+                    <div className="flex flex-col min-w-0 gap-[1px] flex-1">
+                      {/* Title - Always Persian font and format */}
+                      <span
+                        dir="rtl"
+                        className={`fa-body-medium font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70 truncate ${
+                          isRTL ? "text-right" : "text-left [direction:rtl]"
+                        }`}
+                      >
+                        {course.titleFa || course.title || "سیستم عامل"}
                       </span>
 
                       {/* Degree */}
-                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale300">
-                        کارشناسی / مهندسی کامپیوتر
-                      </span>
+                      <div className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale300 flex flex-col leading-tight`}>
+                        {isRTL ? (
+                          <span>{course.degreeFa || "کارشناسی / مهندسی کامپیوتر"}</span>
+                        ) : (
+                          <>
+                            <span>Bachelor / Computer</span>
+                            <span>Engineering</span>
+                          </>
+                        )}
+                      </div>
 
-                      {/* Privacy */}
-                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale300">
-                        خصوصی
+                      {/* Privacy / Access Level */}
+                      <span className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}>
+                        {isRTL
+                          ? (course.accessLevel === "public" ? "عمومی" : "خصوصی")
+                          : (course.accessLevel === "public" ? "Public" : "Private")}
                       </span>
 
                       {/* Description */}
-                      <span className="fa-caption-1 text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0">
-                        {course.description ||
-                          "این دوره شامل مطالب آموزشی و منابع مرتبط با درس می‌باشد."}
+                      <span className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0`}>
+                        {course.preview || course.description ||
+                          (isRTL
+                            ? "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری"
+                            : "This course includes educational materials and related resources.")}
                       </span>
                     </div>
                   </div>

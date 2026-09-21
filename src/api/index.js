@@ -20,7 +20,7 @@ export { quizApi, generateQuiz, explainAnswer } from "./existing/quiz.api";
 export { coursesApi, getCourses, getCourseById, getCourseDetails, updateCourseDetails, getCoursesOverview } from "./new/courses.api";
 export { studentsApi, getStudentsByCourse, getStudentById, toggleBlockStudent, removeStudentFromCourse } from "./new/students.api";
 export { notificationsApi, getJoinRequests, acceptJoinRequest, rejectJoinRequest, getSystemMessages } from "./new/notifications.api";
-export { chatHistoryApi, getChatHistory, saveChatMessage, submitMessageFeedback, clearChatHistory } from "./new/chatHistory.api";
+export { chatHistoryApi, getChatHistory, saveChatMessage, saveConversationTurn, sendMessageWithRAG, submitMessageFeedback, clearChatHistory } from "./new/chatHistory.api";
 export { authApi, getCurrentUserProfile, login, logout, updateProfile } from "./new/auth.api";
 export { examsApi, getTeacherExams, saveGeneratedQuiz, submitQuizAnswers, getQuizResults } from "./new/exams.api";
 export { navigationApi, getLessonTabs, getAvailableCourses, requestJoinCourse } from "./new/navigation.api";

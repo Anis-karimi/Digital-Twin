@@ -9,20 +9,26 @@ import { courses as mockCourses } from "@/data/courses";
 
 /**
  * Fetches dynamic course tabs for the teacher top navigation bar.
- * @endpoint GET /teacher/nav-tabs
+ * @endpoint GET /navigation/lesson-tabs
  * @returns {Promise<Array<Object>>}
  */
 export async function getLessonTabs() {
-  return requestWithFallback("/teacher/nav-tabs", { method: "GET" }, () => mockLessonItems);
+  const res = await requestWithFallback(
+    "/navigation/lesson-tabs",
+    { method: "GET" },
+    () => mockLessonItems
+  );
+  return Array.isArray(res) && res.length > 0 ? res : mockLessonItems;
 }
 
 /**
  * Fetches the catalogue of all courses offered across the platform for student discovery.
- * @endpoint GET /student/available-courses
+ * @endpoint GET /courses
  * @returns {Promise<import("../types").Course[]>}
  */
 export async function getAvailableCourses() {
-  return requestWithFallback("/student/available-courses", { method: "GET" }, () => mockCourses);
+  const res = await requestWithFallback("/courses", { method: "GET" }, () => mockCourses);
+  return Array.isArray(res) && res.length > 0 ? res : mockCourses;
 }
 
 /**
@@ -38,7 +44,7 @@ export async function requestJoinCourse(courseId) {
     () => ({
       success: true,
       courseId,
-      message: "Enrollment request submitted for instructor review.",
+      message: "Enrollment request submitted.",
     })
   );
 }

@@ -4,6 +4,7 @@ import "@/styles/fonts.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { navigationApi } from "@/api";
+
 import { lessonItems as defaultLessonItems } from "@/data/LessonsNavBar";
 
 export const LessonsNavBar = () => {
@@ -140,8 +141,8 @@ export const LessonsNavBar = () => {
         >
           {items.map((item) => {
             const isActive = activeTab === item.id;
-            // The "lessons" tab is a UI navigation item that translates ("درس‌ها" / "Lessons").
-            // Course tabs come from the backend and always remain in Persian ("سیستم عامل").
+            // The lessons tab translates based on active RTL language.
+            // Course tabs originate from the backend database in authentic Persian UTF-8.
             const displayLabel =
               item.id === "lessons"
                 ? isRTL

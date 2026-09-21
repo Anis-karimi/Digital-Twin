@@ -74,9 +74,54 @@ export async function clearChatHistory(chatType, targetId) {
   );
 }
 
+/**
+ * Persists a conversation turn (user prompt and assistant/fallback response) to the new backend database.
+ * @endpoint POST /chats/:type/:targetId/messages
+ * @param {'course'|'student'} chatType
+ * @param {string} targetId
+ * @param {{ text: string, answer?: string, courseName?: string, language?: string }} payload
+ * @returns {Promise<{ success: boolean, userMessage: Object, aiMessage: Object }>}
+ */
+export async function saveConversationTurn(chatType, targetId, payload) {
+  return requestWithFallback(
+    `/chats/${chatType}/${targetId}/messages`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    () => {
+      const now = new Date();
+      return {
+        success: true,
+        userMessage: {
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+          text: payload.text,
+          sender: "me",
+          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
+        },
+        aiMessage: {
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + 1),
+          text: payload.answer || "مشکلی در ارتباط با سرور به وجود آمد.",
+          sender: "other",
+          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
+        },
+      };
+    }
+  );
+}
+
+/**
+ * Backward compatibility alias for saveConversationTurn.
+ */
+export const sendMessageWithRAG = saveConversationTurn;
+
 export const chatHistoryApi = {
   getChatHistory,
   saveChatMessage,
+  saveConversationTurn,
+  sendMessageWithRAG,
   submitMessageFeedback,
   clearChatHistory,
 };

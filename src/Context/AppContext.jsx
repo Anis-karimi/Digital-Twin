@@ -1,15 +1,39 @@
 import { createContext, useState, useEffect } from "react";
+import { authApi } from "@/api/new/auth.api";
 
 export const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const [role, setRole] = useState("teacher"); // Default: teacher
+  const [sessionToken, setSessionToken] = useState(() => {
+    return localStorage.getItem("session_token") || null;
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("current_user");
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [role, setRole] = useState(() => {
+    const saved = localStorage.getItem("current_user");
+    try {
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed?.role || "teacher";
+    } catch {
+      return "teacher";
+    }
+  });
+
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem("language") || "fa";
   });
-  const [selectedResources, setSelectedResources] = useState([]); // Teacher selected resource documents
+  const [selectedResources, setSelectedResources] = useState([]);
 
   const isRTL = language === "fa";
+  const isAuthenticated = Boolean(sessionToken);
 
   useEffect(() => {
     localStorage.setItem("language", language);
@@ -26,10 +50,46 @@ export function AppProvider({ children }) {
       root.classList.add("ltr");
       root.classList.remove("rtl");
     }
+
+    const token = localStorage.getItem("token") || localStorage.getItem("session_token");
+    if (token) {
+      authApi.updateUserSettings({ language }).catch((err) => {
+        console.warn("Failed to persist language to new backend:", err);
+      });
+    }
   }, [language]);
 
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "fa" ? "en" : "fa"));
+  };
+
+  const loginUser = (user, token) => {
+    setCurrentUser(user);
+    setSessionToken(token);
+    const userRole = (user?.user_type || user?.role || "teacher").toLowerCase();
+    setRole(userRole);
+    if (user?.language) {
+      setLanguage(user.language);
+    }
+    if (user?.theme) {
+      localStorage.setItem("theme", user.theme);
+      const root = document.documentElement;
+      if (user.theme === "dark") root.classList.add("dark");
+      else root.classList.remove("dark");
+    }
+    localStorage.setItem("current_user", JSON.stringify(user));
+    localStorage.setItem("session_token", token);
+    localStorage.setItem("token", token);
+    localStorage.setItem("user_role", userRole);
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+    setSessionToken(null);
+    localStorage.removeItem("current_user");
+    localStorage.removeItem("session_token");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_role");
   };
 
   return (
@@ -43,9 +103,15 @@ export function AppProvider({ children }) {
         isRTL,
         selectedResources,
         setSelectedResources,
+        sessionToken,
+        currentUser,
+        isAuthenticated,
+        loginUser,
+        logoutUser,
       }}
     >
       {children}
     </AppContext.Provider>
   );
 }
+

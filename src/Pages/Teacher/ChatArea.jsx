@@ -3,8 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
-import { courses } from "@/data/courses";
-import { students } from "@/data/students";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 
@@ -19,7 +17,7 @@ import Quiz from "@/assets/icons/quiz-icon1.svg?react";
 import Send from "@/assets/icons/Send.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
-import { adminApi, chatApi, voiceApi } from "@/api";
+import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 
 
 const avatarColors = [
@@ -47,15 +45,16 @@ const avatarColors = [
 
 const getAvatarColor = (id) => {
     let hash = 0;
-
-    for (let i = 0; i < id.length; i++) {
-        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    const str = String(id || "");
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
 
     return avatarColors[Math.abs(hash) % avatarColors.length];
 };
 
 const getInitials = (title) => {
+    if (!title) return "";
     const words = title.trim().split(/\s+/);
 
     if (words.length >= 2) {
@@ -64,6 +63,7 @@ const getInitials = (title) => {
 
     return words[0]?.[0] || "";
 };
+
 
 export const ChatArea = () => {
     const [message, setMessage] = useState("");
@@ -193,26 +193,61 @@ export const ChatArea = () => {
         `${isRTL ? "fa-caption-3 font-vazir" : "en-caption-3 font-inter"} bg-primery-1000 text-neutral-scale100 px-3 py-1 text-[10px] rounded-full`,
     };
 
-    const currentCourse = courses.find(
-        (item) => String(item.id) === String(id)
-    );
+    const [chatEntity, setChatEntity] = useState(null);
 
-    const currentStudent = students.find(
-        (item) => String(item.id) === String(id)
-    );
+    // Fetch course or student dynamically from new backend
+    useEffect(() => {
+        let isMounted = true;
+        if (id) {
+            if (isStudentChat) {
+                studentsApi.getStudentById(id)
+                    .then((student) => {
+                        if (isMounted && student) setChatEntity(student);
+                    })
+                    .catch((err) => console.warn("Failed to load student:", err));
+            } else {
+                coursesApi.getCourseById(id)
+                    .then((course) => {
+                        if (isMounted && course) setChatEntity(course);
+                    })
+                    .catch((err) => console.warn("Failed to load course:", err));
+            }
+        }
+        return () => {
+            isMounted = false;
+        };
+    }, [id, isStudentChat]);
 
-    const currentChat = isStudentChat
-        ? currentStudent
-        : currentCourse;
+    // Load persistent chat history from backend database
+    useEffect(() => {
+        let isMounted = true;
+        if (id) {
+            const chatType = isStudentChat ? "student" : "course";
+            chatHistoryApi.getChatHistory(chatType, id)
+                .then((history) => {
+                    if (isMounted && Array.isArray(history) && history.length > 0) {
+                        setMessages(history);
+                    }
+                })
+                .catch((err) => console.warn("Failed to load chat history:", err));
+        }
+        return () => {
+            isMounted = false;
+        };
+    }, [id, isStudentChat]);
 
-    const chatTitle = currentChat?.title || "Chat";
+    const currentStudent = isStudentChat ? chatEntity : null;
+    const currentCourse = !isStudentChat ? chatEntity : null;
+    const currentChat = chatEntity;
+
+    const chatTitle = currentChat?.title || currentChat?.name || (isStudentChat ? "گفت‌وگو با دانشجو" : "گفت‌وگو با درس");
 
     const toggleAI = () => {
         setAiEnabled(prev => !prev);
     };
 
-    // ClearHistory
-    const handleClearHistory = () => {
+    // ClearHistory with server persistence
+    const handleClearHistory = async () => {
         const confirmed = window.confirm(
             "Are you sure you want to clear the chat history?"
         );
@@ -221,9 +256,17 @@ export const ChatArea = () => {
             return;
         }
 
+        try {
+            const chatType = isStudentChat ? "student" : "course";
+            await chatHistoryApi.clearChatHistory(chatType, id);
+        } catch (err) {
+            console.warn("Failed to clear chat history on server:", err);
+        }
+
         setMessages([]);
         setIsMenuOpen(false);
     };
+
 
     // DownloadPDF
     const handleDownloadPDF = async () => {
@@ -369,25 +412,36 @@ export const ChatArea = () => {
         }
     };
 
-    const handleFeedback = (messageId, feedback) => {
+    const handleFeedback = async (messageId, feedback) => {
+      const targetMsg = messages.find((m) => m.id === messageId);
+      const newFeedback = targetMsg?.feedback === feedback ? null : feedback;
+
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.id !== messageId) return msg;
 
           return {
             ...msg,
-            feedback: msg.feedback === feedback ? null : feedback,
+            feedback: newFeedback,
           };
         }),
       );
+
+      try {
+        await chatHistoryApi.submitMessageFeedback(messageId, newFeedback);
+      } catch (err) {
+        console.warn("Feedback submission error:", err);
+      }
     };
 
     const sendMessage = async () => {
         if (!message.trim() || isLoading) return;
 
-        const newMessage = {
-            id: Date.now(),
-            text: message,
+        const userMessageText = message;
+        const tempId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+        const optimisticMessage = {
+            id: tempId,
+            text: userMessageText,
             sender: "me",
             time: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
@@ -399,9 +453,7 @@ export const ChatArea = () => {
             })
         };
 
-        setMessages((prev) => [...prev, newMessage]);
-
-        const userMessage = message;
+        setMessages((prev) => [...prev, optimisticMessage]);
 
         setMessage("");
         setIsTyping(false);
@@ -411,9 +463,14 @@ export const ChatArea = () => {
             textareaRef.current.style.height = "37px";
             textareaRef.current.parentElement.style.height = "39px";
         }
+
+        let aiText = "";
+        let isError = false;
+
         try {
+            // Query legacy AI backend server directly as before
             const answer = await chatApi.askAI({
-                query: userMessage,
+                query: userMessageText,
                 contexts: "",
                 language,
                 llmModel,
@@ -421,67 +478,69 @@ export const ChatArea = () => {
                 teacherName,
             });
 
-            console.log("API RESPONSE =>", answer);
+            aiText = String(answer || (isRTL ? "پاسخی از سرور دریافت نشد." : "No response from server."));
+        } catch (error) {
+            console.error("Chat Error:", error);
+            isError = true;
 
-            const aiMessage = {
-              id: Date.now() + 1,
-              text: String(answer || (isRTL ? "پاسخی از سرور دریافت نشد." : "No response from server.")),
-              sender: "other",
-              feedback: null,
-              time: new Date().toLocaleTimeString([], {
+            const errorDetail =
+                error?.response?.data?.detail ??
+                error?.data?.detail ??
+                error?.originalError?.response?.data?.detail;
+
+            aiText = errorDetail
+                ? (typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail))
+                : "مشکلی در ارتباط با سرور به وجود آمد.";
+        }
+
+        const aiMsgId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + 1);
+        const aiMessage = {
+            id: aiMsgId,
+            text: aiText,
+            sender: "other",
+            feedback: null,
+            time: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
-              }),
-              date: new Date().toLocaleDateString("en-GB", {
+            }),
+            date: new Date().toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "long",
-              }),
-            };
+            }),
+        };
 
-            setMessages(prev => [...prev, aiMessage]);
-            if (aiEnabled) {
-                playTTSBytes(String(answer || ""));
-            }
+        setMessages((prev) => [...prev, aiMessage]);
 
-        } catch (error) {
-            console.error("API Error:", error);
-
-            console.log(
-                "Error Response:",
-                error.response?.data
-            );
-
-            console.log(
-                "Status:",
-                error.response?.status
-            );
-
-            const errorMessage = {
-                id: Date.now() + 1,
-                text:
-                    error.response?.data?.detail
-                        ? JSON.stringify(error.response.data.detail)
-                        : "مشکلی در ارتباط با سرور به وجود آمد.",
-                sender: "other",
-                time: new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }),
-                date: new Date().toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "long"
-                })
-            };
-
-            setMessages(prev => [
-                ...prev,
-                errorMessage
-            ]);
+        if (!isError && aiEnabled && aiText) {
+            playTTSBytes(aiText);
         }
-        finally {
+
+        // Persist both user prompt and response (or error message) to new backend history database
+        try {
+            const chatType = isStudentChat ? "student" : "course";
+            const saveRes = await chatHistoryApi.saveConversationTurn(chatType, id, {
+                text: userMessageText,
+                answer: aiText,
+                courseName: chatTitle,
+                language,
+            });
+
+            if (saveRes?.userMessage?.id && saveRes?.aiMessage?.id) {
+                setMessages((prev) =>
+                    prev.map((msg) => {
+                        if (msg.id === tempId) return { ...msg, id: saveRes.userMessage.id };
+                        if (msg.id === aiMsgId) return { ...msg, id: saveRes.aiMessage.id };
+                        return msg;
+                    })
+                );
+            }
+        } catch (saveErr) {
+            console.warn("Failed to persist conversation turn to new backend history:", saveErr);
+        } finally {
             setIsLoading(false);
         }
     };
+
 
     const concatUint8 = (a, b) => {
         const out = new Uint8Array(a.byteLength + b.byteLength);
@@ -620,26 +679,27 @@ export const ChatArea = () => {
             {/* Avatar */}
             <div className="mx-2 shrink-0 flex items-center justify-center">
               {isStudentChat ? (
-                currentStudent.photo_url ? (
+                currentStudent?.photo_url ? (
                   <img
                     className="w-[38px] h-[38px] rounded-full object-cover"
                     src={currentStudent.photo_url}
-                    alt={currentStudent.title}
+                    alt={currentStudent?.title || "Student"}
                   />
                 ) : (
                   <div
                     className={`w-[38px] h-[38px] rounded-full flex items-center justify-center ${getAvatarColor(
-                      currentStudent.id,
+                      currentStudent?.id || id,
                     )} text-white fa-caption-3`}
                   >
-                    {getInitials(currentStudent.title)}
+                    {getInitials(currentStudent?.title || currentStudent?.name || "")}
                   </div>
                 )
               ) : (
+
                 <img
                   className="w-[38px] h-[38px] rounded-full object-cover"
-                  src={AI}
-                  alt="AI"
+                  src={currentCourse?.photo_url || AI}
+                  alt={chatTitle || "Course"}
                 />
               )}
             </div>
@@ -848,9 +908,10 @@ export const ChatArea = () => {
                   chatPath: location.pathname + location.search,
                   chatBackTo:
                     location.state?.backTo ||
-                    (isStudentChat && currentStudent?.lessonId
-                      ? `/TeacherLessonsPage/${currentStudent.lessonId}`
+                    (isStudentChat && (currentStudent?.lessonId || currentStudent?.courseId)
+                      ? `/TeacherLessonsPage/${currentStudent.lessonId || currentStudent.courseId}`
                       : "/"),
+
                 }),
               );
 

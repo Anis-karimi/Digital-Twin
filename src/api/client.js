@@ -17,6 +17,7 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
     this.originalError = originalError;
+    this.response = originalError?.response || (data ? { status, data } : undefined);
   }
 }
 

@@ -25,6 +25,7 @@ import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 
 import { AppProvider } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
+import { Login } from "@/Pages/Login";
 
 
 function App() {
@@ -35,6 +36,9 @@ function App() {
           <Nav />
 
           <Routes>
+            {/* ==================== Auth ==================== */}
+            <Route path="/login" element={<Login />} />
+
             {/* ==================== Teacher ==================== */}
 
             <Route element={<TeacherLayout />}>
