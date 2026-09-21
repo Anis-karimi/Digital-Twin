@@ -77,7 +77,7 @@ export const TeacherResource = () => {
                   key={course.id}
                   type="button"
                   aria-label={`Select course ${course.titleFa || course.title}`}
-                  className={`flex items-center rounded-[12px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale80 dark:bg-neutral-scale1300/40 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 justify-between w-full cursor-pointer p-3 transition-colors ${
+                  className={`flex items-center rounded-[12px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale80 dark:bg-neutral-scale1200 hover:bg-neutral-scale90 dark:hover:bg-neutral-scale1100 justify-between w-full cursor-pointer p-3 transition-colors ${
                     isRTL ? "text-right" : "text-left"
                   }`}
                   onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
