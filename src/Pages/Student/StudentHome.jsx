@@ -36,11 +36,11 @@ export const StudentHome = () => {
       data-id={isRTL ? "student-home-page-fa" : "student-home-page-en"}
     >
       <header
-        className="absolute top-0 left-0 w-full h-[84px] flex z-10"
+        className="absolute top-0 left-0 w-full h-[65px] flex z-10"
         aria-label={isRTL ? "سربرگ صفحه" : "Page header"}
       >
         <div
-          className="w-full h-[84px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1500"
+          className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000"
           dir={isRTL ? "rtl" : "ltr"}
         >
           <h1
@@ -68,7 +68,7 @@ export const StudentHome = () => {
                 }}
                 className="relative flex h-6 w-6 items-center justify-center cursor-pointer"
               >
-                <Icon className="w-6 h-6 text-neutral-scale70 " />
+                <Icon className="w-6 h-6 text-neutral-scale70" />
               </button>
             ))}
           </div>
@@ -77,7 +77,7 @@ export const StudentHome = () => {
 
       <section
         aria-label="Course chat feed"
-        className="absolute top-[85px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden"
+        className="absolute top-[60px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden"
       >
         <HomeChatFeedSection />
       </section>
@@ -88,21 +88,25 @@ export const StudentHome = () => {
 
       {/* ✅ OVERLAY MENU (added only) */}
       <div className="relative">
-        {isMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setIsMenuOpen(false)}
-            />
-
-            {/* Menu */}
-            <div className="absolute top-9 right-6 mt-2 z-50 overflow-hidden rounded-lg shadow-lg">
-              <HomeDropdownMenu />
+              {isMenuOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsMenuOpen(false)}
+                  />
+      
+                  {/* Menu */}
+                  <div
+                    className={`absolute top-3 ${
+                      isRTL ? "left-4" : "right-4"
+                    } mt-2 z-50 overflow-hidden rounded-lg shadow-lg`}
+                  >
+                    <HomeDropdownMenu />
+                  </div>
+                </>
+              )}
             </div>
-          </>
-        )}
-      </div>
     </main>
   );
 };
