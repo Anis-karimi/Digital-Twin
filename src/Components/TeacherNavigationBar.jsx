@@ -35,15 +35,15 @@ export const TeacherNavigationBar = () => {
     },
     {
       id: "courses",
-      label: isRTL ? "درس‌های من" : "My Courses",
+      label: isRTL ? "دروس" : "Courses",
       route: "/TeacherResource",
       icon: MyCourses,
       iconActive: MyCoursesFilled,
-      iconClassName: "w-[20px] h-[20px]",
+      iconClassName: "w-[21px] h-[20px]",
     },
     {
       id: "exams",
-      label: isRTL ? "آزمون‌ها" : "My Exams",
+      label: isRTL ? "آزمون‌ها" : "Exams",
       route: "/TeacherExams",
       icon: Exam,
       iconActive: ExamFilled,
@@ -95,7 +95,7 @@ export const TeacherNavigationBar = () => {
     <nav
       dir="ltr"
       className="fixed left-1/2 -translate-x-1/2 z-50
-        w-80 h-[50px] flex
+        w-80 h-[55px] flex
         bg-[#f8fcfd] dark:bg-neutral-scale1300
         border border-neutral-scale100 dark:border-neutral-scale1100
         rounded-[40px] overflow-hidden
@@ -116,7 +116,7 @@ export const TeacherNavigationBar = () => {
           <div
             className="
             absolute
-            top-[3px]
+            top-1/2
             h-[44px]
             bg-primery-90
             rounded-[23px]
@@ -127,7 +127,7 @@ export const TeacherNavigationBar = () => {
           "
             style={{
               width: `calc(${indicatorStyle.width}px - 10px)`,
-              transform: `translateX(${indicatorStyle.left + 4}px)`,
+              transform: `translate(${indicatorStyle.left + 4}px, -50%)`,
             }}
           />
         )}

@@ -87,7 +87,7 @@ export const StudentNavigationBar = () => {
 
   return (
     <nav
-      className="w-50 h-[55px] shrink-0 flex bg-[#f8fcfd] dark:bg-neutral-scale1300 rounded-[30px] overflow-hidden shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#00000040,-1px_0px_3px_0.1px_#2828281a]"
+      className="w-50 h-[60px] shrink-0 flex bg-[#f8fcfd] dark:bg-neutral-scale1300 rounded-[30px] overflow-hidden shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#00000040,-1px_0px_3px_0.1px_#2828281a]"
       aria-label="Bottom navigation"
     >
       <div className="flex mt-1.5 w-[250px] h-[43px] mx-[1px] relative items-center justify-center gap-2">

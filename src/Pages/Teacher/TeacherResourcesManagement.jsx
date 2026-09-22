@@ -75,33 +75,25 @@ export const TeacherResource = () => {
             </p>
 
             <div className="flex flex-col w-full gap-[12px] mt-[16px] px-3.5">
-              {courses.map((course) => {
-                const descText =
-                  course.description ||
-                  (isRTL
-                    ? "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری"
-                    : "This course includes educational materials and related resources.");
-                const isDescPersian = isPersianText(descText);
-
-                return (
-                  <button
-                    key={course.id}
-                    type="button"
-                    aria-label={`Select course ${course.titleFa || course.title}`}
-                    className={`flex items-center rounded-[10px] border border-neutral-scale200 dark:border-neutral-scale1000 bg-neutral-scale80 dark:bg-neutral-scale1200 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1100 justify-between w-full cursor-pointer p-3 transition-colors ${
-                      isRTL ? "text-right" : "text-left"
-                    }`}
-                    onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
-                  >
-                    <div className="flex items-center gap-[12px] min-w-0 flex-1">
-                      {/* Course Image */}
-                      <div className="w-[75px] h-[75px] flex-shrink-0 overflow-hidden rounded-[10px] border border-neutral-scale200 dark:border-neutral-scale1000 bg-neutral-scale100 dark:bg-neutral-scale1100 shadow-sm">
-                        <img
-                          src={resolveMediaUrl(course.photo_url) || courseImage}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+              {courses.map((course) => (
+                <button
+                  key={course.id}
+                  type="button"
+                  aria-label={`Select course ${course.titleFa || course.title}`}
+                  className={`flex items-center rounded-[12px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale80 dark:bg-neutral-scale1200 hover:bg-neutral-scale90 dark:hover:bg-neutral-scale1100 justify-between w-full cursor-pointer p-3 transition-colors ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}
+                  onClick={() => navigate(`/TeacherCourseDoc/${course.id}`)}
+                >
+                  <div className="flex items-center gap-[12px] min-w-0 flex-1">
+                    {/* Course Image */}
+                    <div className="w-[70px] h-[70px] flex-shrink-0 overflow-hidden rounded-[10px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale100 dark:bg-neutral-scale1100 shadow-sm">
+                      <img
+                        src={course.photo_url || courseImage}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
 
                       {/* Course Information */}
                       <div
