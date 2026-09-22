@@ -49,26 +49,24 @@ export const Language = () => {
       className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh flex flex-col gap-[15px] mx-auto"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      <header className="w-full h-[65px] flex">
+      <header className="w-full h-[65px] flex shrink-0">
         <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
           <button
             onClick={() => navigate(-1)}
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
-            className="text-white w-6 h-6 cursor-pointer flex items-center justify-center"
+            className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
           >
             <BackIcon className="!w-6 !h-6" />
           </button>
 
           <h1
-            className={`mx-auto text-neutral-scale70 text-center whitespace-nowrap ${
-              isRTL ? "fa-title-1" : "en-title-1"
+            className={`flex-1 mx-2 text-neutral-scale70 whitespace-nowrap truncate ${
+              isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
             }`}
           >
             {isRTL ? "انتخاب زبان" : "Language"}
           </h1>
-
-          <div className="w-6" aria-hidden="true" />
         </div>
       </header>
 

@@ -66,6 +66,8 @@ export async function getCourseDetails(courseId) {
     description:
       "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
     accessLevel: "private",
+    isActive: true,
+    is_active: true,
   });
 
   const res = await requestWithFallback(
@@ -96,6 +98,24 @@ export async function updateCourseDetails(courseId, details) {
 }
 
 /**
+ * Updates course active status directly.
+ * @endpoint PATCH /courses/:id/status
+ * @param {string} courseId Course UUID
+ * @param {boolean} isActive
+ * @returns {Promise<Object>}
+ */
+export async function updateCourseStatus(courseId, isActive) {
+  return requestWithFallback(
+    `/courses/${courseId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ isActive, is_active: isActive }),
+    },
+    () => ({ success: true, courseId, isActive })
+  );
+}
+
+/**
  * Fetches course categories and recent active courses.
  * @endpoint GET /courses/overview
  * @returns {Promise<{categories: Array<{id: string, name: string}>, recentCourses: Array<Object>}>}
@@ -115,12 +135,63 @@ export async function getCoursesOverview() {
   }));
 }
 
+/**
+ * Uploads a new photo/avatar for the course.
+ * @endpoint POST /courses/:id/photo
+ * @param {string} courseId Course UUID or 'os'
+ * @param {File} file Image file
+ * @returns {Promise<{success: boolean, courseId: string, photo_url: string}>}
+ */
+export async function uploadCoursePhoto(courseId, file) {
+  const targetId = courseId || "c0000000-0000-4000-8000-000000000001";
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return requestWithFallback(
+    `/courses/${targetId}/photo`,
+    {
+      method: "POST",
+      body: formData,
+    },
+    () => ({
+      success: true,
+      courseId: targetId,
+      photo_url: URL.createObjectURL(file),
+    })
+  );
+}
+
+/**
+ * Deletes the photo/avatar for the course, reverting to default.
+ * @endpoint DELETE /courses/:id/photo
+ * @param {string} courseId Course UUID or 'os'
+ * @returns {Promise<{success: boolean, courseId: string, photo_url: null}>}
+ */
+export async function deleteCoursePhoto(courseId) {
+  const targetId = courseId || "c0000000-0000-4000-8000-000000000001";
+  return requestWithFallback(
+    `/courses/${targetId}/photo`,
+    {
+      method: "DELETE",
+    },
+    () => ({
+      success: true,
+      courseId: targetId,
+      photo_url: null,
+    })
+  );
+}
+
 export const coursesApi = {
   getCourses,
   getCourseById,
   getCourseDetails,
   updateCourseDetails,
+  updateCourseStatus,
+  uploadCoursePhoto,
+  deleteCoursePhoto,
   getCoursesOverview,
 };
 
 export default coursesApi;
+

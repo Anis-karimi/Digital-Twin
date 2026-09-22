@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatDate } from "@/utils/dateFormatter";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
+import { isPersianText } from "@/utils/textUtils";
 
 const avatarColors = [
   "bg-red-400",
@@ -109,7 +111,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                     <img
                       className="w-[47px] h-[47px] rounded-full object-cover shrink-0"
                       alt={item.title}
-                      src={item.photo_url}
+                      src={resolveMediaUrl(item.photo_url)}
                     />
                   ) : (
                     <div
@@ -122,26 +124,39 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                   )}
 
                   {/* Info */}
-                  <div className="flex flex-col flex-1 min-w-0 justify-center">
+                  <div className={`flex flex-col flex-1 min-w-0 justify-center ${isRTL ? "text-right" : "text-left"}`}>
                     <h2
-                      className={`truncate text-black dark:text-neutral-scale70 fa-body font-vazir ${
-                        isRTL ? "text-right" : "text-left"
+                      className={`truncate text-black dark:text-neutral-scale70 ${
+                        isRTL
+                          ? "fa-body font-vazir text-right"
+                          : isPersianText(item.title)
+                          ? "en-body font-vazir text-left"
+                          : "en-body font-inter text-left"
                       }`}
-                      dir="rtl"
+                      dir={isRTL ? "rtl" : "ltr"}
                     >
                       {item.title}
                     </h2>
 
-                    <p
-                      className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${
-                        isRTL
-                          ? "fa-caption-2 text-right font-vazir"
-                          : "en-caption-2 text-left font-inter"
-                      }`}
-                    >
-                      {item.preview ||
-                        (isRTL ? "پیامی بنویسید..." : "Type something...")}
-                    </p>
+                    {(() => {
+                      const previewText =
+                        item.preview || (isRTL ? "پیامی بنویسید..." : "Type something...");
+                      const isPreviewPersian = isPersianText(previewText);
+                      return (
+                        <p
+                          dir={isRTL ? "rtl" : "ltr"}
+                          className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${
+                            isRTL
+                              ? "fa-caption-2 font-vazir text-right"
+                              : isPreviewPersian
+                              ? "en-caption-2 font-vazir text-left"
+                              : "en-caption-2 font-inter text-left"
+                          }`}
+                        >
+                          {previewText}
+                        </p>
+                      );
+                    })()}
                   </div>
 
                   {/* Date & Unread count - on LEFT in RTL, on RIGHT in LTR */}

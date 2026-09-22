@@ -73,7 +73,7 @@ module.exports = {
       },
       fontFamily: {
         vazir: ["Vazirmatn", "sans-serif"],
-        inter: ["Inter", "sans-serif"],
+        inter: ["Inter", "Vazirmatn", "sans-serif"],
         "EN-inter-body-body": "var(--EN-inter-body-body-font-family)",
         "EN-inter-body-body-large":
           "var(--EN-inter-body-body-large-font-family)",

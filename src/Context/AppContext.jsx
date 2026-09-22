@@ -18,10 +18,12 @@ export function AppProvider({ children }) {
   });
 
   const [role, setRole] = useState(() => {
+    const savedRole = localStorage.getItem("user_role");
+    if (savedRole) return savedRole.toLowerCase();
     const saved = localStorage.getItem("current_user");
     try {
       const parsed = saved ? JSON.parse(saved) : null;
-      return parsed?.role || "teacher";
+      return (parsed?.role || parsed?.user_type || "teacher").toLowerCase();
     } catch {
       return "teacher";
     }

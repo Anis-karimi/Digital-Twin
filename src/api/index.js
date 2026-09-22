@@ -17,7 +17,7 @@ export { contextsApi, getContextDocuments, uploadDocument, deleteDocuments, getD
 export { quizApi, generateQuiz, explainAnswer } from "./existing/quiz.api";
 
 // New Backend Contracts & Modules (with Smart Mock Fallback)
-export { coursesApi, getCourses, getCourseById, getCourseDetails, updateCourseDetails, getCoursesOverview } from "./new/courses.api";
+export { coursesApi, getCourses, getCourseById, getCourseDetails, updateCourseDetails, updateCourseStatus, uploadCoursePhoto, deleteCoursePhoto, getCoursesOverview } from "./new/courses.api";
 export { studentsApi, getStudentsByCourse, getStudentById, toggleBlockStudent, removeStudentFromCourse } from "./new/students.api";
 export { notificationsApi, getJoinRequests, acceptJoinRequest, rejectJoinRequest, getSystemMessages } from "./new/notifications.api";
 export { chatHistoryApi, getChatHistory, saveChatMessage, saveConversationTurn, sendMessageWithRAG, submitMessageFeedback, clearChatHistory } from "./new/chatHistory.api";

@@ -1,14 +1,18 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import X from "@/assets/icons/X.svg?react";
 import { notificationsApi } from "@/api";
+import { AppContext } from "@/Context/AppContext";
 
 export const TeacherNotification = () => {
   const navigate = useNavigate();
+  const { isRTL } = useContext(AppContext);
   const [joinRequests, setJoinRequests] = useState([]);
+
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
   useEffect(() => {
     let isMounted = true;
@@ -41,21 +45,28 @@ export const TeacherNotification = () => {
   };
 
   return (
-    <main className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden">
+    <main
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden"
+      dir={isRTL ? "rtl" : "ltr"}
+    >
       {/* Header */}
       <header className="w-full h-[65px] flex shrink-0">
-        <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
+        <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label="Go back"
-            className="text-white absolute left-[15px] top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center"
+            aria-label={isRTL ? "بازگشت" : "Go back"}
+            className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
           >
-            <ArrowLeft className="!w-6 !h-6" />
+            <BackIcon className="!w-6 !h-6" />
           </button>
 
-          <h1 className="absolute top-1/2 -translate-y-1/2 left-16 en-title-1 text-[#f7f7f7] text-center whitespace-nowrap">
-            Notifications
+          <h1
+            className={`flex-1 mx-2 text-neutral-scale70 whitespace-nowrap truncate ${
+              isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
+            }`}
+          >
+            {isRTL ? "اعلان‌ها" : "Notifications"}
           </h1>
         </div>
       </header>
@@ -73,9 +84,11 @@ export const TeacherNotification = () => {
           >
             <h2
               id="join-requests-heading"
-              className="text-left relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70 "
+              className={`relative self-stretch mt-[-1px] text-primery-800 dark:text-neutral-scale70 ${
+                isRTL ? "fa-caption-3 font-vazir text-right" : "en-caption-3 font-inter text-left"
+              }`}
             >
-              Your Join Requests
+              {isRTL ? "درخواست‌های عضویت شما" : "Your Join Requests"}
             </h2>
 
             <div className="absolute top-8 left-0 w-full h-[3px] bg-neutral-scale200" />
@@ -146,8 +159,12 @@ export const TeacherNotification = () => {
 
           {/* Messages */}
           <section className="w-full h-[65px] shrink-0 relative flex flex-col items-start gap-3 px-[15px] py-2.5 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden">
-            <h2 className="text-left relative self-stretch mt-[-1px] en-caption-3 text-primery-800 dark:text-neutral-scale70">
-              Messages
+            <h2
+              className={`relative self-stretch mt-[-1px] text-primery-800 dark:text-neutral-scale70 ${
+                isRTL ? "fa-caption-3 font-vazir text-right" : "en-caption-3 font-inter text-left"
+              }`}
+            >
+              {isRTL ? "پیام‌ها" : "Messages"}
             </h2>
 
             <div className="absolute top-8 left-0 w-full h-[3px] bg-neutral-scale200" />
