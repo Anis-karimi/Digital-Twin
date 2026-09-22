@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useCallback } from "react";
 import "@/styles/Allpages.css";
 import AI from "@/assets/images/AI.png";
 import { coursesApi } from "@/api";
@@ -6,23 +6,29 @@ import { useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatDate } from "@/utils/dateFormatter";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
+import { isPersianText } from "@/utils/textUtils";
 
 export const HomeChatFeedSection = () => {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchChats = useCallback(() => {
     coursesApi.getCourses().then((data) => {
-      if (isMounted && Array.isArray(data)) {
+      if (Array.isArray(data)) {
         setChats(data);
       }
     });
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    fetchChats();
+    window.addEventListener("focus", fetchChats);
+    return () => {
+      window.removeEventListener("focus", fetchChats);
+    };
+  }, [fetchChats]);
 
   return (
     <section
@@ -48,28 +54,42 @@ export const HomeChatFeedSection = () => {
                 <img
                   className="w-[50px] h-[50px] rounded-full object-cover shrink-0"
                   alt={displayTitle}
-                  src={AI}
+                  src={resolveMediaUrl(item.photo_url) || AI}
+                  onError={(e) => {
+                    e.currentTarget.src = AI;
+                  }}
                 />
 
                 {/* Content info */}
-                <div className="flex flex-col flex-1 min-w-0 justify-center">
+                <div className={`flex flex-col flex-1 min-w-0 justify-center ${isRTL ? "text-right" : "text-left"}`}>
                   <h2
-                    className={`truncate text-black dark:text-neutral-scale70 fa-title-3 font-vazir ${
-                      isRTL ? "text-right" : "text-left"
+                    className={`truncate text-black dark:text-neutral-scale70 ${
+                      isRTL ? "fa-title-3 font-vazir text-right" : "en-title-3 font-vazir text-left"
                     }`}
-                    dir="rtl"
+                    dir={isRTL ? "rtl" : "ltr"}
                   >
                     {displayTitle}
                   </h2>
-
-                  <p
-                    className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${
-                      isRTL ? "fa-caption-2 text-right" : "en-caption-2 text-left"
-                    }`}
-                  >
-                    {item.preview ||
-                      (isRTL ? "پیامی بنویسید..." : "Type something...")}
-                  </p>
+                  {/* Last message preview */}
+                  {(() => {
+                    const previewText =
+                      item.preview || (isRTL ? "پیامی بنویسید..." : "Type something...");
+                    const isPreviewPersian = isPersianText(previewText);
+                    return (
+                      <p
+                        dir={isRTL ? "rtl" : "ltr"}
+                        className={`truncate text-neutral-scale1000 dark:text-neutral-scale300 ${
+                          isRTL
+                            ? "fa-caption-2 font-vazir text-right"
+                            : isPreviewPersian
+                            ? "en-caption-2 font-vazir text-left"
+                            : "en-caption-2 font-inter text-left"
+                        }`}
+                      >
+                        {previewText}
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 {/* Date & Unread count - on LEFT in RTL, on RIGHT in LTR */}

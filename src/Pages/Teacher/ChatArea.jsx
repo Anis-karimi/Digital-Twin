@@ -1,5 +1,5 @@
 import { useId, useState, useRef, useContext, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Camera } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
@@ -18,6 +18,8 @@ import Send from "@/assets/icons/Send.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
+import { isPersianText } from "@/utils/textUtils";
 
 
 const avatarColors = [
@@ -81,7 +83,66 @@ export const ChatArea = () => {
     const { id } = useParams();
     const location = useLocation();
     const isStudentChat = location.pathname.startsWith("/ChatArea/student/");
-    
+    const { language, isRTL, role, currentUser } = useContext(AppContext);
+
+    const isStudentRole = Boolean(
+      (role && role.toLowerCase() === "student") ||
+      (currentUser?.role && currentUser.role.toLowerCase() === "student") ||
+      (currentUser?.user_type && currentUser.user_type.toUpperCase() === "STUDENT") ||
+      localStorage.getItem("user_role") === "student"
+    );
+
+    const activeChatType = isStudentChat || isStudentRole ? "student" : "course";
+    const activeTargetId = isStudentChat
+      ? id
+      : isStudentRole
+      ? currentUser?.user_id || "ef6125a3-d179-442c-a9be-b4cd82e8ada6"
+      : id || "c0000000-0000-4000-8000-000000000001";
+    const activeCourseId = !isStudentChat
+      ? id || "c0000000-0000-4000-8000-000000000001"
+      : null;
+
+    const chatPhotoInputRef = useRef(null);
+    const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
+
+    const handleChatPhotoUploadClick = () => {
+      if (chatPhotoInputRef.current) {
+        chatPhotoInputRef.current.click();
+      }
+    };
+
+    const handleChatPhotoFileChange = async (event) => {
+      const file = event.target.files?.[0];
+      if (!file || !activeCourseId) return;
+
+      setIsUpdatingPhoto(true);
+      try {
+        const res = await coursesApi.uploadCoursePhoto(activeCourseId, file);
+        if (res && res.photo_url) {
+          setChatEntity((prev) => ({ ...(prev || {}), photo_url: res.photo_url }));
+        }
+      } catch (error) {
+        console.error("Course photo upload failed:", error);
+      } finally {
+        setIsUpdatingPhoto(false);
+        event.target.value = "";
+      }
+    };
+
+    const handleChatPhotoDelete = async () => {
+      if (!activeCourseId) return;
+      setIsUpdatingPhoto(true);
+      try {
+        await coursesApi.deleteCoursePhoto(activeCourseId);
+        setChatEntity((prev) => ({ ...(prev || {}), photo_url: null }));
+      } catch (error) {
+        console.error("Course photo delete failed:", error);
+      } finally {
+        setIsUpdatingPhoto(false);
+        setIsMenuOpen(false);
+      }
+    };
+
     const handleBack = () => {
       // If a specific return route was provided in state, navigate there
       if (location.state?.backTo) {
@@ -94,6 +155,11 @@ export const ChatArea = () => {
         navigate(`/TeacherLessonsPage/${currentStudent.lessonId}`, {
           replace: true,
         });
+        return;
+      }
+
+      if (isStudentRole) {
+        navigate("/Student", { replace: true });
         return;
       }
 
@@ -114,8 +180,6 @@ export const ChatArea = () => {
     const sampleRateRef = useRef(22050);
 
     const [settings, setSettings] = useState(null);
-
-    const { language, isRTL } = useContext(AppContext);
     const [llmModel] = useState("gemma4");
     const [teacherName] = useState("Teacher");
 
@@ -221,20 +285,22 @@ export const ChatArea = () => {
     // Load persistent chat history from backend database
     useEffect(() => {
         let isMounted = true;
-        if (id) {
-            const chatType = isStudentChat ? "student" : "course";
-            chatHistoryApi.getChatHistory(chatType, id)
+        if (activeTargetId) {
+            chatHistoryApi.getChatHistory(activeChatType, activeTargetId)
                 .then((history) => {
-                    if (isMounted && Array.isArray(history) && history.length > 0) {
-                        setMessages(history);
+                    if (isMounted) {
+                        setMessages(Array.isArray(history) ? history : []);
                     }
                 })
-                .catch((err) => console.warn("Failed to load chat history:", err));
+                .catch((err) => {
+                    console.warn("Failed to load chat history:", err);
+                    if (isMounted) setMessages([]);
+                });
         }
         return () => {
             isMounted = false;
         };
-    }, [id, isStudentChat]);
+    }, [activeChatType, activeTargetId]);
 
     const currentStudent = isStudentChat ? chatEntity : null;
     const currentCourse = !isStudentChat ? chatEntity : null;
@@ -257,8 +323,7 @@ export const ChatArea = () => {
         }
 
         try {
-            const chatType = isStudentChat ? "student" : "course";
-            await chatHistoryApi.clearChatHistory(chatType, id);
+            await chatHistoryApi.clearChatHistory(activeChatType, activeTargetId);
         } catch (err) {
             console.warn("Failed to clear chat history on server:", err);
         }
@@ -517,8 +582,7 @@ export const ChatArea = () => {
 
         // Persist both user prompt and response (or error message) to new backend history database
         try {
-            const chatType = isStudentChat ? "student" : "course";
-            const saveRes = await chatHistoryApi.saveConversationTurn(chatType, id, {
+            const saveRes = await chatHistoryApi.saveConversationTurn(activeChatType, activeTargetId, {
                 text: userMessageText,
                 answer: aiText,
                 courseName: chatTitle,
@@ -676,13 +740,38 @@ export const ChatArea = () => {
               />
             </button>
 
+            {/* Hidden file input for course photo upload */}
+            <input
+              ref={chatPhotoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleChatPhotoFileChange}
+            />
+
             {/* Avatar */}
-            <div className="mx-2 shrink-0 flex items-center justify-center">
+            <div
+              className={`mx-2 shrink-0 flex items-center justify-center ${
+                !isStudentChat && !isStudentRole ? "cursor-pointer group relative" : ""
+              }`}
+              onClick={() => {
+                if (!isStudentChat && !isStudentRole) {
+                  navigate(`/TeacherCourseDoc/${activeCourseId}`);
+                }
+              }}
+              title={
+                !isStudentChat && !isStudentRole
+                  ? isRTL
+                    ? "تنظیمات و تغییر عکس درس"
+                    : "Course settings & photo"
+                  : undefined
+              }
+            >
               {isStudentChat ? (
                 currentStudent?.photo_url ? (
                   <img
                     className="w-[38px] h-[38px] rounded-full object-cover"
-                    src={currentStudent.photo_url}
+                    src={resolveMediaUrl(currentStudent.photo_url)}
                     alt={currentStudent?.title || "Student"}
                   />
                 ) : (
@@ -695,26 +784,37 @@ export const ChatArea = () => {
                   </div>
                 )
               ) : (
-
-                <img
-                  className="w-[38px] h-[38px] rounded-full object-cover"
-                  src={currentCourse?.photo_url || AI}
-                  alt={chatTitle || "Course"}
-                />
+                <div className="relative w-[38px] h-[38px] rounded-full overflow-hidden border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm">
+                  <img
+                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    src={resolveMediaUrl(currentCourse?.photo_url) || AI}
+                    alt={chatTitle || "Course"}
+                    onError={(e) => {
+                      e.currentTarget.src = AI;
+                    }}
+                  />
+                  {!isStudentRole && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="w-3.5 h-3.5 text-white drop-shadow" />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Title */}
             <h1
-              dir={/[\u0600-\u06FF]/.test(chatTitle) ? "rtl" : (isRTL ? "rtl" : "ltr")}
+              dir={isPersianText(chatTitle) ? "rtl" : (isRTL ? "rtl" : "ltr")}
               className={`flex-1 min-w-0 truncate ${
-                /[\u0600-\u06FF]/.test(chatTitle)
+                isPersianText(chatTitle)
                   ? "fa-title-3 font-vazir"
                   : (isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter")
-              } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70 cursor-pointer`}
+              } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70 ${
+                !isStudentChat && !isStudentRole ? "cursor-pointer" : ""
+              }`}
               onClick={() => {
-                if (!isStudentChat) {
-                  navigate(`/TeacherCourseDoc/${id}`);
+                if (!isStudentChat && !isStudentRole) {
+                  navigate(`/TeacherCourseDoc/${activeCourseId}`);
                 }
               }}
             >
@@ -759,6 +859,29 @@ export const ChatArea = () => {
                 <ChatDropdownMenu
                   onClearHistory={handleClearHistory}
                   onDownloadPdf={handleDownloadPDF}
+                  onCourseSettings={
+                    !isStudentChat && !isStudentRole
+                      ? () => {
+                          setIsMenuOpen(false);
+                          navigate(`/TeacherCourseDoc/${activeCourseId}`);
+                        }
+                      : undefined
+                  }
+                  onChangePhoto={
+                    !isStudentChat && !isStudentRole
+                      ? () => {
+                          setIsMenuOpen(false);
+                          handleChatPhotoUploadClick();
+                        }
+                      : undefined
+                  }
+                  onDeletePhoto={
+                    !isStudentChat && !isStudentRole
+                      ? handleChatPhotoDelete
+                      : undefined
+                  }
+                  hasPhoto={Boolean(currentCourse?.photo_url)}
+                  isCourseChat={!isStudentChat && !isStudentRole}
                 />
               </div>
             )}

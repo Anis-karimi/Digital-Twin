@@ -16,11 +16,11 @@
 :root {
   --effects-drop-shadow-bottom: 0px 1.5px 3px 0px rgba(0, 0, 0, 0.25);
   --effects-drop-shadow-top: 0px -1.5px 3px 0px rgba(0, 0, 0, 0.25);
-  --EN-inter-body-body-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-body-body-font-size: 14px;
   --EN-inter-body-body-font-style: normal;
   --EN-inter-body-body-font-weight: 400;
-  --EN-inter-body-body-large-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-large-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-body-body-large-font-size: 16px;
   --EN-inter-body-body-large-font-style: normal;
   --EN-inter-body-body-large-font-weight: 400;
@@ -28,67 +28,67 @@
   --EN-inter-body-body-large-line-height: 24px;
   --EN-inter-body-body-letter-spacing: 0px;
   --EN-inter-body-body-line-height: 22px;
-  --EN-inter-body-body-medium-font-family: "Inter", Helvetica;
+  --EN-inter-body-body-medium-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-body-body-medium-font-size: 14px;
   --EN-inter-body-body-medium-font-style: normal;
   --EN-inter-body-body-medium-font-weight: 500;
   --EN-inter-body-body-medium-letter-spacing: 0px;
   --EN-inter-body-body-medium-line-height: 22px;
-  --EN-inter-caption-1-font-family: "Inter", Helvetica;
+  --EN-inter-caption-1-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-1-font-size: 12px;
   --EN-inter-caption-1-font-style: normal;
   --EN-inter-caption-1-font-weight: 400;
   --EN-inter-caption-1-letter-spacing: 0px;
   --EN-inter-caption-1-line-height: 18px;
-  --EN-inter-caption-2-font-family: "Inter", Helvetica;
+  --EN-inter-caption-2-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-2-font-size: 11px;
   --EN-inter-caption-2-font-style: normal;
   --EN-inter-caption-2-font-weight: 400;
   --EN-inter-caption-2-letter-spacing: 0px;
   --EN-inter-caption-2-line-height: 16px;
-  --EN-inter-caption-3-font-family: "Inter", Helvetica;
+  --EN-inter-caption-3-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-3-font-size: 12px;
   --EN-inter-caption-3-font-style: normal;
   --EN-inter-caption-3-font-weight: 600;
   --EN-inter-caption-3-letter-spacing: 0px;
   --EN-inter-caption-3-line-height: 18px;
-  --EN-inter-caption-4-font-family: "Inter", Helvetica;
+  --EN-inter-caption-4-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-4-font-size: 10px;
   --EN-inter-caption-4-font-style: normal;
   --EN-inter-caption-4-font-weight: 400;
   --EN-inter-caption-4-letter-spacing: 0px;
   --EN-inter-caption-4-line-height: 14px;
-  --EN-inter-caption-5-font-family: "Inter", Helvetica;
+  --EN-inter-caption-5-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-5-font-size: 8px;
   --EN-inter-caption-5-font-style: normal;
   --EN-inter-caption-5-font-weight: 400;
   --EN-inter-caption-5-letter-spacing: 0px;
   --EN-inter-caption-5-line-height: 12px;
-  --EN-inter-caption-6-font-family: "Inter", Helvetica;
+  --EN-inter-caption-6-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-caption-6-font-size: 6px;
   --EN-inter-caption-6-font-style: normal;
   --EN-inter-caption-6-font-weight: 400;
   --EN-inter-caption-6-letter-spacing: 0px;
   --EN-inter-caption-6-line-height: 10px;
-  --EN-inter-display-font-family: "Inter", Helvetica;
+  --EN-inter-display-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-display-font-size: 22px;
   --EN-inter-display-font-style: normal;
   --EN-inter-display-font-weight: 800;
   --EN-inter-display-letter-spacing: 0px;
   --EN-inter-display-line-height: 30px;
-  --EN-inter-titles-1-font-family: "Inter", Helvetica;
+  --EN-inter-titles-1-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-titles-1-font-size: 20px;
   --EN-inter-titles-1-font-style: normal;
   --EN-inter-titles-1-font-weight: 600;
   --EN-inter-titles-1-letter-spacing: 0px;
   --EN-inter-titles-1-line-height: 28px;
-  --EN-inter-titles-2-font-family: "Inter", Helvetica;
+  --EN-inter-titles-2-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-titles-2-font-size: 17px;
   --EN-inter-titles-2-font-style: normal;
   --EN-inter-titles-2-font-weight: 600;
   --EN-inter-titles-2-letter-spacing: 0px;
   --EN-inter-titles-2-line-height: 24px;
-  --EN-inter-titles-3-font-family: "Inter", Helvetica;
+  --EN-inter-titles-3-font-family: "Inter", "Vazirmatn", sans-serif;
   --EN-inter-titles-3-font-size: 16px;
   --EN-inter-titles-3-font-style: normal;
   --EN-inter-titles-3-font-weight: 500;
@@ -104,11 +104,11 @@
   --error-700: rgba(203, 30, 26, 1);
   --error-800: rgba(181, 27, 23, 1);
   --error-900: rgba(158, 23, 20, 1);
-  --FA-vazirmatn-body-body-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-body-body-font-size: 14px;
   --FA-vazirmatn-body-body-font-style: normal;
   --FA-vazirmatn-body-body-font-weight: 400;
-  --FA-vazirmatn-body-body-large-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-large-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-body-body-large-font-size: 16px;
   --FA-vazirmatn-body-body-large-font-style: normal;
   --FA-vazirmatn-body-body-large-font-weight: 400;
@@ -116,67 +116,67 @@
   --FA-vazirmatn-body-body-large-line-height: 24px;
   --FA-vazirmatn-body-body-letter-spacing: 0px;
   --FA-vazirmatn-body-body-line-height: 22px;
-  --FA-vazirmatn-body-body-medium-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-body-body-medium-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-body-body-medium-font-size: 14px;
   --FA-vazirmatn-body-body-medium-font-style: normal;
   --FA-vazirmatn-body-body-medium-font-weight: 500;
   --FA-vazirmatn-body-body-medium-letter-spacing: 0px;
   --FA-vazirmatn-body-body-medium-line-height: 22px;
-  --FA-vazirmatn-caption-1-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-1-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-1-font-size: 12px;
   --FA-vazirmatn-caption-1-font-style: normal;
   --FA-vazirmatn-caption-1-font-weight: 400;
   --FA-vazirmatn-caption-1-letter-spacing: 0px;
   --FA-vazirmatn-caption-1-line-height: 18px;
-  --FA-vazirmatn-caption-2-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-2-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-2-font-size: 11px;
   --FA-vazirmatn-caption-2-font-style: normal;
   --FA-vazirmatn-caption-2-font-weight: 400;
   --FA-vazirmatn-caption-2-letter-spacing: 0px;
   --FA-vazirmatn-caption-2-line-height: 16px;
-  --FA-vazirmatn-caption-3-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-3-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-3-font-size: 12px;
   --FA-vazirmatn-caption-3-font-style: normal;
   --FA-vazirmatn-caption-3-font-weight: 600;
   --FA-vazirmatn-caption-3-letter-spacing: 0px;
   --FA-vazirmatn-caption-3-line-height: 18px;
-  --FA-vazirmatn-caption-4-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-4-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-4-font-size: 10px;
   --FA-vazirmatn-caption-4-font-style: normal;
   --FA-vazirmatn-caption-4-font-weight: 400;
   --FA-vazirmatn-caption-4-letter-spacing: 0px;
   --FA-vazirmatn-caption-4-line-height: 14px;
-  --FA-vazirmatn-caption-5-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-5-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-5-font-size: 8px;
   --FA-vazirmatn-caption-5-font-style: normal;
   --FA-vazirmatn-caption-5-font-weight: 400;
   --FA-vazirmatn-caption-5-letter-spacing: 0px;
   --FA-vazirmatn-caption-5-line-height: 12px;
-  --FA-vazirmatn-caption-6-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-caption-6-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-caption-6-font-size: 6px;
   --FA-vazirmatn-caption-6-font-style: normal;
   --FA-vazirmatn-caption-6-font-weight: 400;
   --FA-vazirmatn-caption-6-letter-spacing: 0px;
   --FA-vazirmatn-caption-6-line-height: 10px;
-  --FA-vazirmatn-display-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-display-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-display-font-size: 22px;
   --FA-vazirmatn-display-font-style: normal;
   --FA-vazirmatn-display-font-weight: 600;
   --FA-vazirmatn-display-letter-spacing: 0px;
   --FA-vazirmatn-display-line-height: 30px;
-  --FA-vazirmatn-titles-1-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-1-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-titles-1-font-size: 20px;
   --FA-vazirmatn-titles-1-font-style: normal;
   --FA-vazirmatn-titles-1-font-weight: 600;
   --FA-vazirmatn-titles-1-letter-spacing: 0px;
   --FA-vazirmatn-titles-1-line-height: 28px;
-  --FA-vazirmatn-titles-2-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-2-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-titles-2-font-size: 17px;
   --FA-vazirmatn-titles-2-font-style: normal;
   --FA-vazirmatn-titles-2-font-weight: 600;
   --FA-vazirmatn-titles-2-letter-spacing: 0px;
   --FA-vazirmatn-titles-2-line-height: 24px;
-  --FA-vazirmatn-titles-3-font-family: "Vazirmatn", Helvetica;
+  --FA-vazirmatn-titles-3-font-family: "Vazirmatn", "Inter", sans-serif;
   --FA-vazirmatn-titles-3-font-size: 16px;
   --FA-vazirmatn-titles-3-font-style: normal;
   --FA-vazirmatn-titles-3-font-weight: 500;
@@ -368,4 +368,113 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(128, 140, 153, 0.65);
+}
+
+/* ==========================================================================
+   Telegram Style Switch
+   ========================================================================== */
+:root {
+  --tg-track-off: #cbd5e1;
+  --tg-track-on: #8ec3ea;
+  --tg-thumb-off: #ffffff;
+  --tg-thumb-on: #2481cc;
+  --tg-shadow: rgba(0, 0, 0, 0.16);
+  --tg-ripple: rgba(36, 129, 204, 0.15);
+}
+
+.dark {
+  --tg-track-off: #39424c;
+  --tg-track-on: #3f6f94;
+  --tg-thumb-off: #a2adb7;
+  --tg-thumb-on: #52a6e6;
+  --tg-shadow: rgba(0, 0, 0, 0.35);
+  --tg-ripple: rgba(82, 166, 230, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --tg-track-off: #39424c;
+    --tg-track-on: #3f6f94;
+    --tg-thumb-off: #a2adb7;
+    --tg-thumb-on: #52a6e6;
+    --tg-shadow: rgba(0, 0, 0, 0.35);
+    --tg-ripple: rgba(82, 166, 230, 0.2);
+  }
+}
+
+.tg-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide standard HTML checkbox */
+.tg-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* Background pill track */
+.tg-track {
+  width: 36px;
+  height: 14px;
+  background-color: var(--tg-track-off);
+  border-radius: 7px;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+}
+
+/* Circular thumb knob */
+.tg-thumb {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-color: var(--tg-thumb-off);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px 0 var(--tg-shadow), 0 2px 4px 0 var(--tg-shadow);
+  transition: 
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.15s ease;
+  display: block;
+}
+
+/* Active / Click stretch effect */
+.tg-switch:active .tg-thumb {
+  width: 24px;
+}
+
+/* Checked state: Track */
+.tg-switch input:checked + .tg-track {
+  background-color: var(--tg-track-on);
+}
+
+/* Checked state: Thumb position & color */
+.tg-switch input:checked ~ .tg-thumb {
+  transform: translate(16px, -50%);
+  background-color: var(--tg-thumb-on);
+  box-shadow: 0 2px 4px 0 rgba(36, 129, 204, 0.35);
+}
+
+/* When dragging/clicking while checked, anchor expansion to right */
+.tg-switch input:checked:active ~ .tg-thumb {
+  transform: translate(12px, -50%);
+}
+
+/* Focus ring for accessibility */
+.tg-switch input:focus-visible ~ .tg-thumb {
+  outline: 2px solid var(--tg-thumb-on);
+  outline-offset: 2px;
 }

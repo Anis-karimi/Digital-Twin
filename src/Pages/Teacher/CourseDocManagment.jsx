@@ -13,6 +13,8 @@ import {
   AlertCircle,
   Loader2,
   Image as ImageIcon,
+  Camera,
+  Power,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -21,6 +23,7 @@ import { contextsApi, coursesApi } from "@/api";
 import { AppContext } from "@/Context/AppContext";
 import { DatePickerModal } from "@/Components/Common/DatePickerModal";
 import { formatDisplayDate } from "@/utils/dateUtils";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
 import AI from "@/assets/images/AI.png";
 import courseImage from "@/assets/images/course.jpg";
 
@@ -31,10 +34,17 @@ const DEFAULT_COURSE = {
   description:
     "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
   accessLevel: "private",
+  photo_url: null,
+};
+
+const isPersianText = (text) => {
+  if (!text || typeof text !== "string") return false;
+  return /[\u0600-\u06FF]/.test(text);
 };
 
 export const TeacherCourseDoc = () => {
   const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
   const navigate = useNavigate();
   const { id } = useParams();
   const { isRTL } = useContext(AppContext);
@@ -50,13 +60,15 @@ export const TeacherCourseDoc = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
 
   // Course Details state (backed by new server coursesApi with authentic mock default)
-  const [courseDetails, setCourseDetails] = useState({ ...DEFAULT_COURSE });
+  const [courseDetails, setCourseDetails] = useState({ ...DEFAULT_COURSE, isActive: true });
   const [courseTitle, setCourseTitle] = useState(DEFAULT_COURSE.name);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [isCourseActive, setIsCourseActive] = useState(true);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ ...DEFAULT_COURSE });
+  const [editForm, setEditForm] = useState({ ...DEFAULT_COURSE, isActive: true });
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
 
@@ -91,27 +103,36 @@ export const TeacherCourseDoc = () => {
 
   useEffect(() => {
     let isMounted = true;
-    if (id) {
-      coursesApi
-        .getCourseDetails(id)
-        .then((data) => {
-          if (isMounted && data) {
-            const loaded = {
-              name: data.name || data.nameFa || data.nameEn || DEFAULT_COURSE.name,
-              startDate: data.startDate || DEFAULT_COURSE.startDate,
-              endDate: data.endDate || DEFAULT_COURSE.endDate,
-              description: data.description ?? DEFAULT_COURSE.description,
-              accessLevel: (data.accessLevel || DEFAULT_COURSE.accessLevel).toLowerCase(),
-            };
-            setCourseDetails(loaded);
-            setEditForm(loaded);
-            setCourseTitle(loaded.name);
-          }
-        })
-        .catch((err) => {
-          console.warn("Failed to load course details from new server:", err);
-        });
-    }
+    const targetCourseId = id || "c0000000-0000-4000-8000-000000000001";
+    coursesApi
+      .getCourseDetails(targetCourseId)
+      .then((data) => {
+        if (isMounted && data) {
+          const activeStatus =
+            data.isActive !== undefined
+              ? Boolean(data.isActive)
+              : data.is_active !== undefined
+              ? Boolean(data.is_active)
+              : true;
+
+          const loaded = {
+            name: data.name || data.nameFa || data.nameEn || DEFAULT_COURSE.name,
+            startDate: data.startDate || DEFAULT_COURSE.startDate,
+            endDate: data.endDate || DEFAULT_COURSE.endDate,
+            description: data.description ?? DEFAULT_COURSE.description,
+            accessLevel: (data.accessLevel || DEFAULT_COURSE.accessLevel).toLowerCase(),
+            isActive: activeStatus,
+            photo_url: data.photo_url || null,
+          };
+          setCourseDetails(loaded);
+          setEditForm(loaded);
+          setCourseTitle(loaded.name);
+          setIsCourseActive(activeStatus);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load course details from new server:", err);
+      });
     return () => {
       isMounted = false;
     };
@@ -155,11 +176,119 @@ export const TeacherCourseDoc = () => {
     }
   };
 
+  // Photo upload and delete handlers (backed by new server coursesApi)
+  const handlePhotoUploadClick = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.click();
+    }
+  };
+
+  const handlePhotoFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const targetCourseId = id || "c0000000-0000-4000-8000-000000000001";
+    setIsUploadingPhoto(true);
+    setFeedback({ type: "", message: "" });
+    try {
+      const res = await coursesApi.uploadCoursePhoto(targetCourseId, file);
+      if (res && res.photo_url) {
+        setCourseDetails((prev) => ({ ...prev, photo_url: res.photo_url }));
+        setEditForm((prev) => ({ ...prev, photo_url: res.photo_url }));
+        setFeedback({
+          type: "success",
+          message: isRTL
+            ? "تصویر نمایشی درس با موفقیت به‌روزرسانی شد."
+            : "Course display photo updated successfully.",
+        });
+        setTimeout(() => setFeedback({ type: "", message: "" }), 3500);
+      }
+    } catch (error) {
+      console.error("Photo upload failed:", error);
+      setFeedback({
+        type: "error",
+        message: isRTL
+          ? "خطا در بارگذاری تصویر درس. لطفاً فایل معتبر تصویری انتخاب کنید."
+          : "Failed to upload course photo.",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = "";
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    const targetCourseId = id || "c0000000-0000-4000-8000-000000000001";
+    setIsUploadingPhoto(true);
+    setFeedback({ type: "", message: "" });
+    try {
+      await coursesApi.deleteCoursePhoto(targetCourseId);
+      setCourseDetails((prev) => ({ ...prev, photo_url: null }));
+      setEditForm((prev) => ({ ...prev, photo_url: null }));
+      setFeedback({
+        type: "success",
+        message: isRTL
+          ? "تصویر نمایشی درس با موفقیت حذف شد."
+          : "Course display photo removed successfully.",
+      });
+      setTimeout(() => setFeedback({ type: "", message: "" }), 3500);
+    } catch (error) {
+      console.error("Photo delete failed:", error);
+      setFeedback({
+        type: "error",
+        message: isRTL
+          ? "خطا در حذف تصویر درس از سرور."
+          : "Failed to remove course photo.",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   // Editing handlers
   const handleStartEdit = () => {
     setEditForm({ ...courseDetails });
     setIsEditing(true);
     setFeedback({ type: "", message: "" });
+  };
+
+  // Handle toggling course active status (Telegram-style switch)
+  const handleToggleCourseStatus = async () => {
+    const nextStatus = !isCourseActive;
+    // Optimistic UI update
+    setIsCourseActive(nextStatus);
+    setCourseDetails((prev) => ({ ...prev, isActive: nextStatus }));
+    setEditForm((prev) => ({ ...prev, isActive: nextStatus }));
+    setIsTogglingStatus(true);
+
+    try {
+      await coursesApi.updateCourseStatus(id, nextStatus);
+      setFeedback({
+        type: "success",
+        message: isRTL
+          ? nextStatus
+            ? "وضعیت درس با موفقیت به «فعال» تغییر یافت"
+            : "وضعیت درس با موفقیت به «غیرفعال» تغییر یافت"
+          : nextStatus
+          ? "Course status changed to active"
+          : "Course status changed to inactive",
+      });
+      setTimeout(() => setFeedback({ type: "", message: "" }), 3000);
+    } catch (error) {
+      console.error("Failed to update course status:", error);
+      // Rollback on error
+      setIsCourseActive(!nextStatus);
+      setCourseDetails((prev) => ({ ...prev, isActive: !nextStatus }));
+      setEditForm((prev) => ({ ...prev, isActive: !nextStatus }));
+      setFeedback({
+        type: "error",
+        message: isRTL
+          ? "خطا در به‌روزرسانی وضعیت درس در سرور"
+          : "Failed to update course status on server",
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -180,11 +309,14 @@ export const TeacherCourseDoc = () => {
         startDate: editForm.startDate,
         endDate: editForm.endDate,
         accessLevel: editForm.accessLevel,
+        isActive: isCourseActive,
+        is_active: isCourseActive,
       });
 
       const updated = {
         ...editForm,
         name: courseDetails.name,
+        isActive: isCourseActive,
       };
       setCourseDetails(updated);
       setIsEditing(false);
@@ -247,7 +379,7 @@ export const TeacherCourseDoc = () => {
     >
       {/* Header */}
       <header className="w-full h-[65px] -mt-px flex shrink-0">
-        <div className="w-full h-[65px] relative flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
+        <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
           {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
@@ -264,38 +396,13 @@ export const TeacherCourseDoc = () => {
 
           {/* Course Title Header - Always authentic Persian formatting */}
           <h1
-            dir="rtl"
-            className="flex-1 mx-2 text-white fa-title-1 font-vazir truncate text-right [direction:rtl]"
+            dir={isRTL ? "rtl" : "ltr"}
+            className={`flex-1 mx-2 text-neutral-scale70 whitespace-nowrap truncate font-vazir ${
+              isRTL ? "fa-title-1 text-right" : "en-title-1 text-left"
+            }`}
           >
             {courseTitle || courseDetails.name || "سیستم عامل"}
           </h1>
-
-          {/* Course Status Toggle - Modern Switch */}
-          <div className="flex items-center shrink-0">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notificationsEnabled}
-              aria-label={isRTL ? "تغییر وضعیت دوره" : "Toggle course status"}
-              onClick={() => setNotificationsEnabled((prev) => !prev)}
-              className={`relative inline-flex h-[22px] w-[40px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                notificationsEnabled
-                  ? "bg-emerald-400"
-                  : "bg-neutral-scale500 dark:bg-neutral-scale1000"
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={`pointer-events-none inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                  notificationsEnabled
-                    ? isRTL
-                      ? "-translate-x-[18px]"
-                      : "translate-x-[18px]"
-                    : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
         </div>
       </header>
 
@@ -322,6 +429,62 @@ export const TeacherCourseDoc = () => {
               <span className={captionClass}>{feedback.message}</span>
             </div>
           )}
+
+          {/* Card: Course Active Status (Telegram-style Switch) */}
+          {/* Card: Course Active Status (Telegram Style Row matching Screenshot) */}
+          <section
+            aria-labelledby="course-status-heading"
+            className="w-full relative flex items-center justify-between px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0 transition-colors shadow-sm"
+          >
+            {/* Left Content (Icon + Title & Status) */}
+            <div className={`flex items-center gap-3 min-w-0 flex-1 ${textAlign}`}>
+              <div className="w-8 h-8 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1200 flex items-center justify-center shrink-0 text-neutral-scale800 dark:text-neutral-scale300">
+                <Power className="w-4 h-4" />
+              </div>
+
+              <div className="flex flex-col min-w-0 flex-1">
+                <h2
+                  id="course-status-heading"
+                  className={`${bodyClass} text-neutral-scale1800 dark:text-neutral-scale70 text-[14px] font-semibold leading-tight`}
+                >
+                  {isRTL ? "وضعیت درس" : "Course Status"}
+                </h2>
+                <span
+                  className={`${captionClass} text-[12px] mt-1 leading-none transition-colors ${
+                    isCourseActive
+                      ? "text-[#2481cc] dark:text-[#52a6e6] font-medium"
+                      : "text-neutral-scale600 dark:text-neutral-scale400"
+                  }`}
+                >
+                  {isCourseActive
+                    ? isRTL ? "فعال" : "Active"
+                    : isRTL ? "غیرفعال" : "Off"}
+                </span>
+              </div>
+            </div>
+
+            {/* Vertical Separator Line */}
+            <div
+              className="w-[1px] h-6 bg-neutral-scale200 dark:bg-neutral-scale1000 mx-3 shrink-0"
+              aria-hidden="true"
+            />
+
+            {/* Telegram-style Switch from User Specs */}
+            <label
+              className="tg-switch shrink-0"
+              dir="ltr"
+              aria-label={isRTL ? "تغییر وضعیت فعال بودن درس" : "Toggle course active status"}
+            >
+              <input
+                type="checkbox"
+                checked={isCourseActive}
+                onChange={handleToggleCourseStatus}
+                disabled={isTogglingStatus}
+              />
+              <span className="tg-track" />
+              <span className="tg-thumb" />
+            </label>
+          </section>
 
           {/* Section: Course Documents / Upload (Old Server) */}
           <section
@@ -365,7 +528,7 @@ export const TeacherCourseDoc = () => {
               {/* Files List */}
               <div className="mt-4 w-full">
                 {files.length === 0 ? (
-                  <div className="w-full flex flex-col items-center justify-center py-6 px-4 rounded-xl border border-dashed border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale80/60 dark:bg-neutral-scale1400/40 text-center transition-all">
+                  <div className="w-full flex flex-col items-center justify-center py-6 px-4 rounded-xl border border-dashed border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale90 dark:bg-neutral-scale1500 text-center transition-all">
                     <div className="w-10 h-10 rounded-full bg-primery-50 dark:bg-neutral-scale1200 flex items-center justify-center mb-2 text-primery-700 dark:text-neutral-scale300">
                       <FileText className="w-5 h-5" />
                     </div>
@@ -474,41 +637,99 @@ export const TeacherCourseDoc = () => {
           {/* Card 0: Course Display Photo (Used in Chat & Lists) */}
           <section
             aria-labelledby="course-photo-label"
-            className="w-full relative flex items-center gap-3.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+            className="w-full relative flex flex-col gap-2.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
           >
-            <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm bg-neutral-scale100 dark:bg-neutral-scale1200">
-              <img
-                src={courseDetails.photo_url || AI}
-                alt={courseDetails.name || "Course"}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = courseImage;
-                }}
-              />
-              <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <ImageIcon className="w-4 h-4 text-white drop-shadow" />
+            <input
+              type="file"
+              ref={photoInputRef}
+              onChange={handlePhotoFileChange}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+            />
+
+            <div className="flex items-center gap-3.5">
+              {/* Avatar thumbnail with click-to-change overlay */}
+              <div
+                onClick={handlePhotoUploadClick}
+                className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm bg-neutral-scale100 dark:bg-neutral-scale1200 cursor-pointer group"
+                title={isRTL ? "کلیک برای تغییر عکس" : "Click to change photo"}
+              >
+                <img
+                  src={resolveMediaUrl(courseDetails.photo_url) || AI}
+                  alt={courseDetails.name || "Course"}
+                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  onError={(e) => {
+                    e.currentTarget.src = courseImage;
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isUploadingPhoto ? (
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-5 h-5 text-white drop-shadow" />
+                  )}
+                </div>
+              </div>
+
+              {/* Text label */}
+              <div className={`flex flex-col min-w-0 flex-1 ${textAlign}`}>
+                <div className="flex items-center gap-1.5">
+                  <h3
+                    id="course-photo-label"
+                    className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+                  >
+                    {isRTL ? "تصویر نمایشی درس" : "Course Display Image"}
+                  </h3>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primery-50 dark:bg-neutral-scale1200 text-primery-700 dark:text-neutral-scale300">
+                    {isRTL ? "در گفت‌وگو" : "In Chat"}
+                  </span>
+                </div>
+                <p
+                  className={`text-[11px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5 leading-tight ${captionClass}`}
+                >
+                  {isRTL
+                    ? "تصویر آواتار درس که در صفحه گفتگو و فهرست دروس نمایش داده می‌شود"
+                    : "The avatar picture shown in student chats and course lists"}
+                </p>
               </div>
             </div>
 
-            <div className={`flex flex-col min-w-0 flex-1 ${textAlign}`}>
-              <div className="flex items-center gap-1.5">
-                <h3
-                  id="course-photo-label"
-                  className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
-                >
-                  {isRTL ? "تصویر نمایشی درس" : "Course Display Image"}
-                </h3>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primery-50 dark:bg-neutral-scale1200 text-primery-700 dark:text-neutral-scale300">
-                  {isRTL ? "در گفت‌وگو" : "In Chat"}
-                </span>
-              </div>
-              <p
-                className={`text-[11px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5 leading-tight ${captionClass}`}
+            {/* Action Buttons for Upload & Delete */}
+            <div className={`flex items-center gap-2 pt-2 border-t border-neutral-scale100 dark:border-neutral-scale1200 justify-end`}>
+              <button
+                type="button"
+                onClick={handlePhotoDelete}
+                disabled={isUploadingPhoto}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/50 transition-colors disabled:opacity-50 cursor-pointer"
+                aria-label={isRTL ? "حذف عکس درس" : "Remove course photo"}
+                title={isRTL ? "حذف عکس درس و بازگشت به آواتار پیش‌فرض" : "Remove course photo and restore default"}
               >
-                {isRTL
-                  ? "تصویر آواتار درس که در صفحه گفتگو و فهرست دروس نمایش داده می‌شود"
-                  : "The avatar picture shown in student chats and course lists"}
-              </p>
+                {isUploadingPhoto ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                <span className={captionClass}>{isRTL ? "حذف عکس" : "Remove Photo"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePhotoUploadClick}
+                disabled={isUploadingPhoto}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primery-50 hover:bg-primery-100 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 text-primery-700 dark:text-neutral-scale100 transition-colors disabled:opacity-50 cursor-pointer"
+                aria-label={isRTL ? "تغییر یا بارگذاری تصویر درس" : "Change or upload course image"}
+              >
+                {isUploadingPhoto ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5" />
+                )}
+                <span className={captionClass}>
+                  {courseDetails.photo_url
+                    ? (isRTL ? "تغییر عکس" : "Change Photo")
+                    : (isRTL ? "انتخاب عکس" : "Upload Photo")}
+                </span>
+              </button>
             </div>
           </section>
 
@@ -525,8 +746,10 @@ export const TeacherCourseDoc = () => {
             </h3>
 
             <p
-              dir="rtl"
-              className="w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium font-vazir fa-body-medium text-right [direction:rtl]"
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium font-vazir fa-body-medium ${
+                isRTL ? "text-right" : "text-left"
+              }`}
             >
               {courseDetails.name || "سیستم عامل"}
             </p>
@@ -736,16 +959,26 @@ export const TeacherCourseDoc = () => {
             {isEditing ? (
               <textarea
                 rows={3}
+                dir={isPersianText(editForm.description) ? "rtl" : (isRTL ? "rtl" : "ltr")}
                 value={editForm.description}
                 onChange={(e) =>
                   setEditForm((prev) => ({ ...prev, description: e.target.value }))
                 }
                 placeholder={isRTL ? "توضیحات درس را وارد نمایید..." : "Enter course description..."}
-                className={`w-full py-1.5 px-2 rounded-lg border border-primery-400 dark:border-neutral-scale900 bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 text-xs outline-none focus:ring-1 focus:ring-primery-600 resize-none ${textAlign} ${bodyClass}`}
+                className={`w-full py-1.5 px-2 rounded-lg border border-primery-400 dark:border-neutral-scale900 bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 text-xs outline-none focus:ring-1 focus:ring-primery-600 resize-none ${
+                  isPersianText(editForm.description)
+                    ? "font-vazir text-right"
+                    : `${textAlign} ${bodyClass}`
+                }`}
               />
             ) : (
               <p
-                className={`w-full text-xs text-neutral-scale1000 dark:text-neutral-scale200 leading-relaxed ${textAlign} ${captionClass}`}
+                dir={isPersianText(courseDetails.description) ? "rtl" : (isRTL ? "rtl" : "ltr")}
+                className={`w-full text-xs text-neutral-scale1000 dark:text-neutral-scale200 leading-relaxed ${
+                  isPersianText(courseDetails.description)
+                    ? "font-vazir text-right"
+                    : `${textAlign} ${captionClass}`
+                }`}
               >
                 {courseDetails.description ||
                   (isRTL

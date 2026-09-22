@@ -5,17 +5,20 @@ import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { coursesApi } from "@/api";
+import { courses as defaultCourses } from "@/data/courses";
 import { AppContext } from "@/Context/AppContext";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
+import { isPersianText } from "@/utils/textUtils";
 
 export const TeacherResource = () => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState(defaultCourses);
 
   useEffect(() => {
     let isMounted = true;
     coursesApi.getCourses().then((data) => {
-      if (isMounted && Array.isArray(data)) {
+      if (isMounted && Array.isArray(data) && data.length > 0) {
         setCourses(data);
       }
     });
@@ -92,54 +95,57 @@ export const TeacherResource = () => {
                       />
                     </div>
 
-                    {/* Course Information */}
-                    <div className="flex flex-col min-w-0 gap-[1px] flex-1">
-                      {/* Title - Always Persian font and format */}
-                      <span
-                        dir="rtl"
-                        className={`fa-body-medium font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70 truncate ${
-                          isRTL ? "text-right" : "text-left [direction:rtl]"
+                      {/* Course Information */}
+                      <div
+                        className={`flex flex-col min-w-0 gap-[3px] flex-1 justify-center ${
+                          isRTL ? "text-right" : "text-left"
                         }`}
                       >
-                        {course.titleFa || course.title || "سیستم عامل"}
-                      </span>
+                        {/* Title - Always Persian font and format */}
+                        <span
+                          dir="rtl"
+                          className={`fa-body-medium font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70 truncate ${
+                            isRTL ? "text-right" : "text-left [direction:rtl]"
+                          }`}
+                        >
+                          {course.titleFa || course.title || "سیستم عامل"}
+                        </span>
 
-                      {/* Degree */}
-                      <div className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale300 flex flex-col leading-tight`}>
-                        {isRTL ? (
-                          <span>{course.degreeFa || "کارشناسی / مهندسی کامپیوتر"}</span>
-                        ) : (
-                          <>
-                            <span>Bachelor / Computer</span>
-                            <span>Engineering</span>
-                          </>
-                        )}
+                        {/* Privacy / Access Level */}
+                        <span
+                          className={`${
+                            isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                          } text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}
+                        >
+                          {isRTL
+                            ? (course.accessLevel === "public" ? "عمومی" : "خصوصی")
+                            : (course.accessLevel === "public" ? "Public" : "Private")}
+                        </span>
+
+                        {/* Description - Auto-detect Persian font */}
+                        <span
+                          dir={isDescPersian ? "rtl" : (isRTL ? "rtl" : "ltr")}
+                          className={`${
+                            isDescPersian
+                              ? "fa-caption-1 font-vazir"
+                              : (isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter")
+                          } text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0 ${
+                            !isRTL && isDescPersian ? "text-left [direction:rtl]" : ""
+                          }`}
+                        >
+                          {descText}
+                        </span>
                       </div>
-
-                      {/* Privacy / Access Level */}
-                      <span className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}>
-                        {isRTL
-                          ? (course.accessLevel === "public" ? "عمومی" : "خصوصی")
-                          : (course.accessLevel === "public" ? "Public" : "Private")}
-                      </span>
-
-                      {/* Description */}
-                      <span className={`${isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"} text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0`}>
-                        {course.preview || course.description ||
-                          (isRTL
-                            ? "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری"
-                            : "This course includes educational materials and related resources.")}
-                      </span>
                     </div>
-                  </div>
 
-                  <ChevronRight
-                    className={`!w-4 !h-4 flex-shrink-0 text-neutral-scale1800 dark:text-neutral-scale70 mx-1 ${
-                      isRTL ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              ))}
+                    <ChevronRight
+                      className={`!w-4 !h-4 flex-shrink-0 text-neutral-scale1800 dark:text-neutral-scale70 mx-1 ${
+                        isRTL ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -2,84 +2,84 @@ import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { authApi } from "@/api";
-import { GraduationCap, User, Shield, KeyRound, ArrowRight, ArrowLeft } from "lucide-react";
+import { GraduationCap, User, Shield, KeyRound, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { isRTL, setRole, language, loginUser, currentUser, role } = useContext(AppContext);
+  const { isRTL, setRole, loginUser, currentUser, role } = useContext(AppContext);
 
-  const [activeRole, setActiveRole] = useState("teacher");
-  const [tokenInput, setTokenInput] = useState("sso_token_dr_elahbakhsh");
-  const [usernameInput, setUsernameInput] = useState("dr_elahbakhsh");
-  const [loading, setLoading] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const roles = [
+  const sampleProfiles = [
     {
       id: "teacher",
-      titleFa: "استاد درس",
-      titleEn: "Teacher",
+      role: "TEACHER",
+      titleFa: "دکتر محمد اله بخش",
+      titleEn: "Dr. Mohammad Allahbakhsh",
+      roleFa: "استاد درس سیستم عامل",
+      roleEn: "Course Professor",
+      descriptionFa: "مدیریت اسناد درس، تنظیمات و نظارت بر چت‌های دانشجویان",
+      descriptionEn: "Course management, documents & student oversight",
       icon: GraduationCap,
-      descriptionFa: "ورود با هویت دکتر مصطفی اله بخش (استاد درس سیستم عامل) - مدیریت درس و چت‌ها",
-      descriptionEn: "Sign in as Dr. Mostafa Elahbakhsh (OS Course Professor) - Course management & chats",
-      defaultUsername: "dr_elahbakhsh",
-      defaultToken: "sso_token_dr_elahbakhsh",
+      defaultUsername: "mohammad_allahbakhsh",
+      defaultToken: "sso_token_dr_allahbakhsh",
+      badgeColor: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+      accentBorder: "hover:border-blue-500 dark:hover:border-blue-500",
     },
     {
       id: "student",
-      titleFa: "دانشجو",
-      titleEn: "Student",
+      role: "STUDENT",
+      titleFa: "علیرضا رضایی",
+      titleEn: "Alireza Rezaei",
+      roleFa: "دانشجوی درس سیستم عامل",
+      roleEn: "Enrolled Student",
+      descriptionFa: "دسترسی به چت‌بات هوشمند درس، حل تمرین و آزمون‌ها",
+      descriptionEn: "AI course bot assistant, study materials & quizzes",
       icon: User,
-      descriptionFa: "ورود با هویت علیرضا رضایی (دانشجوی درس سیستم عامل) - دسترسی به آزمون‌ها و دستیار هوشمند",
-      descriptionEn: "Sign in as Alireza Rezaei (Enrolled Student) - Access quizzes and AI assistant",
       defaultUsername: "alireza_rezaei",
       defaultToken: "sso_token_student_rezaei",
+      badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+      accentBorder: "hover:border-emerald-500 dark:hover:border-emerald-500",
     },
     {
       id: "admin",
+      role: "ADMIN",
       titleFa: "مدیر سامانه",
-      titleEn: "Admin",
+      titleEn: "System Administrator",
+      roleFa: "دسترسی سیستمی",
+      roleEn: "System Access",
+      descriptionFa: "نظارت بر سیستم و تنظیمات دسترسی سراسری",
+      descriptionEn: "System settings, permissions & global overview",
       icon: Shield,
-      descriptionFa: "نظارت کلی بر سیستم، تنظیمات پایه و مدیریت دسترسی‌ها",
-      descriptionEn: "System monitoring, configurations and permissions",
       defaultUsername: "admin",
       defaultToken: "sso_token_admin_001",
+      badgeColor: "bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+      accentBorder: "hover:border-purple-500 dark:hover:border-purple-500",
     },
   ];
 
-  const currentRoleConfig = roles.find((r) => r.id === activeRole) || roles[0];
-
-  const handleRoleSelect = (roleId) => {
-    setActiveRole(roleId);
-    setErrorMessage("");
-    const roleCfg = roles.find((r) => r.id === roleId);
-    if (roleCfg) {
-      setUsernameInput(roleCfg.defaultUsername);
-      setTokenInput(roleCfg.defaultToken);
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleQuickLogin = async (profile) => {
+    if (loadingRole) return;
+    setLoadingRole(profile.id);
     setErrorMessage("");
 
     try {
       const payload = {
-        role: activeRole.toUpperCase(),
-        token: tokenInput || currentRoleConfig.defaultToken,
-        username: usernameInput || currentRoleConfig.defaultUsername,
+        role: profile.role,
+        token: profile.defaultToken,
+        username: profile.defaultUsername,
       };
 
       const res = await authApi.externalLogin(payload);
-      const userRole = (res.role || activeRole).toLowerCase();
+      const userRole = (res.role || res.user?.user_type || profile.id).toLowerCase();
+
       if (loginUser) {
         loginUser(res.user, res.access_token || res.token);
       }
       setRole(userRole);
-
 
       if (userRole === "student") {
         navigate("/Student", { replace: true });
@@ -90,11 +90,11 @@ export const Login = () => {
       console.error("Login failed:", err);
       setErrorMessage(
         isRTL
-          ? "خطا در برقراری ارتباط با سرور. لطفاً دوباره تلاش کنید."
-          : "Authentication failed. Please verify credentials."
+          ? "خطا در ورود به سامانه. لطفاً وضعیت سرور را بررسی کنید."
+          : "Authentication failed. Please verify backend status."
       );
     } finally {
-      setLoading(false);
+      setLoadingRole(null);
     }
   };
 
@@ -103,7 +103,7 @@ export const Login = () => {
       className="bg-[#f9f9f9] dark:bg-neutral-scale1400 w-full min-h-dvh flex items-center justify-center p-4 relative overflow-hidden"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      <div className="w-full max-w-[420px] bg-white dark:bg-neutral-scale1300 rounded-3xl shadow-xl border border-neutral-scale200 dark:border-neutral-scale1100 p-6 flex flex-col gap-5 relative z-10 transition-colors duration-200">
+      <div className="w-full max-w-[440px] bg-white dark:bg-neutral-scale1300 rounded-3xl shadow-xl border border-neutral-scale200 dark:border-neutral-scale1100 p-6 flex flex-col gap-5 relative z-10 transition-colors duration-200">
         {/* Top Action Bar */}
         <div className="w-full flex items-center justify-between pb-2 border-b border-neutral-scale100 dark:border-neutral-scale1100">
           <button
@@ -122,14 +122,16 @@ export const Login = () => {
           </button>
 
           {currentUser && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-vazir">
-              {isRTL ? `کاربر فعلی: ${currentUser.username || "استاد"}` : `Active: ${currentUser.username || "teacher"}`}
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-vazir">
+              {isRTL
+                ? `کاربر فعلی: ${currentUser.first_name || currentUser.username || "استاد"}`
+                : `Active: ${currentUser.first_name || currentUser.username || "teacher"}`}
             </span>
           )}
         </div>
 
         {/* Header Branding */}
-        <div className="flex flex-col items-center text-center gap-1.5 pt-2">
+        <div className="flex flex-col items-center text-center gap-1.5 pt-1">
           <div className="w-14 h-14 rounded-2xl bg-primery-700 dark:bg-primery-900 text-white flex items-center justify-center shadow-lg shadow-primery-700/25">
             <KeyRound className="w-7 h-7 text-white" />
           </div>
@@ -138,146 +140,71 @@ export const Login = () => {
           </h1>
           <p className="fa-caption-1 text-neutral-scale900 dark:text-neutral-scale400 font-vazir">
             {isRTL
-              ? "احراز هویت از طریق سامانه یکپارچه و مدیریت سشن"
-              : "Unified external authentication & session management"}
+              ? "ورود سریع با انتخاب پروفایل نمونه (ارسال خودکار توکن و شناسه):"
+              : "Quick login by selecting a sample profile:"}
           </p>
         </div>
 
-        {/* 3 Distinct Role Selectors */}
-        <div className="flex flex-col gap-2">
-          <label className="fa-caption-2 text-neutral-scale800 dark:text-neutral-scale300 font-vazir">
-            {isRTL ? "انتخاب نقش کاربری:" : "Select your role:"}
-          </label>
-          <div className="grid grid-cols-3 gap-2 p-1 bg-neutral-scale100 dark:bg-neutral-scale1400 rounded-2xl">
-            {roles.map((r) => {
-              const Icon = r.icon;
-              const isSelected = activeRole === r.id;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => handleRoleSelect(r.id)}
-                  className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-200 cursor-pointer ${
-                    isSelected
-                      ? "bg-white dark:bg-primery-800 text-primery-700 dark:text-white shadow-sm font-semibold"
-                      : "text-neutral-scale900 dark:text-neutral-scale400 hover:text-black dark:hover:text-white"
-                  }`}
-                >
-                  <Icon className="w-5 h-5 mb-1" />
-                  <span className="fa-caption-2 font-vazir">
-                    {isRTL ? r.titleFa : r.titleEn}
-                  </span>
-                </button>
-              );
-            })}
+        {/* Error message if any */}
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 fa-caption-2 font-vazir text-center">
+            {errorMessage}
           </div>
+        )}
+
+        {/* One-Click Sample Profile Buttons */}
+        <div className="flex flex-col gap-3">
+          {sampleProfiles.map((profile) => {
+            const Icon = profile.icon;
+            const isLoadingThis = loadingRole === profile.id;
+            const isAnyLoading = Boolean(loadingRole);
+
+            return (
+              <button
+                key={profile.id}
+                type="button"
+                disabled={isAnyLoading}
+                onClick={() => handleQuickLogin(profile)}
+                className={`w-full p-4 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 bg-neutral-scale50/50 dark:bg-neutral-scale1400 flex items-center gap-3.5 transition-all duration-200 cursor-pointer text-start ${profile.accentBorder} hover:shadow-md hover:bg-white dark:hover:bg-neutral-scale1200 disabled:opacity-50`}
+              >
+                {/* Icon box */}
+                <div className="w-11 h-11 rounded-xl bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1000 flex items-center justify-center shrink-0 shadow-xs">
+                  {isLoadingThis ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-primery-700 dark:text-primery-400" />
+                  ) : (
+                    <Icon className="w-5 h-5 text-primery-700 dark:text-primery-400" />
+                  )}
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-neutral-scale1800 dark:text-neutral-scale100 font-vazir truncate">
+                      {isRTL ? profile.titleFa : profile.titleEn}
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md border font-vazir shrink-0 ${profile.badgeColor}`}
+                    >
+                      {isRTL ? profile.roleFa : profile.roleEn}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-vazir mt-0.5 line-clamp-1">
+                    {isRTL ? profile.descriptionFa : profile.descriptionEn}
+                  </p>
+                </div>
+
+                {/* Forward Arrow */}
+                <div className="shrink-0 text-neutral-scale600 dark:text-neutral-scale400">
+                  {isRTL ? (
+                    <ArrowLeft className="w-4 h-4" />
+                  ) : (
+                    <ArrowRight className="w-4 h-4" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
-
-        {/* Selected Role Info Card */}
-        <div className="p-3 bg-primery-50 dark:bg-neutral-scale1200/50 rounded-2xl border border-primery-100 dark:border-neutral-scale1100 flex items-start gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-primery-700 dark:bg-primery-400 mt-2 shrink-0" />
-          <p className="fa-caption-2 text-neutral-scale1000 dark:text-neutral-scale300 font-vazir leading-relaxed">
-            {isRTL ? currentRoleConfig.descriptionFa : currentRoleConfig.descriptionEn}
-          </p>
-        </div>
-
-        {/* Quick Demo Profiles */}
-        <div className="flex flex-col gap-1.5">
-          <span className="fa-caption-2 text-neutral-scale700 dark:text-neutral-scale400 font-vazir">
-            {isRTL ? "انتخاب سریع پروفایل‌های تستی:" : "Quick Demo Profiles:"}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                handleRoleSelect("teacher");
-                setUsernameInput("dr_elahbakhsh");
-                setTokenInput("sso_token_dr_elahbakhsh");
-              }}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-vazir cursor-pointer transition-all border ${
-                usernameInput === "dr_elahbakhsh"
-                  ? "bg-primery-100 dark:bg-primery-900/60 border-primery-400 text-primery-800 dark:text-primery-200 font-semibold shadow-xs"
-                  : "bg-neutral-scale80 dark:bg-neutral-scale1400 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 hover:border-primery-300"
-              }`}
-            >
-              👨‍🏫 {isRTL ? "دکتر اله بخش (استاد درس)" : "Dr. Elahbakhsh (Teacher)"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                handleRoleSelect("student");
-                setUsernameInput("alireza_rezaei");
-                setTokenInput("sso_token_student_rezaei");
-              }}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-vazir cursor-pointer transition-all border ${
-                usernameInput === "alireza_rezaei"
-                  ? "bg-primery-100 dark:bg-primery-900/60 border-primery-400 text-primery-800 dark:text-primery-200 font-semibold shadow-xs"
-                  : "bg-neutral-scale80 dark:bg-neutral-scale1400 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 hover:border-primery-300"
-              }`}
-            >
-              🎓 {isRTL ? "علیرضا رضایی (دانشجو)" : "Alireza Rezaei (Student)"}
-            </button>
-          </div>
-        </div>
-
-        {/* Login Form with External Token Inputs */}
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 fa-caption-2 font-vazir text-center">
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-1.5">
-            <label className="fa-caption-2 text-neutral-scale1000 dark:text-neutral-scale300 font-vazir">
-              {isRTL ? "شناسه کاربری / نام کاربری:" : "Username / Identifier:"}
-            </label>
-            <input
-              type="text"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-              placeholder={currentRoleConfig.defaultUsername}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 bg-white dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale100 fa-body-medium font-vazir focus:outline-none focus:ring-2 focus:ring-primery-600 transition-all"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="fa-caption-2 text-neutral-scale1000 dark:text-neutral-scale300 font-vazir">
-              {isRTL ? "توکن احراز هویت خارجی (SSO Token):" : "External Auth Token (SSO):"}
-            </label>
-            <input
-              type="text"
-              value={tokenInput}
-              onChange={(e) => setTokenInput(e.target.value)}
-              placeholder={currentRoleConfig.defaultToken}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 bg-white dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale100 fa-body-medium font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primery-600 transition-all"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-3 px-4 rounded-xl bg-primery-700 hover:bg-primery-800 dark:bg-primery-800 dark:hover:bg-primery-700 text-white font-vazir fa-body-medium flex items-center justify-center gap-2 shadow-lg shadow-primery-700/20 transition-all duration-200 cursor-pointer disabled:opacity-50"
-          >
-            {loading ? (
-              <span>{isRTL ? "در حال ایجاد سشن..." : "Creating session..."}</span>
-            ) : (
-              <>
-                <span>
-                  {isRTL
-                    ? `ورود به عنوان ${currentRoleConfig.titleFa}`
-                    : `Sign in as ${currentRoleConfig.titleEn}`}
-                </span>
-                {isRTL ? (
-                  <ArrowLeft className="w-4 h-4" />
-                ) : (
-                  <ArrowRight className="w-4 h-4" />
-                )}
-              </>
-            )}
-          </button>
-        </form>
       </div>
     </main>
   );

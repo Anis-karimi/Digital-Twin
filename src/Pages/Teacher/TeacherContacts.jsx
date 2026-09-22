@@ -6,6 +6,8 @@ import Block from "@/assets/icons/Block.svg?react";
 import { useParams, useNavigate } from "react-router-dom";
 import { studentsApi, coursesApi } from "@/api";
 import { AppContext } from "@/Context/AppContext";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
+import { isPersianText } from "@/utils/textUtils";
 
 const avatarColors = [
   "bg-red-400",
@@ -112,26 +114,26 @@ export const TeacherContacts = () => {
       className="bg-[#f1f0f0] dark:bg-neutral-scale1400 overflow-hidden w-full md:w-[360px] h-dvh mx-auto flex flex-col"
       dir={isRTL ? "rtl" : "ltr"}
     >
-      <header className="w-full h-[65px] flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
-        <button
-          type="button"
-          aria-label={isRTL ? "بازگشت" : "Go back"}
-          onClick={handleBack}
-          className="text-white w-6 h-6 cursor-pointer flex items-center justify-center shrink-0"
-        >
-          <BackIcon className="!w-6 !h-6" />
-        </button>
+      <header className="w-full h-[65px] flex shrink-0">
+        <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
+          <button
+            type="button"
+            aria-label={isRTL ? "بازگشت" : "Go back"}
+            onClick={handleBack}
+            className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
+          >
+            <BackIcon className="!w-6 !h-6" />
+          </button>
 
-        <h1
-          className={`mx-auto text-white text-center whitespace-nowrap font-vazir ${
-            isRTL ? "fa-title-1" : "en-title-1"
-          }`}
-          dir="rtl"
-        >
-          {currentCourse?.title}
-        </h1>
-
-        <div className="w-6 shrink-0" aria-hidden="true" />
+          <h1
+            className={`flex-1 mx-2 text-neutral-scale70 whitespace-nowrap truncate font-vazir ${
+              isRTL ? "fa-title-1 text-right" : "en-title-1 text-left"
+            }`}
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            {currentCourse?.title}
+          </h1>
+        </div>
       </header>
 
       <section
@@ -172,7 +174,7 @@ export const TeacherContacts = () => {
                     {/* Avatar */}
                     {student.photo_url ? (
                       <img
-                        src={student.photo_url}
+                        src={resolveMediaUrl(student.photo_url)}
                         alt={student.title}
                         className="w-11 h-11 rounded-full object-cover shrink-0"
                       />
@@ -196,8 +198,12 @@ export const TeacherContacts = () => {
                       }`}
                     >
                       <div
-                        className="fa-body font-vazir text-black dark:text-neutral-scale70 truncate"
-                        dir="rtl"
+                        className={`truncate text-black dark:text-neutral-scale70 ${
+                          isRTL
+                            ? "fa-body font-vazir text-right"
+                            : "en-body font-vazir text-left"
+                        }`}
+                        dir={isRTL ? "rtl" : "ltr"}
                       >
                         {student.title}
 
