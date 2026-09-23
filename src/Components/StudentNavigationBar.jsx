@@ -1,4 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
+import { useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 import "@/styles/fonts.css";
 
 import Chat from "@/assets/icons/Chat.svg?react";
@@ -6,77 +8,79 @@ import Explor from "@/assets/icons/explor.svg?react";
 import Settings from "@/assets/icons/Settings.svg?react";
 
 import ChatFilled from "@/assets/icons/ChatFull.svg?react";
-// import SearchFilled from "@/assets/icons/SearchFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 
-const navItems = [
-  {
-    id: "chats",
-    label: "Chats",
-
-    wrapperClassName: "relative w-[65px] h-12 mt-[-3.00px] mb-[-3.00px]",
-
-    contentClassName:
-      "relative left-2.5 w-[46px] h-10 flex flex-col gap-[0.3px]",
-
-    iconWrapperClassName: "ml-[9.3px] w-[25.81px] h-[24.66px] flex",
-
-    icon: Chat,
-    iconActive: ChatFilled,
-
-    iconClassName: "flex-1 w-[20.35px]",
-
-    labelClassName:
-      "w-11 h-[15px] en-caption-1 text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap",
-  },
-
-  {
-    id: "explor",
-    label: "Explor",
-
-    wrapperClassName: "relative w-[90px] h-12 mt-[-3.00px] mb-[-3.00px]",
-
-    contentClassName:
-      "relative top-1 left-[11px] w-[70px] h-10 flex flex-col gap-1.5",
-
-    iconWrapperClassName: "ml-6 w-[21px] h-[15px] flex",
-
-    icon: Explor,
-    // iconActive: SearchFilled,
-
-    iconClassName:
-      "flex-1 w-[19px] text-neutral-scale1400 dark:text-neutral-scale70",
-
-    labelClassName:
-      "w-[68px] h-[15px] text-neutral-scale1800 dark:text-neutral-scale70 en-caption-1 text-center whitespace-nowrap",
-  },
-
-  {
-    id: "settings",
-    label: "Settings",
-
-    activeClassName:
-      "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[23px]",
-
-    wrapperClassName: "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px]",
-
-    contentClassName:
-      "relative top-px left-3 w-[51px] h-10 flex flex-col gap-[3px]",
-
-    iconWrapperClassName: "ml-3.5 w-[22px] h-[21px] flex",
-
-    icon: Settings,
-    iconActive: SettingsFilled,
-
-    iconClassName: "flex-1 w-[19.33px]",
-
-    labelClassName:
-      "w-[49px] h-4 en-caption-1 text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap",
-  },
-];
-
 export const StudentNavigationBar = () => {
+  const { t, isRTL } = useContext(AppContext);
   const location = useLocation();
+
+  const navItems = [
+    {
+      id: "chats",
+      label: t("chats"),
+
+      wrapperClassName: "relative w-[65px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative left-2.5 w-[46px] h-10 flex flex-col gap-[0.3px]",
+
+      iconWrapperClassName: "ml-[9.3px] w-[25.81px] h-[24.66px] flex",
+
+      icon: Chat,
+      iconActive: ChatFilled,
+
+      iconClassName: "flex-1 w-[20.35px]",
+
+      labelClassName: `w-11 h-[15px] ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap`,
+    },
+
+    {
+      id: "explor",
+      label: t("courses"),
+
+      wrapperClassName: "relative w-[90px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative top-1 left-[11px] w-[70px] h-10 flex flex-col gap-1.5",
+
+      iconWrapperClassName: "ml-6 w-[21px] h-[15px] flex",
+
+      icon: Explor,
+
+      iconClassName:
+        "flex-1 w-[19px] text-neutral-scale1400 dark:text-neutral-scale70",
+
+      labelClassName: `w-[68px] h-[15px] text-neutral-scale1800 dark:text-neutral-scale70 ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-center whitespace-nowrap`,
+    },
+
+    {
+      id: "settings",
+      label: t("settings"),
+
+      activeClassName:
+        "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[23px]",
+
+      wrapperClassName: "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative top-px left-3 w-[51px] h-10 flex flex-col gap-[3px]",
+
+      iconWrapperClassName: "ml-3.5 w-[22px] h-[21px] flex",
+
+      icon: Settings,
+      iconActive: SettingsFilled,
+
+      iconClassName: "flex-1 w-[19.33px]",
+
+      labelClassName: `w-[49px] h-4 ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap`,
+    },
+  ];
 
   const isHomePage =
     location.pathname === "/student" || location.pathname === "/StudentHome";

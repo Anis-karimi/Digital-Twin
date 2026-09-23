@@ -1,40 +1,104 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useId } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
-import background from "@/assets/images/Quiz-Background.jpg";
-import CloseIcon from "@/assets/icons/X.svg?react";
 import { quizApi } from "@/api";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  BookOpen,
+  ListOrdered,
+  Plus,
+  Minus,
+  Gauge,
+  FileText,
+  Loader2,
+  AlertCircle,
+  BrainCircuit,
+} from "lucide-react";
 import "@/styles/fonts.css";
 
-const fieldClassName =
-  "relative self-stretch w-full h-[41px] bg-white rounded-[10px] border-[3px] border-solid border-primery-700 px-3 text-black focus:ring-2 focus:ring-primery-300";
+export const QuizFirstPage = ({ language: propLanguage }) => {
+  const {
+    language: contextLang,
+    isRTL,
+    t,
+    selectedResources,
+  } = useContext(AppContext);
 
-const labelClassName =
-  "relative self-stretch mt-[-1.00px] bg-[linear-gradient(90deg,rgba(20,96,133,1)_0%,rgba(0,0,0,1)_100%)] [-webkit-background-clip:text] bg-clip-text [-webkit-text-fill-color:transparent] [text-fill-color:transparent] en-title-2 text-transparent";
-
-export const QuizFirstPage = ({ language }) => {
-  const { selectedResources } = useContext(AppContext);
+  const activeLanguage = propLanguage || contextLang || "fa";
+  const navigate = useNavigate();
+  const inputId = useId();
 
   const [topic, setTopic] = useState("");
-  const [questionCount, setQuestionCount] = useState("0");
-  const [difficulty, setDifficulty] = useState(50);
+  const [questionCount, setQuestionCount] = useState("5");
+  const [difficulty, setDifficulty] = useState("normal"); // 'easy' | 'normal' | 'hard'
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const navigate = useNavigate();
+  const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
-  const isPersianText = (text) => {
-    return /[\u0600-\u06FF]/.test(text);
+  const difficultyLevels = [
+    {
+      id: "easy",
+      label: t("easy"),
+      activeBg: "bg-emerald-500 shadow-emerald-500/25",
+      dotColor: "bg-emerald-500",
+    },
+    {
+      id: "normal",
+      label: t("normal"),
+      activeBg: "bg-blue-500 shadow-blue-500/25",
+      dotColor: "bg-blue-500",
+    },
+    {
+      id: "hard",
+      label: t("hard"),
+      activeBg: "bg-rose-500 shadow-rose-500/25",
+      dotColor: "bg-rose-500",
+    },
+  ];
+
+  const difficultyIndex =
+    difficulty === "easy" ? 0 : difficulty === "normal" ? 1 : 2;
+  const currentLevel = difficultyLevels[difficultyIndex] || difficultyLevels[1];
+
+  const handleClose = () => {
+    const savedReturn = sessionStorage.getItem("quizReturnToChat");
+    if (savedReturn) {
+      try {
+        const returnData = JSON.parse(savedReturn);
+        navigate(returnData.chatPath, {
+          state: {
+            backTo: returnData.chatBackTo,
+          },
+          replace: true,
+        });
+        return;
+      } catch (error) {
+        console.error("Invalid quiz return data:", error);
+        navigate(savedReturn, { replace: true });
+        return;
+      }
+    }
+    navigate("/", { replace: true });
+  };
+
+  const handleCountChange = (delta) => {
+    const current = parseInt(questionCount, 10) || 0;
+    const next = Math.max(1, Math.min(30, current + delta));
+    setQuestionCount(String(next));
   };
 
   const generateQuiz = async () => {
-    if (!topic.trim() || !questionCount || Number(questionCount) === 0) {
-      setSubmissionMessage("Please enter a topic and number of questions.");
+    const parsedCount = parseInt(questionCount, 10);
+    if (!topic.trim() || !parsedCount || parsedCount <= 0) {
+      setSubmissionMessage(t("quizTopicRequired"));
       return;
     }
 
     setProcessing(true);
-    setSubmissionMessage("⏳ Generating quiz...");
+    setSubmissionMessage("");
 
     try {
       const contextsString =
@@ -42,16 +106,13 @@ export const QuizFirstPage = ({ language }) => {
           ? selectedResources.join(",")
           : "";
 
-      // Convert slider value to target API difficulty
-      const quizDifficulty =
-        difficulty <= 33 ? "easy" : difficulty >= 67 ? "hard" : "normal";
-
+      // Preserved exact backend request signature & payload
       const rawQuiz = await quizApi.generateQuiz({
-        topic,
-        count: parseInt(questionCount, 10),
-        difficulty: quizDifficulty,
+        topic: topic.trim(),
+        count: parsedCount,
+        difficulty,
         contexts: contextsString,
-        language: language || "en",
+        language: activeLanguage || "en",
         llmModel: "gemma4",
       });
 
@@ -59,11 +120,7 @@ export const QuizFirstPage = ({ language }) => {
         throw new Error("No quiz questions were generated.");
       }
 
-      setSubmissionMessage(
-        `✅ Quiz generated successfully! (${rawQuiz.length} questions)`,
-      );
-
-      // Navigate to QuizQuestionsPage with real questions
+      // Navigate to QuizQuestionsPage with identical payload state
       navigate("/QuizQuestionsPage", {
         replace: true,
         state: {
@@ -72,10 +129,7 @@ export const QuizFirstPage = ({ language }) => {
       });
     } catch (err) {
       console.error("❌ Error fetching quiz:", err);
-
-       setSubmissionMessage(
-         "Something went wrong while generating the quiz. Please try again.",
-       );
+      setSubmissionMessage(t("quizError"));
     } finally {
       setProcessing(false);
     }
@@ -83,220 +137,295 @@ export const QuizFirstPage = ({ language }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     await generateQuiz();
   };
 
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+
   return (
     <main
-      className="w-full md:w-[360px] min-h-dvh justify-center mx-auto"
-      aria-labelledby="quiz-title"
+      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden"
+      dir={isRTL ? "rtl" : "ltr"}
     >
-      <section className="w-full min-h-dvh relative bg-white overflow-y-auto overflow-x-hidden">
-        <img
-          src={background}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          aria-hidden="true"
-        />
+      {/* ----------------- Telegram App Header ----------------- */}
+      <header className="sticky top-0 z-40 w-full h-[60px] bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 flex items-center justify-between px-3 text-white shadow-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label={t("closeQuiz")}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
+          >
+            <BackIcon className="w-5 h-5" />
+          </button>
 
-        <h1
-          id="quiz-title"
-          className="absolute top-[100px] right-10  w-full text-center font-bold text-[48px] leading-[1.05] bg-[linear-gradient(90deg,rgba(144,207,238,1)_0%,rgba(27,128,177,1)_30%,rgba(163,100,253,1)_65%,rgba(252,72,255,1)_90%)] [-webkit-background-clip:text] bg-clip-text [-webkit-text-fill-color:transparent] text-transparent"
-        >
-          <span className="block mق-[130px]">AI Quiz</span>
-          <span className="block mt-[15px] ml-[130px]">Generator</span>
-        </h1>
-
-        <form
-          className="flex flex-col w-[83.33%] max-w-[300px] items-start gap-[25px] absolute top-[299px] left-1/2 -translate-x-1/2"
-          onSubmit={handleSubmit}
-          noValidate
-        >
-          <div className="text-left flex flex-col items-start gap-[5px] relative self-stretch w-full flex-[0_0_auto]">
-            <label className={labelClassName} htmlFor="quiz-topic">
-              Topic
-            </label>
-
-            <input
-              id="quiz-topic"
-              className={`${fieldClassName} ${
-                isPersianText(topic)
-                  ? "fa-body-large text-right"
-                  : "en-body-large text-left"
+          <div className="flex flex-col min-w-0">
+            <h1
+              className={`text-sm font-semibold truncate ${
+                isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
               }`}
-              type="text"
-              dir={isPersianText(topic) ? "rtl" : "ltr"}
-              value={topic}
-              onChange={(event) => setTopic(event.target.value)}
-              aria-describedby="form-status"
-            />
+            >
+              {t("quizGenerator")}
+            </h1>
+            <span
+              className={`text-[11px] text-white/70 truncate ${
+                isRTL ? "fa-caption-4 font-vazir" : "en-caption-4 font-inter"
+              }`}
+            >
+              {t("aiAssistant")}
+            </span>
           </div>
+        </div>
 
-          <div className="text-left flex flex-col items-start gap-[5px] relative self-stretch w-full flex-[0_0_auto]">
-            <label className={labelClassName} htmlFor="question-count">
-              Number
-            </label>
+
+      </header>
+
+      {/* ----------------- Content Body ----------------- */}
+      <section className="flex-1 px-3.5 py-4 flex flex-col gap-3.5 overflow-y-auto">
+        {/* Telegram Hero / Bot Card */}
+        <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primery-700 via-primery-600 to-sky-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-primery-700/20">
+            <BrainCircuit className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <h2
+              className={`text-sm font-bold text-neutral-900 dark:text-neutral-100 ${
+                isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
+              }`}
+            >
+              {t("quizGenerator")}
+            </h2>
+            <p
+              className={`text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed ${
+                isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+              }`}
+            >
+              {t("quizSubtitle")}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+          {/* Card 1: Topic */}
+          <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor={inputId}
+                className={`flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 ${
+                  isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-primery-700 dark:text-sky-400" />
+                <span>{t("quizTopic")}</span>
+              </label>
+
+              {topic && (
+                <button
+                  type="button"
+                  onClick={() => setTopic("")}
+                  className="text-[11px] text-neutral-400 hover:text-red-500 cursor-pointer transition-colors"
+                >
+                  {isRTL ? "پاک کردن" : "Clear"}
+                </button>
+              )}
+            </div>
 
             <div className="relative w-full">
               <input
-                id="question-count"
-                className={fieldClassName}
-                type="number"
-                min="0"
-                step="1"
-                value={questionCount}
-                onChange={(event) => {
-                  const value = event.target.value;
+                id={inputId}
+                type="text"
+                dir={isPersianText(topic) ? "rtl" : isRTL ? "rtl" : "ltr"}
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder={t("quizTopicPlaceholder")}
+                className={`w-full rounded-xl bg-neutral-50 dark:bg-neutral-scale1200 border border-neutral-200 dark:border-neutral-scale1000 px-3.5 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-primery-500/30 focus:border-primery-600 transition-all ${
+                  isPersianText(topic) || isRTL
+                    ? "font-vazir text-right"
+                    : "font-inter text-left"
+                }`}
+              />
+            </div>
+          </div>
 
-                  if (value === "" || Number(value) >= 0) {
-                    setQuestionCount(value);
-                  }
+          {/* Card 2: Question Count */}
+          <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span
+                className={`flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 ${
+                  isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                }`}
+              >
+                <ListOrdered className="w-4 h-4 text-primery-700 dark:text-sky-400" />
+                <span>{t("quizQuestionCount")}</span>
+              </span>
+
+              <span className="text-xs font-bold text-primery-700 dark:text-sky-400">
+                {questionCount} {t("questionsSuffix")}
+              </span>
+            </div>
+
+            {/* Telegram Counter Stepper */}
+            <div className="flex items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-scale1200 p-2 rounded-xl border border-neutral-200 dark:border-neutral-scale1000">
+              <button
+                type="button"
+                onClick={() => handleCountChange(-1)}
+                className="w-9 h-9 rounded-lg bg-white dark:bg-neutral-scale1300 border border-neutral-200 dark:border-neutral-scale1000 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-scale1100 active:scale-95 transition-all shadow-xs cursor-pointer"
+                aria-label="Decrease question count"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center">
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={questionCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || (Number(val) >= 1 && Number(val) <= 30)) {
+                      setQuestionCount(val);
+                    }
+                  }}
+                  className="w-16 text-center bg-transparent text-lg font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleCountChange(1)}
+                className="w-9 h-9 rounded-lg bg-white dark:bg-neutral-scale1300 border border-neutral-200 dark:border-neutral-scale1000 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-scale1100 active:scale-95 transition-all shadow-xs cursor-pointer"
+                aria-label="Increase question count"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+
+          {/* Card 3: Difficulty Segmented Control (Telegram Poll Style with Sliding Motion) */}
+          <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span
+                className={`flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 ${
+                  isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                }`}
+              >
+                <Gauge className="w-4 h-4 text-primery-700 dark:text-sky-400" />
+                <span>{t("quizDifficulty")}</span>
+              </span>
+            </div>
+
+            {/* Segmented Switcher with sliding motion indicator */}
+            <div className="relative flex items-center bg-neutral-100 dark:bg-neutral-scale1200 p-1 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 select-none">
+              {/* Sliding Highlight Indicator Box */}
+              <div
+                className={`absolute top-1 bottom-1 w-[calc((100%-8px)/3)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${currentLevel.activeBg} shadow-sm pointer-events-none`}
+                style={{
+                  transform: isRTL
+                    ? `translateX(${difficultyIndex * -100}%)`
+                    : `translateX(${difficultyIndex * 100}%)`,
+                  right: isRTL ? "4px" : "auto",
+                  left: isRTL ? "auto" : "4px",
                 }}
-                aria-describedby="form-status"
               />
 
-              <div className="absolute right-3 top-5 -translate-y-1/2 flex flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuestionCount((prev) => String(Number(prev || 0) + 1))
-                  }
-                  className="w-5 h-5 flex items-center justify-center text-neutral-scale1400 text-[11px] leading-none bg-neutral-scale200 rounded-[4px] hover:bg-neutral-scale400"
-                  aria-label="Increase number of questions"
-                >
-                  ▲
-                </button>
+              {difficultyLevels.map((lvl) => {
+                const isSelected = difficulty === lvl.id;
+                return (
+                  <button
+                    key={lvl.id}
+                    type="button"
+                    onClick={() => setDifficulty(lvl.id)}
+                    className={`relative z-10 flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors duration-200 cursor-pointer ${
+                      isSelected
+                        ? "text-white"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                        isSelected ? "bg-white" : lvl.dotColor
+                      }`}
+                    />
+                    <span>{lvl.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setQuestionCount((prev) =>
-                      String(Math.max(0, Number(prev || 0) - 1)),
-                    )
-                  }
-                  className="w-5 h-5 flex items-center justify-center text-neutral-scale1400 text-[11px] leading-none bg-neutral-scale200 rounded-[4px] hover:bg-neutral-scale400"
-                  aria-label="Decrease number of questions"
-                >
-                  ▼
-                </button>
+          {/* Card 4: Selected Resources (if any) */}
+          {selectedResources && selectedResources.length > 0 && (
+            <div className="w-full bg-sky-50 dark:bg-sky-950/30 rounded-2xl border border-sky-200 dark:border-sky-900/50 p-3.5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold text-sky-900 dark:text-sky-200 block truncate">
+                  {t("attachedResources")}
+                </span>
+                <span className="text-[11px] text-sky-700 dark:text-sky-400">
+                  {selectedResources.length} {isRTL ? "مورد متصل" : "items attached"}
+                </span>
               </div>
             </div>
-          </div>
+          )}
 
-          <fieldset className="relative self-stretch w-full h-[89px] border-0 p-0 m-0">
-            <legend className="absolute text-left top-1.5 left-0 w-[300px] bg-[linear-gradient(90deg,rgba(20,96,133,1)_0%,rgba(0,0,0,1)_100%)] [-webkit-background-clip:text] bg-clip-text [-webkit-text-fill-color:transparent] [text-fill-color:transparent] font-EN-inter-titles-2 font-[number:var(--EN-inter-titles-2-font-weight)] text-transparent text-[length:var(--EN-inter-titles-2-font-size)] tracking-[var(--EN-inter-titles-2-letter-spacing)] leading-[var(--EN-inter-titles-2-line-height)] [font-style:var(--EN-inter-titles-2-font-style)]">
-              Difficulty
-            </legend>
-
-            <div className="absolute top-10 left-0 w-[300px] h-2.5 rounded-[10px] bg-[linear-gradient(90deg,rgba(30,255,0,1)_0%,rgba(0,178,255,1)_50%,rgba(255,0,72,1)_100%)]" />
-
-            <input
-              className="absolute top-[34px] left-0 z-10 w-[300px] h-[22px] cursor-pointer opacity-0"
-              type="range"
-              min="0"
-              max="100"
-              step="50"
-              value={difficulty}
-              onChange={(event) => setDifficulty(Number(event.target.value))}
-              aria-label="Quiz difficulty"
-            />
-
-            <div
-              className="absolute top-[34px] w-[22px] h-[22px]  bg-[#fffcfc] rounded-[23px] border border-solid border-black pointer-events-none"
-              style={{ left: `calc(${difficulty}% - 11px)` }}
-              aria-hidden="true"
-            />
-
-            <span className="absolute top-[60px] left-0 en-caption-3 text-black whitespace-nowrap">
-              Easy
-            </span>
-
-            <span className="absolute top-[60px] left-[133px] en-caption-3 text-black whitespace-nowrap">
-              Normal
-            </span>
-
-            <span className="absolute top-[60px] left-[277px] en-caption-3 text-black whitespace-nowrap">
-              Hard
-            </span>
-          </fieldset>
-
-          <button
-            className="flex w-[81.67%] h-[45px] mt-[15px] self-center items-center justify-center gap-2.5 px-0 py-2.5 bg-primery-700 rounded-[10px]"
-            type="submit"
-            disabled={processing}
-          >
-            <span className="relative w-fit mt-[-3.00px] mix-blend-hard-light en-title-1 text-white whitespace-nowrap">
-              Generate Quiz
-            </span>
-          </button>
-
+          {/* Submission Error Message */}
           {submissionMessage && !processing && (
-            <div className="w-[81.67%] self-center mt-[-10px] px-3 py-2 rounded-[8px] border border-[#f0d6d6] bg-[#fff8f8]">
-              <p className="en-caption-3 text-[#b94a48] text-center leading-[1.4]">
-                {submissionMessage}
-              </p>
+            <div className="w-full p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{submissionMessage}</span>
             </div>
           )}
-        </form>
 
-        <p id="form-status" className="sr-only" aria-live="polite">
-          {submissionMessage}
-        </p>
-
-        <button
-          type="button"
-          onClick={() => {
-            const savedReturn = sessionStorage.getItem("quizReturnToChat");
-
-            if (savedReturn) {
-              try {
-                const returnData = JSON.parse(savedReturn);
-
-                navigate(returnData.chatPath, {
-                  state: {
-                    backTo: returnData.chatBackTo,
-                  },
-                  replace: true,
-                });
-
-                return;
-              } catch (error) {
-                console.error("Invalid quiz return data:", error);
-
-                // Fallback for backward compatibility with legacy return data
-                navigate(savedReturn, { replace: true });
-                return;
-              }
-            }
-
-            navigate("/", { replace: true });
-          }}
-          className="absolute top-[20px] left-[20px] z-50 w-[32px] h-[32px] flex items-center justify-center"
-          aria-label="Close quiz"
-        >
-          <CloseIcon className="w-[12px] h-[20px]" />
-        </button>
-
-        {/* Generating Quiz Loading */}
-        {processing && (
-          <div
-            className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]"
-            aria-live="polite"
-            aria-label="Generating quiz"
-          >
-            <div className="w-[55px] h-[55px] rounded-full border-[5px] border-neutral-scale300 border-t-primery-700 animate-spin" />
-
-            <span className="mt-[18px] en-title-2 text-primery-700">
-              Generating quiz...
-            </span>
-
-            <span className="mt-[5px] en-caption-3 text-neutral-scale1000">
-              Please wait
-            </span>
+          {/* Submit Action Button */}
+          <div className="pt-2 pb-6">
+            <button
+              type="submit"
+              disabled={processing || !topic.trim()}
+              className="w-full h-12 rounded-xl bg-primery-700 hover:bg-primery-800 dark:bg-primery-600 dark:hover:bg-primery-700 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md shadow-primery-700/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{t("generateQuiz")}</span>
+            </button>
           </div>
-        )}
+        </form>
       </section>
+
+      {/* ----------------- Telegram Loading Overlay ----------------- */}
+      {processing && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          aria-live="polite"
+        >
+          <div className="w-[85%] max-w-[320px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-3.5">
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-primery-50 dark:bg-primery-950/40 text-primery-700 dark:text-sky-400">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <Sparkles className="w-4 h-4 absolute top-2 right-2 text-amber-400" />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <h3
+                className={`text-sm font-bold text-neutral-900 dark:text-neutral-100 ${
+                  isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
+                }`}
+              >
+                {t("generatingQuiz")}
+              </h3>
+              <p
+                className={`text-xs text-neutral-500 dark:text-neutral-400 ${
+                  isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+                }`}
+              >
+                {t("pleaseWait")}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
+
+export default QuizFirstPage;

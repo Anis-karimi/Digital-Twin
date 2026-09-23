@@ -60,7 +60,7 @@ export const TeacherContacts = () => {
 
   const { lessonId } = useParams();
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -118,7 +118,7 @@ export const TeacherContacts = () => {
         <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
           <button
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             onClick={handleBack}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
           >
@@ -138,7 +138,7 @@ export const TeacherContacts = () => {
 
       <section
         className="w-full flex-1 min-h-0 px-3 pt-2.5 pb-20"
-        aria-label={isRTL ? "فهرست دانشجویان" : "Students list"}
+        aria-label={t("courseStudentsList")}
       >
         <div className="w-full h-full overflow-y-auto rounded-[20px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100">
           <ul className="w-full list-none m-0 p-2.5">
@@ -150,9 +150,7 @@ export const TeacherContacts = () => {
                   }`}
                   dir={isRTL ? "rtl" : "ltr"}
                 >
-                  {isRTL
-                    ? "هنوز دانشجویی در این درس ثبت‌نام نکرده است."
-                    : "No students have enrolled in this course yet."}
+                  {t("noStudentsEnrolled")}
                 </p>
               </li>
             ) : (
@@ -162,9 +160,12 @@ export const TeacherContacts = () => {
                     ? blockedStudents[student.id]
                     : student.blocked;
 
-                const displayStatus = isRTL
-                  ? student.statusFa || (student.status === "online" ? "آنلاین" : student.status)
-                  : student.statusEn || student.status;
+                const displayStatus =
+                  student.status === "online"
+                    ? t("online")
+                    : isRTL
+                    ? student.statusFa || student.status
+                    : student.statusEn || student.status;
 
                 return (
                   <li
@@ -284,13 +285,7 @@ export const TeacherContacts = () => {
                             )}
 
                             <span>
-                              {isRTL
-                                ? isBlocked
-                                  ? "رفع مسدودی"
-                                  : "مسدود کردن"
-                                : isBlocked
-                                ? "Unblock"
-                                : "Block"}
+                              {isBlocked ? t("unblock") : t("block")}
                             </span>
                           </button>
                         </div>

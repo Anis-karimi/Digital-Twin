@@ -1,50 +1,20 @@
-import { useEffect, useState, useRef } from "react";
-
+import { useEffect, useState, useRef, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-import background from "@/assets/images/Quiz-Background.jpg";
-import CloseIcon from "@/assets/icons/X.svg?react";
+import { AppContext } from "@/Context/AppContext";
 import { quizApi } from "@/api";
+import { X } from "lucide-react";
+import "@/styles/fonts.css";
 
 export const QuizQuestionsPage = () => {
+  const { language, isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
 
- const handleExitQuiz = () => {
-    // Flag to the back handler that this is an intentional exit
-    isExitingQuizRef.current = true;
-
-    const savedReturn = sessionStorage.getItem("quizReturnToChat");
-
-    if (savedReturn) {
-      try {
-        const returnData = JSON.parse(savedReturn);
-
-        // Standard flow: Home -> TeacherLessons -> Chat -> QuizQuestions -> Guard
-        // With history.go(-2): Guard -> QuizQuestions -> Chat
-        // Exiting quiz navigates straight back to previous Chat
-        window.history.go(-2);
-
-        sessionStorage.removeItem("quizReturnToChat");
-
-        return;
-      } catch (error) {
-        console.error("Invalid quiz return data:", error);
-      }
-    }
-
-   // fallback
-   navigate("/", { replace: true });
- };
-
-  
-
-  const isPersianText = (text) => {
-    return /[\u0600-\u06FF]/.test(String(text || ""));
-  };
+  const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
   // Retrieve generated questions passed from QuizFirstPage
   const quizData = location.state?.quizData || [];
+  const totalQuestions = quizData.length;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
@@ -63,14 +33,32 @@ export const QuizQuestionsPage = () => {
   // Store AI explanation loading state per question
   const [loadingExplanations, setLoadingExplanations] = useState({});
 
-  const totalQuestions = quizData.length;
-
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
 
   const isHandlingBackRef = useRef(false);
   const isExitingQuizRef = useRef(false);
   const isFinishingQuizRef = useRef(false);
   const pendingResultRef = useRef(null);
+
+  const handleExitQuiz = () => {
+    isExitingQuizRef.current = true;
+    const savedReturn = sessionStorage.getItem("quizReturnToChat");
+
+    if (savedReturn) {
+      try {
+        const returnData = JSON.parse(savedReturn);
+        // Exiting quiz navigates straight back to previous Chat
+        window.history.go(-2);
+        sessionStorage.removeItem("quizReturnToChat");
+        return;
+      } catch (error) {
+        console.error("Invalid quiz return data:", error);
+      }
+    }
+
+    // fallback
+    navigate("/", { replace: true });
+  };
 
   useEffect(() => {
     // Push a new history entry while retaining the existing quizData state
@@ -88,10 +76,8 @@ export const QuizQuestionsPage = () => {
             replace: true,
             state: pendingResultRef.current,
           });
-
           pendingResultRef.current = null;
         }
-
         return;
       }
 
@@ -124,46 +110,40 @@ export const QuizQuestionsPage = () => {
   // Empty state if no questions are available
   if (totalQuestions === 0) {
     return (
-      <main className="w-full md:w-[360px] min-h-dvh mx-auto relative">
-        <section className="relative w-full min-h-dvh bg-white overflow-x-hidden">
-          <img
-            className="absolute inset-0 w-full h-full object-cover"
-            alt=""
-            src={background}
-            aria-hidden="true"
-          />
-
-          <div className="relative z-10 min-h-dvh flex items-center justify-center px-5">
-            <p className="en-body text-black text-center">
-              No quiz questions found.
-            </p>
-          </div>
-        </section>
+      <main
+        className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none items-center justify-center p-6"
+        dir={isRTL ? "rtl" : "ltr"}
+      >
+        <div className="w-full max-w-sm bg-white dark:bg-neutral-scale1300 rounded-3xl border border-neutral-scale200 dark:border-neutral-scale1100 p-8 shadow-sm text-center flex flex-col items-center gap-4">
+          <h2
+            className={`text-base font-bold text-neutral-900 dark:text-neutral-100 ${
+              isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
+            }`}
+          >
+            {t("noQuizQuestionsFound")}
+          </h2>
+          <button
+            type="button"
+            onClick={() => navigate("/QuizFirstPage", { replace: true })}
+            className="w-full h-11 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-semibold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+          >
+            {isRTL ? "بازگشت و تلاش مجدد" : "Go Back & Try Again"}
+          </button>
+        </div>
       </main>
     );
   }
 
   const currentQuestion = quizData[currentQuestionIndex];
-
-  // Selected option for current question (preserves answer when navigating between questions)
   const selectedAnswer = selectedAnswers[currentQuestionIndex] || "";
-
-  // Has "Show Answer" been clicked for the current question
   const showAnswer = answeredQuestions[currentQuestionIndex] || false;
-
-  // Should explanation be visible for current question
   const showExplanation = showExplanations[currentQuestionIndex] || false;
-
-  // Explanation text for current question
   const explanation = explanations[currentQuestionIndex] || "";
-
-  // Loading state for current question explanation
   const loadingExplanation = loadingExplanations[currentQuestionIndex] || false;
 
   // Normalize options array from API into structured { id, letter, text } objects
-  const normalizedAnswers = (currentQuestion.options || []).map(
+  const normalizedAnswers = (currentQuestion?.options || []).map(
     (option, index) => {
-      // If API returned an object
       if (typeof option === "object" && option !== null) {
         return {
           id: option.id || String(index),
@@ -172,10 +152,7 @@ export const QuizQuestionsPage = () => {
         };
       }
 
-      // If API returned a plain string
       const optionText = String(option);
-
-      // Detect prefix letter patterns like A) / A. / A- / A:
       const letterMatch = optionText.match(/^\s*([A-Da-d])\s*[)\.\-:]\s*/);
 
       if (letterMatch) {
@@ -186,7 +163,6 @@ export const QuizQuestionsPage = () => {
         };
       }
 
-      // Fallback if no prefix exists
       return {
         id: String(index),
         letter: String.fromCharCode(65 + index),
@@ -197,20 +173,16 @@ export const QuizQuestionsPage = () => {
 
   // Convert API correct answer representation to A/B/C/D letter
   const getCorrectAnswerLetter = () => {
-    const rawAnswer = currentQuestion.answer;
-
+    const rawAnswer = currentQuestion?.answer;
     if (!rawAnswer) return "";
 
     const answerString = String(rawAnswer).trim();
-
-    // If answer is already a direct letter (e.g., 'A', 'B')
     const letterMatch = answerString.match(/^([A-Da-d])(?:[)\.\-:]|\s|$)/);
 
     if (letterMatch) {
       return letterMatch[1].toUpperCase();
     }
 
-    // If answer is the full string text of the matching option
     const matchingOption = normalizedAnswers.find(
       (option) =>
         option.text.trim().toLowerCase() === answerString.toLowerCase(),
@@ -220,22 +192,17 @@ export const QuizQuestionsPage = () => {
       return matchingOption.letter;
     }
 
-    // Fallback
     return answerString.charAt(0).toUpperCase();
   };
 
   const correctAnswer = getCorrectAnswerLetter();
-
   const progress =
     totalQuestions > 0
       ? ((currentQuestionIndex + 1) / totalQuestions) * 100
       : 0;
 
   const handleSelectAnswer = (answerLetter) => {
-    // Prevent changing answer if already submitted via Show Answer
     if (showAnswer) return;
-
-    // Save answer at current question index
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentQuestionIndex]: answerLetter,
@@ -244,8 +211,6 @@ export const QuizQuestionsPage = () => {
 
   const handleShowAnswer = () => {
     if (!selectedAnswer) return;
-
-    // Mark current question as answered
     setAnsweredQuestions((prev) => ({
       ...prev,
       [currentQuestionIndex]: true,
@@ -255,13 +220,11 @@ export const QuizQuestionsPage = () => {
   const handleShowExplanation = async () => {
     if (!showAnswer) return;
 
-    // Toggle visibility if explanation was already fetched
     if (explanation) {
       setShowExplanations((prev) => ({
         ...prev,
         [currentQuestionIndex]: !prev[currentQuestionIndex],
       }));
-
       return;
     }
 
@@ -270,24 +233,22 @@ export const QuizQuestionsPage = () => {
         ...prev,
         [currentQuestionIndex]: true,
       }));
-
       setShowExplanations((prev) => ({
         ...prev,
         [currentQuestionIndex]: true,
       }));
 
-      const explanation = await quizApi.explainAnswer(currentQuestion.question);
+      const exp = await quizApi.explainAnswer(currentQuestion.question);
 
       setExplanations((prev) => ({
         ...prev,
-        [currentQuestionIndex]: explanation || "No explanation available.",
+        [currentQuestionIndex]: exp || t("noExplanationAvailable"),
       }));
     } catch (err) {
       console.error("Explain error:", err);
-
       setExplanations((prev) => ({
         ...prev,
-        [currentQuestionIndex]: "⚠️ Error getting explanation.",
+        [currentQuestionIndex]: t("errorGettingExplanation"),
       }));
     } finally {
       setLoadingExplanations((prev) => ({
@@ -305,18 +266,13 @@ export const QuizQuestionsPage = () => {
       let incorrectCount = 0;
 
       quizData.forEach((question, index) => {
-        const selectedAnswer = selectedAnswers[index];
+        const selAns = selectedAnswers[index];
+        if (!selAns) return;
 
-        if (!selectedAnswer) return;
-
-        // Determine correct answer for this question
         const rawAnswer = question.answer;
-
         if (!rawAnswer) return;
 
         const answerString = String(rawAnswer).trim();
-
-        // Normalize options for this question
         const normalizedOptions = (question.options || []).map(
           (option, optionIndex) => {
             if (typeof option === "object" && option !== null) {
@@ -325,18 +281,14 @@ export const QuizQuestionsPage = () => {
                 text: option.text || option.answer || "",
               };
             }
-
             const optionText = String(option);
-
             const letterMatch = optionText.match(/^\s*([A-Da-d])[)\.\-:]\s*/);
-
             if (letterMatch) {
               return {
                 letter: letterMatch[1].toUpperCase(),
                 text: optionText.replace(letterMatch[0], "").trim(),
               };
             }
-
             return {
               letter: String.fromCharCode(65 + optionIndex),
               text: optionText,
@@ -344,36 +296,29 @@ export const QuizQuestionsPage = () => {
           },
         );
 
-        let correctAnswer = "";
-
-        // Check if answer is directly A/B/C/D
+        let corrAns = "";
         const letterMatch = answerString.match(/^([A-Da-d])(?:[)\.\-:]|\s|$)/);
 
         if (letterMatch) {
-          correctAnswer = letterMatch[1].toUpperCase();
+          corrAns = letterMatch[1].toUpperCase();
         } else {
-          // If answer is the full option text
           const matchingOption = normalizedOptions.find(
-            (option) =>
-              option.text.trim().toLowerCase() === answerString.toLowerCase(),
+            (opt) => opt.text.trim().toLowerCase() === answerString.toLowerCase(),
           );
-
           if (matchingOption) {
-            correctAnswer = matchingOption.letter;
+            corrAns = matchingOption.letter;
           } else {
-            // fallback
-            correctAnswer = answerString.charAt(0).toUpperCase();
+            corrAns = answerString.charAt(0).toUpperCase();
           }
         }
 
-        if (selectedAnswer === correctAnswer) {
+        if (selAns === corrAns) {
           correctCount++;
         } else {
           incorrectCount++;
         }
       });
 
-      // Temporarily store quiz statistics in ref
       pendingResultRef.current = {
         correctCount,
         incorrectCount,
@@ -382,10 +327,7 @@ export const QuizQuestionsPage = () => {
         quizData,
       };
 
-      // Signal back handler that this is not an exit, just clearing the extra history entry
       isFinishingQuizRef.current = true;
-
-      // Pop guard and navigate to Quiz-result via popstate
       window.history.back();
     }
   };
@@ -396,297 +338,298 @@ export const QuizQuestionsPage = () => {
     }
   };
 
-  const getAnswerClassName = (answerLetter) => {
-    const isSelected = selectedAnswer === answerLetter;
-    const isCorrect = correctAnswer === answerLetter;
-
-    // Prior to Show Answer
-    if (!showAnswer) {
-      if (isSelected) {
-        return "border-[#6aaee8] bg-[#f3f8fd]";
-      }
-
-      return "border-neutral-scale200 bg-neutral-scale100";
-    }
-
-    // After Show Answer - Correct option
-    if (isCorrect) {
-      return "border-[#63b867] bg-[#f2fbf2]";
-    }
-
-    // After Show Answer - Incorrect option selected
-    if (isSelected && !isCorrect) {
-      return "border-[#e57373] bg-[#fff5f5]";
-    }
-
-    return "border-neutral-scale200 bg-neutral-scale100";
-  };
-
   return (
     <main
-      className="w-full md:w-[360px] min-h-dvh mx-auto relative"
-      aria-labelledby="quiz-question-title"
+      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative"
+      dir={isRTL ? "rtl" : "ltr"}
     >
-      <section
-        className="relative w-full min-h-dvh bg-white overflow-x-hidden"
-        aria-label="Quiz question"
-      >
-        {/* Background */}
-        <img
-          className="absolute inset-0 w-full h-full object-cover"
-          alt=""
-          src={background}
-          aria-hidden="true"
-        />
-
-        {/* Header / Progress */}
-        <header className="absolute top-[30px] left-5 right-5 flex items-center gap-2.5">
-          {/* Close */}
+      {/* ----------------- Telegram App Header ----------------- */}
+      <header className="sticky top-0 z-40 w-full bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 text-white shadow-sm flex flex-col">
+        <div className="h-[60px] flex items-center justify-between px-3">
+          {/* Close Button */}
           <button
             type="button"
-            className="relative w-3 h-[15px] flex-shrink-0"
-            aria-label="Close quiz"
             onClick={() => setShowExitConfirmation(true)}
+            aria-label={t("closeQuiz")}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
           >
-            <CloseIcon className="w-[12px] h-[20px]" />
+            <X className="w-5 h-5" />
           </button>
 
-          {/* Progress Bar */}
-          <div
-            className="relative flex-1 h-1.5 bg-[#d9d9d9] rounded-md overflow-hidden"
-            role="progressbar"
-            aria-label="Quiz progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(progress)}
-          >
-            <div
-              className="absolute top-0 left-0 h-full bg-[#4db151] rounded-md transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          {/* Percentage */}
-          <span className="flex-shrink-0 en-caption-1 text-black whitespace-nowrap">
-            {Math.round(progress)}%
-          </span>
-        </header>
-
-        {/* Question + Answers */}
-        <div className="absolute top-[100px] pb-[100px] left-5 right-5">
-          {/* Question */}
-          <div className="relative">
-            <h1
-              id="quiz-question-title"
-              className={`text-black ${
-                isPersianText(currentQuestion.question)
-                  ? "fa-title-1 text-right"
-                  : "en-title-1 text-left"
+          {/* Question Index Badge */}
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-xs font-bold px-3 py-1 rounded-full bg-white/15 backdrop-blur-xs border border-white/20 shadow-xs ${
+                isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
               }`}
-              dir={isPersianText(currentQuestion.question) ? "rtl" : "ltr"}
             >
-              {currentQuestion.question}{" "}
-              <span
-                className={
-                  isPersianText(currentQuestion.question)
-                    ? "fa-body text-[#000000b2] whitespace-nowrap"
-                    : "en-body text-[#000000b2] whitespace-nowrap"
-                }
-              >
-                {currentQuestionIndex + 1}/{totalQuestions}
-              </span>
-            </h1>
+              {t("question")} {currentQuestionIndex + 1} {t("of")}{" "}
+              {totalQuestions}
+            </span>
           </div>
 
-          {/* Answers */}
-          <fieldset
-            className="mt-[45px] w-full flex flex-col gap-[15px]"
-            aria-label="Answer choices"
-          >
-            <legend className="sr-only">Select an answer</legend>
+          {/* Percentage Indicator */}
+          <div className="flex items-center gap-1 text-xs font-bold text-white/90 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+            <span>{Math.round(progress)}%</span>
+          </div>
+        </div>
 
-            {normalizedAnswers.map((answer) => (
-              <label
-                key={answer.id}
-                className={`flex w-full min-h-[42px] items-center gap-2.5 px-2 py-2 border rounded-[7px] cursor-pointer transition-all duration-200 ${getAnswerClassName(
-                  answer.letter,
-                )}`}
+        {/* Animated Progress Bar */}
+        <div
+          className="w-full h-1.5 bg-black/15 dark:bg-white/10 overflow-hidden"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full bg-gradient-to-r from-emerald-400 via-sky-300 to-amber-300 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </header>
+
+      {/* ----------------- Question Content Body ----------------- */}
+      <section className="flex-1 px-3.5 py-4 flex flex-col gap-4 overflow-y-auto pb-24">
+        {/* Question Card */}
+        <div
+          key={`q-${currentQuestionIndex}`}
+          className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4.5 sm:p-5 shadow-sm space-y-3 transition-all duration-300 transform animate-in fade-in"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primery-50 dark:bg-sky-950/40 text-primery-700 dark:text-sky-300 border border-primery-200/70 dark:border-sky-800/40">
+              {t("question")} {currentQuestionIndex + 1}
+            </span>
+
+            {showAnswer && (
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                  selectedAnswer === correctAnswer
+                    ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
+                    : "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
+                }`}
               >
-                <input
-                  type="radio"
-                  name={`quiz-question-${
-                    currentQuestion.id || currentQuestionIndex
-                  }`}
-                  value={answer.letter}
-                  checked={selectedAnswer === answer.letter}
-                  onChange={() => handleSelectAnswer(answer.letter)}
-                  disabled={showAnswer}
-                  className="sr-only"
-                />
+                {selectedAnswer === correctAnswer ? t("correct") : t("incorrect")}
+              </span>
+            )}
+          </div>
 
-                {/* Letter */}
-                <span
-                  className={`flex flex-shrink-0 w-5 h-5 items-center justify-center bg-white rounded-[3px] ${
-                    isPersianText(answer.text) ? "order-last" : "order-first"
-                  }`}
+          <h2
+            className={`text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 leading-relaxed ${
+              isPersianText(currentQuestion.question)
+                ? "fa-title-2 font-vazir text-right"
+                : "en-title-2 font-inter text-left"
+            }`}
+            dir={isPersianText(currentQuestion.question) ? "rtl" : "ltr"}
+          >
+            {currentQuestion.question}
+          </h2>
+        </div>
+
+        {/* Answer Choices (Telegram Poll/Quiz Style) */}
+        <div className="flex flex-col gap-2.5">
+          {normalizedAnswers.map((answer) => {
+            const isSelected = selectedAnswer === answer.letter;
+            const isCorrect = correctAnswer === answer.letter;
+
+            let cardStyle =
+              "bg-white dark:bg-neutral-scale1300 border-neutral-200 dark:border-neutral-scale1100 text-neutral-800 dark:text-neutral-200 hover:border-primery-400 dark:hover:border-sky-500/50 hover:bg-neutral-50/80 dark:hover:bg-neutral-scale1200";
+            let badgeStyle =
+              "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-scale1000";
+
+            if (!showAnswer) {
+              if (isSelected) {
+                cardStyle =
+                  "bg-primery-50/70 dark:bg-sky-950/40 border-primery-600 dark:border-sky-400 text-primery-900 dark:text-sky-100 shadow-sm shadow-primery-500/10 scale-[1.01]";
+                badgeStyle =
+                  "bg-primery-600 text-white shadow-xs scale-105";
+              }
+            } else {
+              // After Show Answer is clicked
+              if (isCorrect) {
+                cardStyle =
+                  "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-100 shadow-sm shadow-emerald-500/15 scale-[1.01]";
+                badgeStyle =
+                  "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-110";
+              } else if (isSelected && !isCorrect) {
+                cardStyle =
+                  "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-900 dark:text-rose-100 shadow-sm shadow-rose-500/15";
+                badgeStyle =
+                  "bg-rose-500 text-white shadow-sm shadow-rose-500/30 scale-110";
+              } else {
+                cardStyle =
+                  "opacity-50 bg-neutral-50/60 dark:bg-neutral-scale1300/40 border-neutral-200 dark:border-neutral-scale1100 text-neutral-400 dark:text-neutral-500";
+              }
+            }
+
+            return (
+              <button
+                key={answer.id}
+                type="button"
+                onClick={() => handleSelectAnswer(answer.letter)}
+                disabled={showAnswer}
+                className={`w-full text-right p-3.5 rounded-xl border flex items-center gap-3 transition-all duration-200 active:scale-[0.99] cursor-pointer disabled:cursor-default ${cardStyle}`}
+              >
+                {/* Option Letter Badge */}
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-300 ${badgeStyle}`}
                 >
-                  <span className="en-title-3 text-center">
-                    {answer.letter}
-                  </span>
-                </span>
+                  <span>{answer.letter}</span>
+                </div>
 
-                {/* Answer Text */}
+                {/* Option Text */}
                 <span
-                  className={`flex-1 text-black ${
+                  className={`flex-1 text-xs sm:text-sm font-medium leading-relaxed ${
                     isPersianText(answer.text)
-                      ? "fa-body text-right"
-                      : "en-body text-left"
+                      ? "fa-body font-vazir text-right"
+                      : "en-body font-inter text-left"
                   }`}
                   dir={isPersianText(answer.text) ? "rtl" : "ltr"}
                 >
                   {answer.text}
                 </span>
-
-                {/* Correct indicator */}
-                {showAnswer && answer.letter === correctAnswer && (
-                  <span className="text-[#4db151] text-[12px] font-bold">
-                    ✓
-                  </span>
-                )}
-
-                {/* Wrong indicator */}
-                {showAnswer &&
-                  selectedAnswer === answer.letter &&
-                  answer.letter !== correctAnswer && (
-                    <span className="text-[#d9534f] text-[12px] font-bold">
-                      ✕
-                    </span>
-                  )}
-              </label>
-            ))}
-          </fieldset>
-
-          {/* Answer Buttons */}
-          <div className="flex items-center justify-center gap-3 mt-[25px]">
-            <button
-              type="button"
-              onClick={handleShowAnswer}
-              disabled={!selectedAnswer || showAnswer}
-              className={`h-[38px] px-4 rounded-[8px] text-[13px] font-medium transition-all ${
-                selectedAnswer && !showAnswer
-                  ? "bg-primery-700 text-white cursor-pointer"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              Show Answer
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShowExplanation}
-              disabled={!showAnswer}
-              className={`h-[38px] px-4 rounded-[8px] text-[13px] font-medium transition-all ${
-                showAnswer
-                  ? "bg-white border border-primery-700 text-primery-700 cursor-pointer"
-                  : "bg-gray-100 text-gray-400 border border-transparent cursor-not-allowed"
-              }`}
-            >
-              {loadingExplanation ? "Loading..." : "Explain Answer"}
-            </button>
-          </div>
-
-          {/* Explanation */}
-          {showExplanation && (
-            <div className="mt-[18px] px-3 py-3 bg-[#f5f9fc] border border-[#d8e8f1] rounded-[8px]">
-              <p
-                className={`text-black text-[13px] leading-[1.5] text-center ${
-                  isPersianText(
-                    loadingExplanation ? "Getting explanation..." : explanation,
-                  )
-                    ? "fa-body"
-                    : "en-body"
-                }`}
-              >
-                {loadingExplanation ? "Getting explanation..." : explanation}
-              </p>
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div className="fixed bottom-5 left-5 right-5 flex items-center justify-between">
-            {/* Previous */}
-            {currentQuestionIndex > 0 ? (
-              <button
-                type="button"
-                onClick={handlePrevious}
-                className="flex min-w-[85px] h-[38px] items-center justify-center px-3 bg-primery-700 rounded-[10px] text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-primery-700 focus-visible:ring-offset-2"
-                aria-label="Go to previous question"
-              >
-                <span className="en-body-medium">Previous</span>
               </button>
-            ) : (
-              <div />
-            )}
-
-            {/* Next / Finish */}
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!selectedAnswer}
-              className={`flex min-w-[70px] h-[38px] items-center justify-center px-3 rounded-[10px] cursor-pointer focus-visible:ring-2 focus-visible:ring-primery-700 focus-visible:ring-offset-2 ${
-                selectedAnswer
-                  ? "bg-primery-700 text-white"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-              aria-label={
-                currentQuestionIndex === totalQuestions - 1
-                  ? "Finish quiz"
-                  : "Go to next question"
-              }
-            >
-              <span className="en-body-medium">
-                {currentQuestionIndex === totalQuestions - 1
-                  ? "Finish"
-                  : "Next"}
-              </span>
-            </button>
-          </div>
+            );
+          })}
         </div>
 
-        {showExitConfirmation && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-5">
-            <div className="w-full max-w-[320px] rounded-[12px] bg-white px-5 py-5 shadow-lg">
-              <p className="en-title-3 text-center text-black">
-                Are you sure you want to finish the quiz?
-              </p>
+        {/* Action Buttons: Show Answer & AI Explanation */}
+        <div className="flex items-center gap-2.5 pt-1">
+          {/* Show Answer Button */}
+          <button
+            type="button"
+            onClick={handleShowAnswer}
+            disabled={!selectedAnswer || showAnswer}
+            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
+              selectedAnswer && !showAnswer
+                ? "bg-white dark:bg-neutral-scale1300 border-2 border-primery-600 dark:border-sky-400 text-primery-700 dark:text-sky-300 hover:bg-primery-50 dark:hover:bg-sky-950/40 active:scale-95 shadow-xs"
+                : "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-scale1000 cursor-not-allowed opacity-60"
+            }`}
+          >
+            <span>{t("showAnswer")}</span>
+          </button>
 
-              <p className="en-caption-1 text-center text-[#000000b2] mt-2">
-                Your progress will be lost!
-              </p>
+          {/* AI Explanation Button */}
+          <button
+            type="button"
+            onClick={handleShowExplanation}
+            disabled={!showAnswer}
+            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
+              showAnswer
+                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 hover:brightness-105 active:scale-95"
+                : "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-scale1000 cursor-not-allowed opacity-60"
+            }`}
+          >
+            <span>{loadingExplanation ? t("gettingExplanation") : t("explainAnswer")}</span>
+          </button>
+        </div>
 
-              <div className="flex items-center justify-center gap-3 mt-5">
-                {/* No */}
-                <button
-                  type="button"
-                  onClick={() => setShowExitConfirmation(false)}
-                  className="h-[38px] min-w-[80px] px-4 rounded-[8px] bg-gray-200 text-gray-700 text-[13px] font-medium"
-                >
-                  No
-                </button>
-
-                {/* Yes */}
-                <button
-                  type="button"
-                  onClick={handleExitQuiz}
-                  className="h-[38px] min-w-[80px] px-4 rounded-[8px] bg-primery-700 text-white text-[13px] font-medium"
-                >
-                  Yes
-                </button>
+        {/* AI Explanation Accordion (Smooth Grid Motion) */}
+        <div
+          className={`grid transition-all duration-300 ease-in-out ${
+            showExplanation
+              ? "grid-rows-[1fr] opacity-100 mt-1"
+              : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-amber-200/80 dark:border-amber-500/25 p-4 shadow-sm space-y-2.5">
+              <div className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                <span>{t("aiExplanationTitle")}</span>
               </div>
+
+              {loadingExplanation ? (
+                <div className="py-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  <span>{t("gettingExplanation")}</span>
+                </div>
+              ) : (
+                <p
+                  className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 ${
+                    isPersianText(explanation)
+                      ? "fa-body font-vazir text-right"
+                      : "en-body font-inter text-left"
+                  }`}
+                  dir={isPersianText(explanation) ? "rtl" : "ltr"}
+                >
+                  {explanation}
+                </p>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </section>
+
+      {/* ----------------- Sticky Bottom Navigation ----------------- */}
+      <footer className="sticky bottom-0 z-30 w-full bg-white/90 dark:bg-neutral-scale1300/90 backdrop-blur-md border-t border-neutral-scale200 dark:border-neutral-scale1100 p-3.5 flex items-center justify-between gap-3 shadow-lg">
+        {/* Previous Button */}
+        <button
+          type="button"
+          onClick={handlePrevious}
+          disabled={currentQuestionIndex === 0}
+          className="h-11 px-5 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300 font-semibold text-xs flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+        >
+          <span>{t("previous")}</span>
+        </button>
+
+        {/* Next / Finish Button */}
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={!selectedAnswer}
+          className={`flex-1 h-11 rounded-xl text-white font-bold text-xs flex items-center justify-center active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md ${
+            currentQuestionIndex === totalQuestions - 1
+              ? "bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25"
+              : "bg-primery-700 hover:bg-primery-800 dark:bg-primery-600 dark:hover:bg-primery-700 shadow-primery-700/20"
+          }`}
+        >
+          <span>
+            {currentQuestionIndex === totalQuestions - 1
+              ? t("finishQuiz")
+              : t("next")}
+          </span>
+        </button>
+      </footer>
+
+      {/* ----------------- Telegram Exit Confirmation Dialog ----------------- */}
+      {showExitConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs px-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-[320px] rounded-3xl bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="space-y-1 pt-1">
+              <h3
+                className={`text-sm font-bold text-neutral-900 dark:text-neutral-100 ${
+                  isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
+                }`}
+              >
+                {t("exitQuizTitle")}
+              </h3>
+              <p
+                className={`text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed ${
+                  isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+                }`}
+              >
+                {t("exitQuizSubtitle")}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowExitConfirmation(false)}
+                className="flex-1 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-scale1200 hover:bg-neutral-200 dark:hover:bg-neutral-scale1100 text-neutral-700 dark:text-neutral-300 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleExitQuiz}
+                className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-sm shadow-rose-500/25"
+              >
+                {t("confirmExit")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

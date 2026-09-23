@@ -83,7 +83,7 @@ export const ChatArea = () => {
     const { id } = useParams();
     const location = useLocation();
     const isStudentChat = location.pathname.startsWith("/ChatArea/student/");
-    const { language, isRTL, role, currentUser } = useContext(AppContext);
+    const { language, isRTL, role, currentUser, t } = useContext(AppContext);
 
     const isStudentRole = Boolean(
       (role && role.toLowerCase() === "student") ||
@@ -543,7 +543,7 @@ export const ChatArea = () => {
                 teacherName,
             });
 
-            aiText = String(answer || (isRTL ? "پاسخی از سرور دریافت نشد." : "No response from server."));
+            aiText = String(answer || t("noServerResponse"));
         } catch (error) {
             console.error("Chat Error:", error);
             isError = true;
@@ -730,7 +730,7 @@ export const ChatArea = () => {
             {/* Back Button */}
             <button
               onClick={handleBack}
-              aria-label={isRTL ? "بازگشت" : "Back"}
+              aria-label={t("back")}
               className="w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer"
             >
               <ArrowLeft
@@ -827,7 +827,7 @@ export const ChatArea = () => {
               <button
                 type="button"
                 onClick={toggleAI}
-                aria-label={isRTL ? "تغییر حالت هوش مصنوعی" : "Toggle AI"}
+                aria-label={t("toggleAi")}
                 className={`w-7 h-7 flex items-center justify-center transition-all duration-300 ${
                   aiEnabled ? "scale-125 animate-pulse" : "scale-100"
                 }`}
@@ -842,7 +842,7 @@ export const ChatArea = () => {
               {/* Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(true)}
-                aria-label={isRTL ? "منو" : "Menu"}
+                aria-label={t("menu")}
                 className="w-7 h-7 flex items-center justify-center cursor-pointer"
               >
                 <Menu className="!w-7 !h-7 dark:text-neutral-scale70" />
@@ -902,7 +902,7 @@ export const ChatArea = () => {
                 isRTL ? "fa-caption-2" : "text-xs"
               } animate-pulse`}
             >
-              🎙 {isRTL ? "در حال ضبط..." : "Recording..."}
+              🎙 {t("recording")}
             </div>
           </div>
         )}
@@ -925,7 +925,7 @@ export const ChatArea = () => {
           }}
         >
           <label htmlFor={composerInputId} className="sr-only">
-            {isRTL ? "پیام" : "Message"}
+            {t("message")}
           </label>
 
           {/* Dynamic typing font & direction detection */}
@@ -947,7 +947,7 @@ export const ChatArea = () => {
                 ref={textareaRef}
                 dir={textareaDir}
                 value={message}
-                placeholder={isRTL ? "پیام خود را بنویسید..." : "Message..."}
+                placeholder={t("writeMessage")}
                 rows={1}
                 className={`absolute bottom-0 w-full ${
                   isRTL

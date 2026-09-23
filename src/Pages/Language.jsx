@@ -40,7 +40,7 @@ const RadioIndicator = ({ checked }) => (
 export const Language = () => {
   const groupId = useId();
   const navigate = useNavigate();
-  const { language, setLanguage, isRTL } = useContext(AppContext);
+  const { language, setLanguage, isRTL, t } = useContext(AppContext);
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -54,7 +54,7 @@ export const Language = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
           >
             <BackIcon className="!w-6 !h-6" />
@@ -65,7 +65,7 @@ export const Language = () => {
               isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
             }`}
           >
-            {isRTL ? "انتخاب زبان" : "Language"}
+            {t("selectLanguage")}
           </h1>
         </div>
       </header>
@@ -77,7 +77,7 @@ export const Language = () => {
         <div className="w-full h-[78px] relative bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden p-3 flex items-center">
           <fieldset className="border-0 m-0 p-0 w-full">
             <legend id={`${groupId}-legend`} className="sr-only">
-              {isRTL ? "انتخاب زبان" : "Select language"}
+              {t("selectLanguage")}
             </legend>
             <div className="flex flex-col items-start gap-2.5">
               {languageOptions.map((option) => {
