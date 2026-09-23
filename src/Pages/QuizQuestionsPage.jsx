@@ -2,7 +2,15 @@ import { useEffect, useState, useRef, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { quizApi } from "@/api";
-import { X } from "lucide-react";
+import {
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Eye,
+  HelpCircle,
+  Check,
+  Award,
+} from "lucide-react";
 import "@/styles/fonts.css";
 
 export const QuizQuestionsPage = () => {
@@ -127,7 +135,7 @@ export const QuizQuestionsPage = () => {
             onClick={() => navigate("/QuizFirstPage", { replace: true })}
             className="w-full h-11 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-semibold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
           >
-            {isRTL ? "بازگشت و تلاش مجدد" : "Go Back & Try Again"}
+            {t("goBackAndTryAgain")}
           </button>
         </div>
       </main>
@@ -394,16 +402,17 @@ export const QuizQuestionsPage = () => {
         {/* Question Card */}
         <div
           key={`q-${currentQuestionIndex}`}
-          className="w-full bg-white dark:bg-neutral-scale1300 rounded-2xl border border-neutral-scale200 dark:border-neutral-scale1100 p-4.5 sm:p-5 shadow-sm space-y-3 transition-all duration-300 transform animate-in fade-in"
+          className="w-full bg-white dark:bg-neutral-scale1300 rounded-3xl border border-neutral-scale200 dark:border-neutral-scale1100 p-6 sm:p-7 shadow-sm transition-all duration-300 transform animate-in fade-in"
         >
-          <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primery-50 dark:bg-sky-950/40 text-primery-700 dark:text-sky-300 border border-primery-200/70 dark:border-sky-800/40">
+          {/* Question Meta Header */}
+          <div className="flex items-center justify-between gap-2 pb-3.5 mb-2 border-b border-neutral-100 dark:border-neutral-scale1200">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primery-50 dark:bg-sky-950/40 text-primery-700 dark:text-sky-300 border border-primery-200/70 dark:border-sky-800/40">
               {t("question")} {currentQuestionIndex + 1}
             </span>
 
             {showAnswer && (
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
                   selectedAnswer === correctAnswer
                     ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
                     : "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
@@ -414,16 +423,19 @@ export const QuizQuestionsPage = () => {
             )}
           </div>
 
-          <h2
-            className={`text-sm sm:text-base font-bold text-neutral-900 dark:text-neutral-100 leading-relaxed ${
-              isPersianText(currentQuestion.question)
-                ? "fa-title-2 font-vazir text-right"
-                : "en-title-2 font-inter text-left"
-            }`}
-            dir={isPersianText(currentQuestion.question) ? "rtl" : "ltr"}
-          >
-            {currentQuestion.question}
-          </h2>
+          {/* Question Text with Comfortable Padding & Spacing */}
+          <div className="py-2.5 sm:py-3.5 px-1 sm:px-2">
+            <h2
+              className={`text-[15px] sm:text-base font-bold text-neutral-900 dark:text-neutral-100 leading-loose sm:leading-loose ${
+                isPersianText(currentQuestion.question)
+                  ? "fa-title-2 font-vazir text-right"
+                  : "en-title-2 font-inter text-left"
+              }`}
+              dir={isPersianText(currentQuestion.question) ? "rtl" : "ltr"}
+            >
+              {currentQuestion.question}
+            </h2>
+          </div>
         </div>
 
         {/* Answer Choices (Telegram Poll/Quiz Style) */}
@@ -468,13 +480,19 @@ export const QuizQuestionsPage = () => {
                 type="button"
                 onClick={() => handleSelectAnswer(answer.letter)}
                 disabled={showAnswer}
-                className={`w-full text-right p-3.5 rounded-xl border flex items-center gap-3 transition-all duration-200 active:scale-[0.99] cursor-pointer disabled:cursor-default ${cardStyle}`}
+                className={`w-full text-right p-3.5 sm:p-4 rounded-2xl border flex items-center gap-3 transition-all duration-200 active:scale-[0.99] cursor-pointer disabled:cursor-default ${cardStyle}`}
               >
-                {/* Option Letter Badge */}
+                {/* Option Letter / Status Badge */}
                 <div
                   className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-300 ${badgeStyle}`}
                 >
-                  <span>{answer.letter}</span>
+                  {showAnswer && isCorrect ? (
+                    <Check className="w-4 h-4 text-white stroke-[2.5]" />
+                  ) : showAnswer && isSelected && !isCorrect ? (
+                    <X className="w-4 h-4 text-white stroke-[2.5]" />
+                  ) : (
+                    <span>{answer.letter}</span>
+                  )}
                 </div>
 
                 {/* Option Text */}
@@ -500,12 +518,13 @@ export const QuizQuestionsPage = () => {
             type="button"
             onClick={handleShowAnswer}
             disabled={!selectedAnswer || showAnswer}
-            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
+            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               selectedAnswer && !showAnswer
                 ? "bg-white dark:bg-neutral-scale1300 border-2 border-primery-600 dark:border-sky-400 text-primery-700 dark:text-sky-300 hover:bg-primery-50 dark:hover:bg-sky-950/40 active:scale-95 shadow-xs"
                 : "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-scale1000 cursor-not-allowed opacity-60"
             }`}
           >
+            <Eye className="w-4 h-4 shrink-0" />
             <span>{t("showAnswer")}</span>
           </button>
 
@@ -514,12 +533,13 @@ export const QuizQuestionsPage = () => {
             type="button"
             onClick={handleShowExplanation}
             disabled={!showAnswer}
-            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${
+            className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               showAnswer
                 ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 hover:brightness-105 active:scale-95"
                 : "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-scale1000 cursor-not-allowed opacity-60"
             }`}
           >
+            <HelpCircle className="w-4 h-4 shrink-0" />
             <span>{loadingExplanation ? t("gettingExplanation") : t("explainAnswer")}</span>
           </button>
         </div>
@@ -534,7 +554,8 @@ export const QuizQuestionsPage = () => {
         >
           <div className="overflow-hidden">
             <div className="bg-gradient-to-br from-amber-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-amber-200/80 dark:border-amber-500/25 p-4 shadow-sm space-y-2.5">
-              <div className="text-xs font-bold text-amber-700 dark:text-amber-400">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400">
+                <HelpCircle className="w-4 h-4 shrink-0" />
                 <span>{t("aiExplanationTitle")}</span>
               </div>
 
@@ -566,8 +587,9 @@ export const QuizQuestionsPage = () => {
           type="button"
           onClick={handlePrevious}
           disabled={currentQuestionIndex === 0}
-          className="h-11 px-5 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300 font-semibold text-xs flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+          className="h-11 px-4.5 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300 font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
         >
+          {isRTL ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
           <span>{t("previous")}</span>
         </button>
 
@@ -576,7 +598,7 @@ export const QuizQuestionsPage = () => {
           type="button"
           onClick={handleNext}
           disabled={!selectedAnswer}
-          className={`flex-1 h-11 rounded-xl text-white font-bold text-xs flex items-center justify-center active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md ${
+          className={`flex-1 h-11 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md ${
             currentQuestionIndex === totalQuestions - 1
               ? "bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25"
               : "bg-primery-700 hover:bg-primery-800 dark:bg-primery-600 dark:hover:bg-primery-700 shadow-primery-700/20"
@@ -587,6 +609,11 @@ export const QuizQuestionsPage = () => {
               ? t("finishQuiz")
               : t("next")}
           </span>
+          {currentQuestionIndex === totalQuestions - 1 ? (
+            <Award className="w-4 h-4 shrink-0" />
+          ) : (
+            isRTL ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
+          )}
         </button>
       </footer>
 

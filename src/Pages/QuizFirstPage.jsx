@@ -5,7 +5,6 @@ import { quizApi } from "@/api";
 import {
   ArrowLeft,
   ArrowRight,
-  Sparkles,
   BookOpen,
   ListOrdered,
   Plus,
@@ -225,7 +224,7 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
                   onClick={() => setTopic("")}
                   className="text-[11px] text-neutral-400 hover:text-red-500 cursor-pointer transition-colors"
                 >
-                  {isRTL ? "پاک کردن" : "Clear"}
+                  {t("clear")}
                 </button>
               )}
             </div>
@@ -366,7 +365,7 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
                   {t("attachedResources")}
                 </span>
                 <span className="text-[11px] text-sky-700 dark:text-sky-400">
-                  {selectedResources.length} {isRTL ? "مورد متصل" : "items attached"}
+                  {selectedResources.length} {t("itemsAttached")}
                 </span>
               </div>
             </div>
@@ -402,7 +401,6 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
           <div className="w-[85%] max-w-[320px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-3.5">
             <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-primery-50 dark:bg-primery-950/40 text-primery-700 dark:text-sky-400">
               <Loader2 className="w-8 h-8 animate-spin" />
-              <Sparkles className="w-4 h-4 absolute top-2 right-2 text-amber-400" />
             </div>
 
             <div className="flex flex-col gap-1">
