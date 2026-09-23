@@ -86,8 +86,8 @@ export const TeacherExams = () => {
       </header>
 
       {/* Content */}
-      <section className="w-full flex-1 min-h-0 mt-[15px] mb-[75px]">
-        <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden">
+      <section className="w-full flex-1 min-h-0 pb-[80px] overflow-y-auto overflow-x-hidden">
+        <div className="w-full px-3.5 ">
           <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             {/* Section Header */}
             <div className="px-4 flex items-center justify-between gap-2">
@@ -153,16 +153,16 @@ export const TeacherExams = () => {
                       ${
                         isActive
                           ? `
-                            border-green-500
-                            dark:border-green-600
+                            border-success-500
+                            dark:border-success-600
                             bg-green-50
                             dark:bg-green-950/30
                           `
                           : isScheduled
                             ? `
-                              border-blue-500
-                              dark:border-blue-600
-                              bg-blue-50
+                              border-primery-500
+                              dark:border-primery-800
+                              bg-blue-100
                               dark:bg-blue-950/30
                             `
                             : `
@@ -191,9 +191,9 @@ export const TeacherExams = () => {
                             shrink-0
                             ${
                               isActive
-                                ? "bg-primery-100 dark:bg-neutral-scale1100"
+                                ? "bg-success-100 dark:bg-success-1000"
                                 : isScheduled
-                                  ? "bg-blue-100 dark:bg-blue-950"
+                                  ? "bg-primery-100 dark:bg-primery-1000"
                                   : "bg-neutral-scale300 dark:bg-neutral-scale1200"
                             }
                           `}
@@ -204,9 +204,9 @@ export const TeacherExams = () => {
                               !h-[20px]
                               ${
                                 isActive
-                                  ? "text-primery-800 dark:text-neutral-scale70"
+                                  ? "text-success-1000 dark:text-success-100"
                                   : isScheduled
-                                    ? "text-blue-700 dark:text-blue-300"
+                                    ? "text-primery-1000 dark:text-primery-90 "
                                     : "text-neutral-scale700 dark:text-neutral-scale400"
                               }
                             `}
@@ -260,7 +260,7 @@ export const TeacherExams = () => {
                         </div>
                       </div>
 
-                      {/* Status + Edit */}
+                      {/* Status */}
                       <div className="flex flex-col items-end gap-[6px] shrink-0">
                         <div
                           className={`
@@ -272,9 +272,9 @@ export const TeacherExams = () => {
                             rounded-full
                             ${
                               isActive
-                                ? "bg-green-100 dark:bg-green-950"
+                                ? "bg-success-100 dark:bg-success-1000"
                                 : isScheduled
-                                  ? "bg-blue-100 dark:bg-blue-950"
+                                  ? "bg-primery-100 dark:bg-primery-1000"
                                   : "bg-neutral-scale200 dark:bg-neutral-scale1100"
                             }
                           `}
@@ -286,9 +286,9 @@ export const TeacherExams = () => {
                               rounded-full
                               ${
                                 isActive
-                                  ? "bg-green-600"
+                                  ? "bg-success-900 dark:bg-success-100"
                                   : isScheduled
-                                    ? "bg-blue-600"
+                                    ? "bg-primery-900 dark:bg-primery-90"
                                     : "bg-neutral-scale700"
                               }
                             `}
@@ -301,9 +301,9 @@ export const TeacherExams = () => {
                                 : "en-caption-1 font-inter"
                             } ${
                               isActive
-                                ? "text-green-700 dark:text-green-300"
+                                ? "text-success-1000 dark:text-success-100"
                                 : isScheduled
-                                  ? "text-blue-700 dark:text-blue-300"
+                                  ? "text-primery-1000 dark:text-primery-90"
                                   : "text-neutral-scale900 dark:text-neutral-scale400"
                             }`}
                           >
@@ -331,9 +331,9 @@ export const TeacherExams = () => {
                         my-[11px]
                         ${
                           isActive
-                            ? "bg-neutral-scale200 dark:bg-neutral-scale1100"
+                            ? "bg-success-500 dark:bg-success-600"
                             : isScheduled
-                              ? "bg-blue-100 dark:bg-blue-900"
+                              ? "bg-primery-500 dark:bg-primery-800"
                               : "bg-neutral-scale300 dark:bg-neutral-scale1200"
                         }
                       `}
@@ -345,7 +345,7 @@ export const TeacherExams = () => {
                         className={`
                           ${
                             isActive || isScheduled
-                              ? "text-neutral-scal1800 dark:text-neutral-scale400"
+                              ? "text-neutral-scal1800 dark:text-neutral-scale70"
                               : "text-neutral-scale900 dark:text-neutral-scale500"
                           }
                           ${
@@ -465,18 +465,16 @@ export const TeacherExams = () => {
                           rounded-[8px]    
                           border
                           border-primery-800
-                          dark:border-primery-800
                           text-primery-1000
-                          dark:text-neutral-scale90
-                          bg-primery-90
-                          dark:bg-blue-950/40
-                          hover:bg-primery-100
-                          dark:hover:bg-blue-900/50
+                          dark:text-neutral-scale70
+                          bg-primery-100
+                          hover:bg-primery-200
+                          dark:bg-primery-1000
                           active:scale-[0.98]
                           transition-all
                         "
                       >
-                        <Pencil className="!w-[13px] !h-[13px]" />
+                        <Pencil className="!w-[13px] !h-[13px] text-primery-1000 dark:text-neutral-scale70" />
 
                         <span
                           className={
@@ -507,11 +505,11 @@ export const TeacherExams = () => {
                           rounded-[8px]
                           border
                           border-neutral-scale600
-                          dark:border-neutral-scale700
+                          dark:border-neutral-scale200
                           bg-neutral-scale70
                           dark:bg-neutral-scale1200
                           text-neutral-scale1200
-                          dark:text-neutral-scale200
+                          dark:text-neutral-scale80
                           hover:bg-neutral-scale100
                           dark:hover:bg-neutral-scale1100
                           hover:border-neutral-scale800
@@ -521,7 +519,7 @@ export const TeacherExams = () => {
                           cursor-pointer
                         "
                       >
-                        <BarChart3 className="!w-[15px] !h-[15px] text-success-900" />
+                        <BarChart3 className="!w-[15px] !h-[15px] dark:text-neutral-scale80" />
 
                         <span
                           className={
