@@ -1,5 +1,6 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 
@@ -10,87 +11,86 @@ import Exam from "@/assets/icons/Exam.svg?react";
 import Settings from "@/assets/icons/Settings.svg?react";
 
 import ChatFilled from "@/assets/icons/ChatFull.svg?react";
-import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 
 export const StudentNavigationBar = () => {
-  const { isRTL } = useContext(AppContext);
+  const { t, isRTL } = useContext(AppContext);
   const location = useLocation();
-  const navigate = useNavigate();
-
-  const itemsRef = useRef({});
-  const [indicatorStyle, setIndicatorStyle] = useState({
-    width: 0,
-    left: 0,
-  });
 
   const navItems = [
     {
       id: "chats",
-      label: isRTL ? "گفتگوها" : "Chats",
-      route: "/Student",
+      label: t("chats"),
+
+      wrapperClassName: "relative w-[65px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative left-2.5 w-[46px] h-10 flex flex-col gap-[0.3px]",
+
+      iconWrapperClassName: "ml-[9.3px] w-[25.81px] h-[24.66px] flex",
+
       icon: Chat,
       iconActive: ChatFilled,
-      iconClassName: "w-[25px] h-[25px]",
+
+      iconClassName: "flex-1 w-[20.35px]",
+
+      labelClassName: `w-11 h-[15px] ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap`,
     },
+
     {
-      id: "explore",
-      label: isRTL ? "جست و جو" : "Explore",
-      route: null,
-      icon: Search,
-      iconActive: Search,
-      iconClassName: "w-[21px] h-[20px]",
-      disabled: true,
+      id: "explor",
+      label: t("courses"),
+
+      wrapperClassName: "relative w-[90px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative top-1 left-[11px] w-[70px] h-10 flex flex-col gap-1.5",
+
+      iconWrapperClassName: "ml-6 w-[21px] h-[15px] flex",
+
+      icon: Explor,
+
+      iconClassName:
+        "flex-1 w-[19px] text-neutral-scale1400 dark:text-neutral-scale70",
+
+      labelClassName: `w-[68px] h-[15px] text-neutral-scale1800 dark:text-neutral-scale70 ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-center whitespace-nowrap`,
     },
-    {
-      id: "exams",
-      label: isRTL ? "آزمون‌ها" : "Exams",
-      route: null,
-      icon: Exam,
-      iconActive: ExamFilled,
-      iconClassName: "w-[15px] h-[15px]",
-      disabled: true,
-    },
+
     {
       id: "settings",
-      label: isRTL ? "تنظیمات" : "Settings",
-      route: "/StudentSettings",
+      label: t("settings"),
+
+      activeClassName:
+        "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[23px]",
+
+      wrapperClassName: "relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px]",
+
+      contentClassName:
+        "relative top-px left-3 w-[51px] h-10 flex flex-col gap-[3px]",
+
+      iconWrapperClassName: "ml-3.5 w-[22px] h-[21px] flex",
+
       icon: Settings,
       iconActive: SettingsFilled,
-      iconClassName: "w-[20px] h-[20px]",
+
+      iconClassName: "flex-1 w-[19.33px]",
+
+      labelClassName: `w-[49px] h-4 ${
+        isRTL ? "fa-caption-1" : "en-caption-1"
+      } text-neutral-scale1800 dark:text-neutral-scale70 text-center whitespace-nowrap`,
     },
   ];
 
-  const isHomePage = location.pathname === "/Student";
+  const isHomePage =
+    location.pathname === "/student" || location.pathname === "/StudentHome";
 
-  const getActiveId = () => {
-    if (isHomePage) return "chats";
+  const isCoursesPage = location.pathname === "/StudentCourses";
 
-    if (location.pathname === "/StudentSettings") return "settings";
-
-    // Internal sub-routes where no primary nav item should be active
-    return null;
-  };
-
-  const activeId = getActiveId();
-
-  // Active indicator position
-  useEffect(() => {
-    const el = itemsRef.current[activeId];
-
-    if (!el) return;
-
-    setIndicatorStyle({
-      width: el.offsetWidth,
-      left: el.offsetLeft,
-    });
-  }, [activeId, location.pathname]);
-
-  const handleNavigate = (item) => {
-    if (item.disabled || !item.route) return;
-
-    navigate(item.route);
-  };
+  const isSettingsPage = location.pathname === "/StudentSettings";
 
   return (
     <nav

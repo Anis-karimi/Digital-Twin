@@ -8,7 +8,7 @@ import "@/styles/fonts.css";
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { isRTL, setRole, loginUser, currentUser, role } = useContext(AppContext);
+  const { isRTL, setRole, loginUser, currentUser, role, t } = useContext(AppContext);
 
   const [loadingRole, setLoadingRole] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -17,12 +17,9 @@ export const Login = () => {
     {
       id: "teacher",
       role: "TEACHER",
-      titleFa: "دکتر محمد اله بخش",
-      titleEn: "Dr. Mohammad Allahbakhsh",
-      roleFa: "استاد درس سیستم عامل",
-      roleEn: "Course Professor",
-      descriptionFa: "مدیریت اسناد درس، تنظیمات و نظارت بر چت‌های دانشجویان",
-      descriptionEn: "Course management, documents & student oversight",
+      titleKey: "drAllahbakhsh",
+      roleKey: "teacherRole",
+      descKey: "teacherDesc",
       icon: GraduationCap,
       defaultUsername: "mohammad_allahbakhsh",
       defaultToken: "sso_token_dr_allahbakhsh",
@@ -32,12 +29,9 @@ export const Login = () => {
     {
       id: "student",
       role: "STUDENT",
-      titleFa: "علیرضا رضایی",
-      titleEn: "Alireza Rezaei",
-      roleFa: "دانشجوی درس سیستم عامل",
-      roleEn: "Enrolled Student",
-      descriptionFa: "دسترسی به چت‌بات هوشمند درس، حل تمرین و آزمون‌ها",
-      descriptionEn: "AI course bot assistant, study materials & quizzes",
+      titleKey: "alirezaRezaei",
+      roleKey: "studentRole",
+      descKey: "studentDesc",
       icon: User,
       defaultUsername: "alireza_rezaei",
       defaultToken: "sso_token_student_rezaei",
@@ -47,12 +41,9 @@ export const Login = () => {
     {
       id: "admin",
       role: "ADMIN",
-      titleFa: "مدیر سامانه",
-      titleEn: "System Administrator",
-      roleFa: "دسترسی سیستمی",
-      roleEn: "System Access",
-      descriptionFa: "نظارت بر سیستم و تنظیمات دسترسی سراسری",
-      descriptionEn: "System settings, permissions & global overview",
+      titleKey: "systemAdmin",
+      roleKey: "adminRole",
+      descKey: "adminDesc",
       icon: Shield,
       defaultUsername: "admin",
       defaultToken: "sso_token_admin_001",
@@ -88,11 +79,7 @@ export const Login = () => {
       }
     } catch (err) {
       console.error("Login failed:", err);
-      setErrorMessage(
-        isRTL
-          ? "خطا در ورود به سامانه. لطفاً وضعیت سرور را بررسی کنید."
-          : "Authentication failed. Please verify backend status."
-      );
+      setErrorMessage(t("loginErrorMessage"));
     } finally {
       setLoadingRole(null);
     }
@@ -118,14 +105,12 @@ export const Login = () => {
             className="inline-flex items-center gap-1.5 text-xs text-neutral-scale1000 dark:text-neutral-scale300 hover:text-black dark:hover:text-white cursor-pointer font-vazir"
           >
             {isRTL ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
-            <span>{isRTL ? "بازگشت به برنامه" : "Back to App"}</span>
+            <span>{t("backToApp")}</span>
           </button>
 
           {currentUser && (
             <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-vazir">
-              {isRTL
-                ? `کاربر فعلی: ${currentUser.first_name || currentUser.username || "استاد"}`
-                : `Active: ${currentUser.first_name || currentUser.username || "teacher"}`}
+              {`${t("activeUser")} ${currentUser.first_name || currentUser.username || (isRTL ? "استاد" : "Teacher")}`}
             </span>
           )}
         </div>
@@ -136,12 +121,10 @@ export const Login = () => {
             <KeyRound className="w-7 h-7 text-white" />
           </div>
           <h1 className="fa-title-1 dark:text-neutral-scale100 text-neutral-scale1800 font-vazir mt-2">
-            {isRTL ? "ورود به دوقلوی دیجیتال" : "Digital Twin Login"}
+            {t("loginToDigitalTwin")}
           </h1>
           <p className="fa-caption-1 text-neutral-scale900 dark:text-neutral-scale400 font-vazir">
-            {isRTL
-              ? "ورود سریع با انتخاب پروفایل نمونه (ارسال خودکار توکن و شناسه):"
-              : "Quick login by selecting a sample profile:"}
+            {t("quickLoginSubtitle")}
           </p>
         </div>
 
@@ -180,16 +163,16 @@ export const Login = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-neutral-scale1800 dark:text-neutral-scale100 font-vazir truncate">
-                      {isRTL ? profile.titleFa : profile.titleEn}
+                      {t(profile.titleKey)}
                     </span>
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded-md border font-vazir shrink-0 ${profile.badgeColor}`}
                     >
-                      {isRTL ? profile.roleFa : profile.roleEn}
+                      {t(profile.roleKey)}
                     </span>
                   </div>
                   <p className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-vazir mt-0.5 line-clamp-1">
-                    {isRTL ? profile.descriptionFa : profile.descriptionEn}
+                    {t(profile.descKey)}
                   </p>
                 </div>
 

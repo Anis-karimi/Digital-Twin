@@ -53,7 +53,7 @@ const getInitials = (title) => {
 
 export const StudentsChatFeedSection = ({ lessonId }) => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const [chats, setChats] = useState([]);
 
   useEffect(() => {
@@ -69,9 +69,10 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
   }, [lessonId]);
 
   const handleStudentClick = (studentId) => {
-    navigate(`/ChatArea/student/${studentId}`, {
+    navigate(`/ChatArea/course/${lessonId}`, {
       state: {
-        backTo: `/TeacherLessonsPage/${lessonId}`,
+        studentId: studentId,
+        viewMode: "student_history",
       },
     });
   };
@@ -79,7 +80,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
   return (
     <section
       className="w-full h-full overflow-x-hidden"
-      aria-label={isRTL ? "فهرست دانشجویان درس" : "Course students list"}
+      aria-label={t("courseStudentsList")}
       dir={isRTL ? "rtl" : "ltr"}
     >
       <div
@@ -90,9 +91,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
         {chats.length === 0 ? (
           <div className="w-full flex-1 flex items-center justify-center p-4">
             <p className="fa-body-medium text-neutral-scale700 dark:text-neutral-scale300 text-center">
-              {isRTL
-                ? "هنوز دانشجویی در این درس ثبت‌نام نکرده است."
-                : "No students have enrolled in this course yet."}
+              {t("noStudentsEnrolled")}
             </p>
           </div>
         ) : (
@@ -140,7 +139,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
 
                     {(() => {
                       const previewText =
-                        item.preview || (isRTL ? "پیامی بنویسید..." : "Type something...");
+                        item.preview || t("typeSomething");
                       const isPreviewPersian = isPersianText(previewText);
                       return (
                         <p

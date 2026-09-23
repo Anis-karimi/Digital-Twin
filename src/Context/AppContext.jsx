@@ -1,5 +1,6 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useMemo, useCallback } from "react";
 import { authApi } from "@/api/new/auth.api";
+import { translations, getTranslation } from "@/translations";
 
 export const AppContext = createContext();
 
@@ -36,6 +37,16 @@ export function AppProvider({ children }) {
 
   const isRTL = language === "fa";
   const isAuthenticated = Boolean(sessionToken);
+
+  const t = useCallback(
+    (key, fallback = "") => getTranslation(language, key, fallback),
+    [language]
+  );
+
+  const strings = useMemo(
+    () => translations[language] || translations.fa,
+    [language]
+  );
 
   useEffect(() => {
     localStorage.setItem("language", language);
@@ -103,6 +114,9 @@ export function AppProvider({ children }) {
         setLanguage,
         toggleLanguage,
         isRTL,
+        t,
+        strings,
+        translations,
         selectedResources,
         setSelectedResources,
         sessionToken,
@@ -116,4 +130,5 @@ export function AppProvider({ children }) {
     </AppContext.Provider>
   );
 }
+
 

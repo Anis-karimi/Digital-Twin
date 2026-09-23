@@ -12,7 +12,7 @@ import { isPersianText } from "@/utils/textUtils";
 export const HomeChatFeedSection = () => {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const fetchChats = useCallback(() => {
     coursesApi.getCourses().then((data) => {
@@ -33,7 +33,7 @@ export const HomeChatFeedSection = () => {
   return (
     <section
       className="w-full h-full overflow-x-hidden"
-      aria-label={isRTL ? "فهرست گفتگوهای درسی" : "Course chats list"}
+      aria-label={t("courseChatsList")}
       dir={isRTL ? "rtl" : "ltr"}
     >
       <div className="flex flex-col w-full items-start gap-2.5 p-2.5 pb-[80px]">
@@ -73,7 +73,7 @@ export const HomeChatFeedSection = () => {
                   {/* Last message preview */}
                   {(() => {
                     const previewText =
-                      item.preview || (isRTL ? "پیامی بنویسید..." : "Type something...");
+                      item.preview || t("typeSomething");
                     const isPreviewPersian = isPersianText(previewText);
                     return (
                       <p

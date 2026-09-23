@@ -14,10 +14,8 @@ import { adminApi, userApi, voiceApi } from "@/api";
 const settingsItems = [
   {
     id: "Courses Information",
-    title: "Courses Information",
-    titleFa: "اطلاعات دروس",
-    subtitle: "Upload resources",
-    subtitleFa: "بارگذاری منابع",
+    titleKey: "coursesInformation",
+    subtitleKey: "uploadResources",
     path: "/TeacherResource",
     icon: (
       <img
@@ -29,10 +27,8 @@ const settingsItems = [
   },
   {
     id: "theme",
-    title: "Theme",
-    titleFa: "پوسته",
-    subtitle: "Dark, Light",
-    subtitleFa: "تاریک، روشن",
+    titleKey: "theme",
+    subtitleKey: "darkLight",
     path: "/Theme",
     icon: (
       <img className="w-[23px] h-[23px] object-contain" alt="" src={PaintBrush} />
@@ -40,17 +36,15 @@ const settingsItems = [
   },
   {
     id: "language",
-    title: "Language",
-    titleFa: "زبان",
-    subtitle: "English, فارسی",
-    subtitleFa: "فارسی، انگلیسی",
+    titleKey: "language",
+    subtitleKey: "englishPersian",
     path: "/Language",
     icon: <img className="w-[23px] h-[23px] object-contain" alt="Language" src={Language} />,
   },
 ];
 
 export const TeacherSettings = () => {
-  const { isRTL, logoutUser } = useContext(AppContext);
+  const { isRTL, logoutUser, t } = useContext(AppContext);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -454,7 +448,7 @@ export const TeacherSettings = () => {
       case "idle":
       case "recording":
         return {
-          text: isRTL ? "ارسال" : "Send",
+          text: t("send"),
           className:
             "bg-neutral-scale300 text-neutral-scale700 cursor-not-allowed",
           disabled: true,
@@ -462,28 +456,28 @@ export const TeacherSettings = () => {
 
       case "recorded":
         return {
-          text: isRTL ? "ارسال" : "Send",
+          text: t("send"),
           className: "bg-primery-600 text-white active:scale-95",
           disabled: false,
         };
 
       case "uploading":
         return {
-          text: isRTL ? "در حال ارسال..." : "Uploading...",
+          text: t("uploadingEllipsis"),
           className: "bg-warning-500 text-white animate-pulse",
           disabled: true,
         };
 
       case "uploaded":
         return {
-          text: isRTL ? "ارسال شد!" : "Uploaded!",
+          text: t("uploadedExclamation"),
           className: "bg-success-600 text-white",
           disabled: true,
         };
 
       default:
         return {
-          text: isRTL ? "ارسال" : "Send",
+          text: t("send"),
           className: "bg-neutral-scale300 text-neutral-scale700",
           disabled: true,
         };
@@ -501,13 +495,13 @@ export const TeacherSettings = () => {
   return (
     <main
       className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] mx-auto flex flex-col h-dvh overflow-hidden"
-      aria-label={isRTL ? "صفحه تنظیمات استاد" : "Teacher settings page"}
+      aria-label={t("teacherSettingsPage")}
       dir={isRTL ? "rtl" : "ltr"}
     >
       <header className="sticky top-0 left-0 w-full h-8 flex justify-end bg-transparent" />
       <section
         className="flex-1 overflow-y-auto overflow-x-hidden pt-[10px] pb-[105px]"
-        aria-label={isRTL ? "پروفایل و تنظیمات" : "Profile and settings"}
+        aria-label={t("profileAndSettings")}
       >
         {/* // ---------------------- Profile photo ---------------------------- */}
         <div className="flex w-[104px] h-[143px] relative mt-1.5 mx-auto flex-col items-center gap-[15px]">
@@ -524,7 +518,7 @@ export const TeacherSettings = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current.click()}
-            aria-label={isRTL ? "تغییر تصویر پروفایل" : "Change profile photo"}
+            aria-label={t("changeProfilePhoto")}
             className="absolute top-20 left-[72px] w-6 h-6 cursor-pointer"
           >
             <img src={Camera} alt="Camera" className="w-6 h-6" />
@@ -554,7 +548,7 @@ export const TeacherSettings = () => {
                 isRTL ? "fa-caption-3 text-right" : "en-caption-3 text-left"
               }`}
             >
-              {isRTL ? "نام و نام خانوادگی" : "Your name"}
+              {t("yourName")}
             </div>
             <div
               className={`fa-caption-1 whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
@@ -584,7 +578,7 @@ export const TeacherSettings = () => {
                 isRTL ? "fa-caption-3 text-right" : "en-caption-3 text-left"
               }`}
             >
-              {isRTL ? "ایمیل شما" : "Your email"}
+              {t("yourEmail")}
             </div>
             <div
               className={`fa-caption-1 text-neutral-scale1800 dark:text-neutral-scale70 ${
@@ -609,9 +603,7 @@ export const TeacherSettings = () => {
                   isRTL ? "fa-caption-3 text-right" : "en-caption-3 text-left"
                 }`}
               >
-                {isRTL
-                  ? "نمونه صدای خود را بارگذاری کنید"
-                  : "Upload your voice sample"}
+                {t("uploadVoiceSample")}
               </div>
 
               <div className="w-full flex items-center gap-2" dir="ltr">
@@ -619,9 +611,7 @@ export const TeacherSettings = () => {
                   <button
                     type="button"
                     onClick={handleVoiceButton}
-                    aria-label={
-                      isRTL ? "ضبط نمونه صدا" : "Record voice sample"
-                    }
+                    aria-label={t("recordVoiceSample")}
                     className="w-[32px] h-[32px] shrink-0 flex items-center justify-center cursor-pointer hover:opacity-80 active:scale-95 transition-all -ml-[1px]"
                   >
                     {renderVoiceIcon()}
@@ -658,9 +648,7 @@ export const TeacherSettings = () => {
                   <button
                     type="button"
                     onClick={deleteAudio}
-                    aria-label={
-                      isRTL ? "حذف صدای قبلی" : "Delete previous audio"
-                    }
+                    aria-label={t("deletePreviousAudio")}
                     className="w-[22px] h-[22px] flex items-center justify-center cursor-pointer text-neutral-scale600 hover:text-red-500 transition-colors"
                   >
                     <TrashFull className="w-full h-full object-contain" />
@@ -674,16 +662,14 @@ export const TeacherSettings = () => {
                 isRTL ? "fa-caption-4 text-right" : "en-caption-4 text-left"
               } text-neutral-scale1800 dark:text-neutral-scale300 leading-relaxed`}
             >
-              {isRTL
-                ? "دکمه بالا را فشار دهید و به مدت ۱۵ ثانیه صحبت کنید. برای ضبط مجدد، صدای قبلی را حذف کرده و مراحل را تکرار کنید."
-                : "Press the button above and speak for 15 seconds. To record again, delete the previous audio and repeat the steps."}
+              {t("voiceRecordingHelp")}
             </p>
           </section>
 
           {/* // ---------------- Preferences Section --------------------------- */}
           <section
             className="mx-3.5 w-auto relative mt-2 bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden p-3.5"
-            aria-label={isRTL ? "تنظیمات و گزینه‌ها" : "Preferences"}
+            aria-label={t("preferences")}
           >
             <div className="flex flex-col w-full gap-3.5">
               {settingsItems.map((item) => (
@@ -693,9 +679,7 @@ export const TeacherSettings = () => {
                   className={`flex items-center gap-3.5 w-full ${
                     isRTL ? "flex-row text-right" : "flex-row text-left"
                   }`}
-                  aria-label={`${isRTL ? item.titleFa : item.title}, ${
-                    isRTL ? item.subtitleFa : item.subtitle
-                  }`}
+                  aria-label={`${t(item.titleKey)}, ${t(item.subtitleKey)}`}
                 >
                   <div className="w-[24px] h-[24px] shrink-0 flex items-center justify-center">
                     {item.icon}
@@ -710,14 +694,14 @@ export const TeacherSettings = () => {
                         isRTL ? "fa-body" : "en-body"
                       }`}
                     >
-                      {isRTL ? item.titleFa : item.title}
+                      {t(item.titleKey)}
                     </div>
                     <div
                       className={`w-full truncate text-neutral-scale1100 dark:text-neutral-scale300 ${
                         isRTL ? "fa-caption-2" : "en-caption-2"
                       }`}
                     >
-                      {isRTL ? item.subtitleFa : item.subtitle}
+                      {t(item.subtitleKey)}
                     </div>
                   </div>
                 </Link>
@@ -733,7 +717,7 @@ export const TeacherSettings = () => {
               navigate("/login");
             }}
             className="mx-3.5 w-auto h-[38px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[8px] overflow-hidden cursor-pointer hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors"
-            aria-label={isRTL ? "خروج" : "Log out"}
+            aria-label={t("logout")}
           >
             <div
               className={`h-full flex items-center gap-3 px-4 ${
@@ -752,7 +736,7 @@ export const TeacherSettings = () => {
                   isRTL ? "fa-body" : "en-body"
                 } text-neutral-scale1800 dark:text-neutral-scale70`}
               >
-                {isRTL ? "خروج" : "Log out"}
+                {t("logout")}
               </span>
             </div>
           </button>

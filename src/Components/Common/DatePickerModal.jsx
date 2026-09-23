@@ -25,7 +25,7 @@ export const DatePickerModal = ({
   onSelectDate,
   title,
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   // Today values
   const todayIso = getTodayIsoDate();
@@ -191,7 +191,7 @@ export const DatePickerModal = ({
     yearsList.push(y);
   }
 
-  const defaultTitle = isRTL ? "انتخاب تاریخ" : "Select Date";
+  const defaultTitle = t("selectDate");
 
   return (
     <div
@@ -220,7 +220,7 @@ export const DatePickerModal = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label={isRTL ? "بستن" : "Close"}
+            aria-label={t("close")}
             className="w-8 h-8 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -232,7 +232,7 @@ export const DatePickerModal = ({
           <button
             type="button"
             onClick={isRTL ? handleNextMonth : handlePrevMonth}
-            aria-label={isRTL ? "ماه بعد" : "Previous Month"}
+            aria-label={isRTL ? t("nextMonth") : t("prevMonth")}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-scale1000 dark:text-neutral-scale300 hover:bg-white dark:hover:bg-neutral-scale1200 hover:shadow-sm transition-all cursor-pointer"
           >
             <ChevronRight className="w-5 h-5" />
@@ -267,7 +267,7 @@ export const DatePickerModal = ({
           <button
             type="button"
             onClick={isRTL ? handlePrevMonth : handleNextMonth}
-            aria-label={isRTL ? "ماه قبل" : "Next Month"}
+            aria-label={isRTL ? t("prevMonth") : t("nextMonth")}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-scale1000 dark:text-neutral-scale300 hover:bg-white dark:hover:bg-neutral-scale1200 hover:shadow-sm transition-all cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -386,7 +386,7 @@ export const DatePickerModal = ({
             onClick={handleJumpToToday}
             className="px-3 py-1.5 rounded-lg text-xs font-medium text-primery-700 dark:text-primery-300 hover:bg-primery-50 dark:hover:bg-neutral-scale1200 transition-colors cursor-pointer"
           >
-            {isRTL ? "امروز" : "Today"}
+            {t("today")}
           </button>
 
           <div className="flex items-center gap-2">
@@ -395,7 +395,7 @@ export const DatePickerModal = ({
               onClick={onClose}
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-scale700 dark:text-neutral-scale400 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors cursor-pointer"
             >
-              {isRTL ? "انصراف" : "Cancel"}
+              {t("cancel")}
             </button>
 
             <button
@@ -404,7 +404,7 @@ export const DatePickerModal = ({
               className="inline-flex items-center gap-1 px-4 py-1.5 rounded-lg text-xs font-semibold bg-primery-700 hover:bg-primery-800 text-white shadow-sm transition-colors cursor-pointer"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{isRTL ? "تایید" : "Confirm"}</span>
+              <span>{t("confirm")}</span>
             </button>
           </div>
         </div>

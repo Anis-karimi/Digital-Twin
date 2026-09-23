@@ -7,15 +7,15 @@ import { useTheme } from "@/Context/ThemeContext";
 import { AppContext } from "@/Context/AppContext";
 
 const themeOptions = [
-  { id: "light", labelEn: "Light", labelFa: "روشن" },
-  { id: "dark", labelEn: "Dark", labelFa: "تاریک" },
+  { id: "light", key: "light" },
+  { id: "dark", key: "dark" },
 ];
 
 export const Theme = () => {
   const radioGroupName = useId();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const selectedTheme = isDark ? "dark" : "light";
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
@@ -30,7 +30,7 @@ export const Theme = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"
           >
             <BackIcon className="!w-6 !h-6" />
@@ -41,7 +41,7 @@ export const Theme = () => {
               isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
             }`}
           >
-            {isRTL ? "پوسته" : "Theme"}
+            {t("theme")}
           </h1>
         </div>
       </header>
@@ -53,7 +53,7 @@ export const Theme = () => {
         <div className="w-full h-[78px] relative bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden p-3 flex items-center">
           <fieldset className="border-0 m-0 p-0 w-full">
             <legend id="theme-selection-heading" className="sr-only">
-              {isRTL ? "انتخاب پوسته" : "Select theme"}
+              {t("selectTheme")}
             </legend>
 
             <div className="flex flex-col items-start gap-2.5">
@@ -95,7 +95,7 @@ export const Theme = () => {
                         isRTL ? "fa-body font-vazir" : "en-body font-inter"
                       }
                     >
-                      {isRTL ? option.labelFa : option.labelEn}
+                      {t(option.key)}
                     </span>
                   </label>
                 );

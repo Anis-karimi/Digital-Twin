@@ -14,7 +14,7 @@ import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 
 export const TeacherNavigationBar = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -27,7 +27,7 @@ export const TeacherNavigationBar = () => {
   const navItems = [
     {
       id: "chats",
-      label: isRTL ? "گفتگوها" : "Chats",
+      label: t("chats"),
       route: "/",
       icon: Chat,
       iconActive: ChatFilled,
@@ -35,7 +35,7 @@ export const TeacherNavigationBar = () => {
     },
     {
       id: "courses",
-      label: isRTL ? "دروس" : "Courses",
+      label: t("courses"),
       route: "/TeacherResource",
       icon: MyCourses,
       iconActive: MyCoursesFilled,
@@ -43,7 +43,7 @@ export const TeacherNavigationBar = () => {
     },
     {
       id: "exams",
-      label: isRTL ? "آزمون‌ها" : "Exams",
+      label: t("exams"),
       route: "/TeacherExams",
       icon: Exam,
       iconActive: ExamFilled,
@@ -51,7 +51,7 @@ export const TeacherNavigationBar = () => {
     },
     {
       id: "settings",
-      label: isRTL ? "تنظیمات" : "Settings",
+      label: t("settings"),
       route: "/TeacherSettings",
       icon: Settings,
       iconActive: SettingsFilled,

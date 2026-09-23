@@ -12,18 +12,12 @@ import "@/styles/fonts.css";
 
 export const HomeDropdownMenu = () => {
   const { isDark, toggleTheme } = useTheme();
-  const { isRTL, logoutUser, currentUser } = useContext(AppContext);
+  const { isRTL, logoutUser, currentUser, t } = useContext(AppContext);
   const navigate = useNavigate();
 
   const captionClass = isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter";
 
-  const themeLabel = isRTL
-    ? isDark
-      ? "حالت روز"
-      : "حالت شب"
-    : isDark
-    ? "Day Mode"
-    : "Night Mode";
+  const themeLabel = isDark ? t("dayMode") : t("nightMode");
 
   const handleLogout = () => {
     if (logoutUser) {
@@ -38,7 +32,7 @@ export const HomeDropdownMenu = () => {
 
   return (
     <nav
-      aria-label={isRTL ? "منوی کاربر" : "User menu"}
+      aria-label={t("userMenu")}
       dir={isRTL ? "rtl" : "ltr"}
       className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 w-full min-w-[145px] flex flex-col rounded-xl p-1.5 shadow-lg"
     >
@@ -77,7 +71,7 @@ export const HomeDropdownMenu = () => {
         <span
           className={`whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 text-xs ${captionClass}`}
         >
-          {isRTL ? "ورود / تعویض کاربر" : "Login / Switch Role"}
+          {t("switchRole")}
         </span>
       </button>
 
@@ -103,7 +97,7 @@ export const HomeDropdownMenu = () => {
         <span
           className={`whitespace-nowrap text-red-600 dark:text-red-400 group-hover:text-red-700 text-xs ${captionClass}`}
         >
-          {isRTL ? "خروج از حساب" : "Log out"}
+          {t("logoutAccount")}
         </span>
       </button>
     </nav>
