@@ -2,9 +2,12 @@ import { Link, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import "@/styles/fonts.css";
+import { AppContext } from "@/Context/AppContext";
+
+import { Search } from "lucide-react";
 
 import Chat from "@/assets/icons/Chat.svg?react";
-import Explor from "@/assets/icons/explor.svg?react";
+import Exam from "@/assets/icons/Exam.svg?react";
 import Settings from "@/assets/icons/Settings.svg?react";
 
 import ChatFilled from "@/assets/icons/ChatFull.svg?react";
@@ -91,147 +94,114 @@ export const StudentNavigationBar = () => {
 
   return (
     <nav
-      className="w-50 h-[60px] shrink-0 flex bg-[#f8fcfd] dark:bg-neutral-scale1300 rounded-[30px] overflow-hidden shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#00000040,-1px_0px_3px_0.1px_#2828281a]"
+      dir="ltr"
+      className="fixed left-1/2 -translate-x-1/2 z-50 
+        w-80 h-[55px] flex 
+        bg-[#f8fcfd] dark:bg-neutral-scale1300 
+        border border-neutral-scale100 dark:border-neutral-scale1100 
+        rounded-[40px] overflow-hidden 
+        shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#00000040,-1px_0px_3px_0.1px_#2828281a]"
       aria-label="Bottom navigation"
     >
-      <div className="flex mt-1.5 w-[250px] h-[43px] mx-[1px] relative items-center justify-center gap-2">
-        {/* ================= Chats ================= */}
-
-        {isHomePage ? (
-          <div className="relative w-[65px] h-12 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[27px]">
-            <div className={navItems[0].contentClassName}>
-              <div className={navItems[0].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[0].iconActive || navItems[0].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[0].iconClassName} text-primery-1000`}
-                    />
-                  );
-                })()}
-              </div>
-
-              <div
-                className={`${navItems[0].labelClassName} text-primery-1000 dark:text-primery-1000 en-caption-3 text-center whitespace-nowrap`}
-              >
-                {navItems[0].label}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <Link to="/student" className={navItems[0].wrapperClassName}>
-            <div className={navItems[0].contentClassName}>
-              <div className={navItems[0].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[0].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[0].iconClassName} text-neutral-scale1800 dark:text-neutral-scale70`}
-                    />
-                  );
-                })()}
-              </div>
-
-              <div className={navItems[0].labelClassName}>
-                {navItems[0].label}
-              </div>
-            </div>
-          </Link>
+      <div
+        className=" 
+        relative 
+        flex 
+        items-center 
+        w-full 
+        h-full 
+      "
+      >
+        {/* Active Indicator */}
+        {activeId && (
+          <div
+            className=" 
+            absolute 
+            top-1/2 
+            h-[44px] 
+            bg-primery-90 
+            rounded-[23px] 
+            transition-all 
+            duration-300 
+            ease-out 
+            pointer-events-none 
+          "
+            style={{
+              width: `calc(${indicatorStyle.width}px - 10px)`,
+              transform: `translate(${indicatorStyle.left + 4}px, -50%)`,
+            }}
+          />
         )}
 
-        {/* ================= My Courses ================= */}
+        {/* Navigation Items */}
+        {navItems.map((item) => {
+          const isActive = activeId === item.id;
+          const Icon = isActive ? item.iconActive || item.icon : item.icon;
 
-        {isCoursesPage ? (
-          <div className="relative w-[90px] h-11 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[23px]">
-            <div className={navItems[1].contentClassName}>
-              <div className={navItems[1].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[1].iconActive || navItems[1].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[1].iconClassName} text-primery-1000`}
-                    />
-                  );
-                })()}
+          return (
+            <button
+              key={item.id}
+              ref={(el) => {
+                itemsRef.current[item.id] = el;
+              }}
+              type="button"
+              onClick={() => handleNavigate(item)}
+              disabled={item.disabled}
+              className={` 
+              relative 
+              z-10 
+              flex 
+              flex-col 
+              items-center 
+              justify-center 
+              gap-[0px] 
+              flex-1 
+              h-11 
+              shrink-0 
+              ${
+                item.disabled
+                  ? "cursor-default opacity-50"
+                  : "cursor-pointer"
+              }
+            `}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {/* Icon */}
+              <div className="h-[25px] flex items-center justify-center">
+                <Icon
+                  className={` 
+            ${item.iconClassName || "w-[20px] h-[20px]"} 
+            ${
+              isActive
+                ? "text-primery-1000"
+                : "text-neutral-scale1800 dark:text-neutral-scale70"
+            } 
+          `}
+                />
               </div>
 
+              {/* Label */}
               <div
-                className={`${navItems[1].labelClassName} text-primery-1000 dark:text-primery-1000 en-caption-3 text-center whitespace-nowrap`}
+                className={` 
+                h-[15px] 
+                text-center 
+                whitespace-nowrap 
+                ${
+                  isActive
+                    ? `text-primery-1000 dark:text-primery-1000 ${
+                        isRTL ? "fa-caption-3" : "en-caption-3"
+                      }`
+                    : `text-neutral-scale1800 dark:text-neutral-scale70 ${
+                        isRTL ? "fa-caption-1" : "en-caption-1"
+                      }`
+                } 
+              `}
               >
-                {navItems[1].label}
+                {item.label}
               </div>
-            </div>
-          </div>
-        ) : (
-          <Link to="/StudentCourses" className={navItems[1].wrapperClassName}>
-            <div className={navItems[1].contentClassName}>
-              <div className={navItems[1].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[1].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[1].iconClassName} text-neutral-scale1800 dark:text-neutral-scale70`}
-                    />
-                  );
-                })()}
-              </div>
-
-              <div className={navItems[1].labelClassName}>
-                {navItems[1].label}
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* ================= Settings ================= */}
-
-        {isSettingsPage ? (
-          <div className="relative w-[73px] h-12 mt-[-3.00px] mb-[-3.00px] bg-primery-90 rounded-[27px]">
-            <div className={navItems[2].contentClassName}>
-              <div className={navItems[2].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[2].iconActive || navItems[2].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[2].iconClassName} text-primery-1000`}
-                    />
-                  );
-                })()}
-              </div>
-
-              <div
-                className={`${navItems[2].labelClassName} text-primery-1000 dark:text-primery-1000 en-caption-3 text-center whitespace-nowrap`}
-              >
-                {navItems[2].label}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <Link to="/StudentSettings" className={navItems[2].wrapperClassName}>
-            <div className={navItems[2].contentClassName}>
-              <div className={navItems[2].iconWrapperClassName}>
-                {(() => {
-                  const Icon = navItems[2].icon;
-
-                  return (
-                    <Icon
-                      className={`${navItems[2].iconClassName} text-neutral-scale1800 dark:text-neutral-scale70`}
-                    />
-                  );
-                })()}
-              </div>
-
-              <div className={navItems[2].labelClassName}>
-                {navItems[2].label}
-              </div>
-            </div>
-          </Link>
-        )}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );

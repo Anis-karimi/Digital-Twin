@@ -23,6 +23,8 @@ import { QuizQuestionsPage } from "@/Pages/QuizQuestionsPage";
 import { QuizResultPage } from "@/Pages/QuizResultPage";
 import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 
+import { TeacherExams } from "./Pages/Teacher/TeacherExamsPage";
+
 import { AppProvider } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
 import { Login } from "@/Pages/Login";
@@ -61,6 +63,8 @@ function App() {
               />
 
               <Route path="/TeacherSettings" element={<TeacherSettings />} />
+
+              <Route path="/TeacherExams" element={<TeacherExams />}></Route>
 
               <Route
                 path="/TeacherContacts/:lessonId"
