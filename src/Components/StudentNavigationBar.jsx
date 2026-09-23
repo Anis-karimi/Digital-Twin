@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import "@/styles/fonts.css";
-import { AppContext } from "@/Context/AppContext";
 
 import { Search } from "lucide-react";
 
