@@ -30,3 +30,12 @@ services:
     restart: unless-stopped
     profiles:
       - prod
+
+networks:
+  default:
+    name: digital-twin_net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/24
+

@@ -13,18 +13,30 @@ import { students as mockStudents } from "@/data/students";
  * @returns {Promise<import("../types").Student[]>}
  */
 export async function getStudentsByCourse(courseId) {
+  const resolvedCourseId =
+    courseId === "os" || !courseId
+      ? "c0000000-0000-4000-8000-000000000001"
+      : courseId;
+
   const fallbackSupplier = () => {
     const filtered = mockStudents.filter(
       (student) =>
         String(student.lessonId) === String(courseId) ||
+        String(student.lessonId) === String(resolvedCourseId) ||
         courseId === "os" ||
         !courseId
     );
-    return filtered.length > 0 ? filtered : mockStudents.filter((s) => s.lessonId === "os");
+    return filtered.length > 0
+      ? filtered
+      : mockStudents.filter(
+          (s) =>
+            s.lessonId === "os" ||
+            s.lessonId === "c0000000-0000-4000-8000-000000000001"
+        );
   };
 
   const res = await requestWithFallback(
-    `/courses/${courseId}/students`,
+    `/courses/${resolvedCourseId}/students`,
     { method: "GET" },
     fallbackSupplier
   );

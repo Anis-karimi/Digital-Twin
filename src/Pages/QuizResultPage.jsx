@@ -19,7 +19,14 @@ import {
 } from "lucide-react";
 import "@/styles/fonts.css";
 
-export const QuizResultPage = ({ onAction }) => {
+export const QuizResultPage = ({
+  onAction,
+  isModal = false,
+  modalResultData = null,
+  onReviewAnswers,
+  onRetryQuiz,
+  onBackToChat,
+}) => {
   const { isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +39,10 @@ export const QuizResultPage = ({ onAction }) => {
   const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
   useEffect(() => {
+    if (isModal) {
+      return;
+    }
+
     // Create a new history entry to intercept browser Back button
     navigate(location.pathname + location.search + location.hash, {
       state: location.state,
@@ -60,9 +71,14 @@ export const QuizResultPage = ({ onAction }) => {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [isModal]);
 
   const handleBackToChat = () => {
+    if (isModal && onBackToChat) {
+      onBackToChat();
+      return;
+    }
+
     isLeavingResultRef.current = true;
 
     const savedReturn = sessionStorage.getItem("quizReturnToChat");
@@ -83,14 +99,14 @@ export const QuizResultPage = ({ onAction }) => {
     navigate("/", { replace: true });
   };
 
-  // Retrieve quiz evaluation stats from location state
+  // Retrieve quiz evaluation stats from location state or modal props
   const {
     correctCount = 0,
     incorrectCount = 0,
     totalQuestions = 0,
     quizData = [],
     selectedAnswers = {},
-  } = location.state || {};
+  } = (isModal && modalResultData ? modalResultData : location.state) || {};
 
   const totalAnswers = correctCount + incorrectCount;
   const unansweredCount = Math.max(0, totalQuestions - totalAnswers);
@@ -362,14 +378,26 @@ export const QuizResultPage = ({ onAction }) => {
       return;
     }
     if (actionId === "chat") {
+      if (isModal && onBackToChat) {
+        onBackToChat();
+        return;
+      }
       handleBackToChat();
       return;
     }
     if (actionId === "retry") {
+      if (isModal && onRetryQuiz) {
+        onRetryQuiz();
+        return;
+      }
       navigate("/QuizFirstPage");
       return;
     }
     if (actionId === "review") {
+      if (isModal && onReviewAnswers) {
+        onReviewAnswers(quizData, selectedAnswers);
+        return;
+      }
       navigate("/Review-Answers", {
         state: {
           quizData,
@@ -419,7 +447,9 @@ export const QuizResultPage = ({ onAction }) => {
 
   return (
     <main
-      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative"
+      className={`w-full ${
+        isModal ? "h-full flex-1" : "md:w-[420px] min-h-dvh mx-auto"
+      } flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* ----------------- Telegram App Header ----------------- */}

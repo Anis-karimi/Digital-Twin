@@ -1,15 +1,20 @@
-import { useContext, useState } from "react";
-import { ArrowLeft, Plus, Clock3, CalendarDays, Pencil, BarChart3 } from "lucide-react";
+import { useContext, useState, useEffect } from "react";
+import { ArrowLeft, Plus, Clock3, CalendarDays, Pencil, BarChart3, CheckCircle2 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
+import { CreateExamAccordion } from "./CreateExamAccordion";
+import { examsApi } from "@/api/new/exams.api";
 
 export const TeacherExams = () => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
 
-  const [exams] = useState([
+  const [isCreatingExam, setIsCreatingExam] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const [exams, setExams] = useState([
     {
       id: 1,
       title: "آزمون فصل اول",
@@ -52,6 +57,58 @@ export const TeacherExams = () => {
     },
   ]);
 
+  // Load backend exams if available
+  useEffect(() => {
+    let isMounted = true;
+    examsApi
+      .getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const mapped = data.map((q) => {
+          let timeDisplay = "10:00 - 10:25";
+          if (q.start_at && q.end_at) {
+            try {
+              const s = new Date(q.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              const e = new Date(q.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              timeDisplay = `${s} - ${e}`;
+            } catch {}
+          }
+          return {
+            id: q.quiz_id,
+            title: q.title,
+            course: "سیستم عامل",
+            topic: (q.goals && q.goals.length > 0) ? q.goals.join("، ") : (q.description || "مباحث آزمون"),
+            date: q.exam_date || "1405/07/20",
+            time: timeDisplay,
+            duration: `${q.duration_minutes || 10} دقیقه هر دانشجو`,
+            active: q.is_active ?? true,
+            scheduled: true,
+          };
+        });
+
+        setExams((prev) => {
+          const mappedIds = new Set(mapped.map((m) => String(m.id)));
+          return [...mapped, ...prev.filter((p) => !mappedIds.has(String(p.id)))];
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleExamCreated = (newExam) => {
+    setExams((prev) => [newExam, ...prev]);
+    setIsCreatingExam(false);
+    setSuccessMessage(
+      isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست قرار گرفت!" : "New exam created successfully!"
+    );
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 4500);
+  };
+
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
@@ -61,7 +118,7 @@ export const TeacherExams = () => {
       <header className="w-full h-[65px] flex shrink-0">
         <div className="w-full h-[65px] relative flex items-center px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => (isCreatingExam ? setIsCreatingExam(false) : navigate(-1))}
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
@@ -80,31 +137,54 @@ export const TeacherExams = () => {
                 : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
-            {isRTL ? "آزمون‌ها" : "Exams"}
+            {isCreatingExam
+              ? isRTL
+                ? "ساخت آزمون جدید"
+                : "Create New Exam"
+              : isRTL
+              ? "آزمون‌ها"
+              : "Exams"}
           </h1>
         </div>
       </header>
 
       {/* Content */}
-      <section className="w-full flex-1 min-h-0 pb-[80px] overflow-y-auto overflow-x-hidden">
-        <div className="w-full px-3.5 ">
-          <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
-            {/* Section Header */}
-            <div className="px-4 flex items-center justify-between gap-2">
-              <p
-                className={`text-primery-800 dark:text-neutral-scale70 ${
-                  isRTL
-                    ? "fa-body-medium font-vazir text-right"
-                    : "en-body-medium font-inter text-left"
-                }`}
-              >
-                {isRTL ? "آزمون‌های درس" : "Course Exams"}
-              </p>
+      <section className="w-full flex-1 min-h-0 mt-[15px] mb-[75px]">
+        {successMessage && (
+          <div className="mx-3.5 mb-3 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center gap-2 text-xs font-vazir">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+            <span>{successMessage}</span>
+          </div>
+        )}
 
-              {/* Add Exam */}
-              <button
-                type="button"
-                onClick={() => console.log("Add Exam")}
+        {isCreatingExam ? (
+          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-8">
+            <CreateExamAccordion
+              courseId="c0000000-0000-4000-8000-000000000001"
+              courseTitle="سیستم عامل"
+              onExamCreated={handleExamCreated}
+              onCancel={() => setIsCreatingExam(false)}
+            />
+          </div>
+        ) : (
+          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden">
+            <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
+              {/* Section Header */}
+              <div className="px-4 flex items-center justify-between gap-2">
+                <p
+                  className={`text-primery-800 dark:text-neutral-scale70 ${
+                    isRTL
+                      ? "fa-body-medium font-vazir text-right"
+                      : "en-body-medium font-inter text-left"
+                  }`}
+                >
+                  {isRTL ? "آزمون‌های درس" : "Course Exams"}
+                </p>
+
+                {/* Add Exam */}
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingExam(true)}
                 className="
                   flex
                   items-center
@@ -538,6 +618,7 @@ export const TeacherExams = () => {
             </div>
           </div>
         </div>
+        )}
       </section>
     </main>
   );

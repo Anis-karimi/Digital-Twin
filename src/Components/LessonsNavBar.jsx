@@ -7,23 +7,34 @@ import { navigationApi } from "@/api";
 
 import { lessonItems as defaultLessonItems } from "@/data/LessonsNavBar";
 
-export const LessonsNavBar = () => {
+export const LessonsNavBar = ({
+  activeTab: controlledActiveTab,
+  onTabClick: controlledOnTabClick,
+  items: controlledItems,
+  dragOffset = 0,
+  isDragging = false,
+  viewportWidth = 360,
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
 
   const containerRef = useRef(null);
   const tabsRef = useRef({});
-  const [items, setItems] = useState(defaultLessonItems);
+  const [internalItems, setInternalItems] = useState(defaultLessonItems);
 
-  // Fetch dynamic navigation tabs from API
+  const items = controlledItems && controlledItems.length > 0 ? controlledItems : internalItems;
+
+  // Fetch dynamic navigation tabs from API if not provided via props
   useEffect(() => {
+    if (controlledItems && controlledItems.length > 0) return;
+
     let isMounted = true;
     navigationApi
       .getLessonTabs()
       .then((tabs) => {
         if (isMounted && Array.isArray(tabs) && tabs.length > 0) {
-          setItems(tabs);
+          setInternalItems(tabs);
         }
       })
       .catch((err) => {
@@ -33,16 +44,17 @@ export const LessonsNavBar = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [controlledItems]);
 
-  // Determine active tab based on current URL path
+  // Determine active tab based on prop or URL path
   const getActiveTab = () => {
+    if (controlledActiveTab !== undefined && controlledActiveTab !== null) {
+      return controlledActiveTab;
+    }
     const match = location.pathname.match(/\/TeacherLessonsPage\/([^/]+)/);
-
     if (match) {
       return match[1];
     }
-
     return "lessons";
   };
 
@@ -54,43 +66,98 @@ export const LessonsNavBar = () => {
   });
   const [isReady, setIsReady] = useState(false);
 
-  // Indicator movement - computed using offset relative to container scroll content for smooth RTL motion
+  // Helper to measure tab element
+  const getTabMetrics = (tabId) => {
+    const el = tabsRef.current[tabId];
+    const container = containerRef.current;
+    if (!el || !container) return null;
+
+    const width = el.offsetWidth;
+    const offset = isRTL
+      ? container.scrollWidth - (el.offsetLeft + el.offsetWidth)
+      : el.offsetLeft;
+
+    return { width, offset };
+  };
+
+  // Indicator movement & real-time swipe interpolation
   useEffect(() => {
     const updateIndicator = () => {
-      const el = tabsRef.current[activeTab];
       const container = containerRef.current;
-      if (!el || !container) return;
+      if (!container) return;
 
-      const width = el.offsetWidth;
-      let offset = 0;
+      const currentMetrics = getTabMetrics(activeTab);
+      if (!currentMetrics) return;
 
-      if (isRTL) {
-        // In RTL, compute distance from right edge of scrollable content
-        offset = container.scrollWidth - (el.offsetLeft + el.offsetWidth);
-      } else {
-        // In LTR, compute distance from left edge of scrollable content
-        offset = el.offsetLeft;
+      let targetWidth = currentMetrics.width + 16;
+      let targetOffset = Math.max(0, currentMetrics.offset - 8);
+
+      // If user is actively dragging, interpolate between current and adjacent tab
+      if (isDragging && dragOffset !== 0) {
+        const currentIndex = items.findIndex((item) => item.id === activeTab);
+        const effectiveVpWidth = viewportWidth > 0 ? viewportWidth : 360;
+
+        if (isRTL) {
+          // In RTL: dragOffset > 0 moves towards NEXT tab (leftwards in DOM)
+          if (dragOffset > 0 && currentIndex < items.length - 1) {
+            const nextMetrics = getTabMetrics(items[currentIndex + 1]?.id);
+            if (nextMetrics) {
+              const fraction = Math.min(1, Math.max(0, dragOffset / effectiveVpWidth));
+              targetWidth = currentMetrics.width + fraction * (nextMetrics.width - currentMetrics.width) + 16;
+              targetOffset = Math.max(0, (currentMetrics.offset + fraction * (nextMetrics.offset - currentMetrics.offset)) - 8);
+            }
+          } else if (dragOffset < 0 && currentIndex > 0) {
+            // dragOffset < 0 moves towards PREVIOUS tab (rightwards in DOM)
+            const prevMetrics = getTabMetrics(items[currentIndex - 1]?.id);
+            if (prevMetrics) {
+              const fraction = Math.min(1, Math.max(0, -dragOffset / effectiveVpWidth));
+              targetWidth = currentMetrics.width + fraction * (prevMetrics.width - currentMetrics.width) + 16;
+              targetOffset = Math.max(0, (currentMetrics.offset + fraction * (prevMetrics.offset - currentMetrics.offset)) - 8);
+            }
+          }
+        } else {
+          // In LTR: dragOffset < 0 moves towards NEXT tab (rightwards in DOM)
+          if (dragOffset < 0 && currentIndex < items.length - 1) {
+            const nextMetrics = getTabMetrics(items[currentIndex + 1]?.id);
+            if (nextMetrics) {
+              const fraction = Math.min(1, Math.max(0, -dragOffset / effectiveVpWidth));
+              targetWidth = currentMetrics.width + fraction * (nextMetrics.width - currentMetrics.width) + 16;
+              targetOffset = Math.max(0, (currentMetrics.offset + fraction * (nextMetrics.offset - currentMetrics.offset)) - 8);
+            }
+          } else if (dragOffset > 0 && currentIndex > 0) {
+            // dragOffset > 0 moves towards PREVIOUS tab (leftwards in DOM)
+            const prevMetrics = getTabMetrics(items[currentIndex - 1]?.id);
+            if (prevMetrics) {
+              const fraction = Math.min(1, Math.max(0, dragOffset / effectiveVpWidth));
+              targetWidth = currentMetrics.width + fraction * (prevMetrics.width - currentMetrics.width) + 16;
+              targetOffset = Math.max(0, (currentMetrics.offset + fraction * (prevMetrics.offset - currentMetrics.offset)) - 8);
+            }
+          }
+        }
       }
 
       setIndicatorStyle({
-        width,
-        offset,
+        width: targetWidth,
+        offset: targetOffset,
       });
       setIsReady(true);
     };
 
     updateIndicator();
-    // Re-check after layout settles
-    const timer = setTimeout(updateIndicator, 50);
-    window.addEventListener("resize", updateIndicator);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", updateIndicator);
-    };
-  }, [activeTab, isRTL, items]);
 
-  // Auto scroll active tab into view
+    if (!isDragging) {
+      const timer = setTimeout(updateIndicator, 50);
+      window.addEventListener("resize", updateIndicator);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("resize", updateIndicator);
+      };
+    }
+  }, [activeTab, isRTL, items, dragOffset, isDragging, viewportWidth]);
+
+  // Auto scroll active tab into view when settling
   useEffect(() => {
+    if (isDragging) return;
     const el = tabsRef.current[activeTab];
     if (!el) return;
 
@@ -99,9 +166,14 @@ export const LessonsNavBar = () => {
       inline: "center",
       block: "nearest",
     });
-  }, [activeTab, items]);
+  }, [activeTab, isDragging, items]);
 
   const handleTabClick = (item) => {
+    if (controlledOnTabClick) {
+      controlledOnTabClick(item);
+      return;
+    }
+
     if (item.id === "lessons") {
       navigate("/");
       return;
@@ -125,13 +197,17 @@ export const LessonsNavBar = () => {
           className={`absolute top-1 ${
             isRTL ? "right-0" : "left-0"
           } h-[26px] bg-primery-90 rounded-[21px] pointer-events-none ${
-            isReady ? "transition-all duration-300 ease-out opacity-100" : "opacity-0"
+            isReady ? "opacity-100" : "opacity-0"
           }`}
           style={{
-            width: indicatorStyle.width ? indicatorStyle.width + 16 : 0,
+            width: indicatorStyle.width ? indicatorStyle.width : 0,
             transform: isRTL
-              ? `translateX(-${Math.max(0, indicatorStyle.offset - 8)}px)`
-              : `translateX(${Math.max(0, indicatorStyle.offset - 8)}px)`,
+              ? `translateX(-${indicatorStyle.offset}px)`
+              : `translateX(${indicatorStyle.offset}px)`,
+            transition: isDragging
+              ? "none"
+              : "transform 300ms cubic-bezier(0.25, 1, 0.5, 1), width 300ms cubic-bezier(0.25, 1, 0.5, 1)",
+            willChange: "transform, width",
           }}
         />
 

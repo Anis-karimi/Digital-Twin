@@ -69,10 +69,11 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
   }, [lessonId]);
 
   const handleStudentClick = (studentId) => {
-    navigate(`/ChatArea/course/${lessonId}`, {
+    navigate(`/ChatArea/student/${studentId}`, {
       state: {
         studentId: studentId,
-        viewMode: "student_history",
+        lessonId: lessonId || "os",
+        backTo: `/TeacherLessonsPage/${lessonId || "os"}`,
       },
     });
   };
@@ -106,21 +107,31 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                   }`}
                 >
                   {/* Avatar / Logo - on RIGHT in RTL, on LEFT in LTR */}
-                  {item.photo_url ? (
-                    <img
-                      className="w-[47px] h-[47px] rounded-full object-cover shrink-0"
-                      alt={item.title}
-                      src={resolveMediaUrl(item.photo_url)}
-                    />
-                  ) : (
-                    <div
-                      className={`w-[47px] h-[47px] rounded-full flex items-center justify-center shrink-0 ${getAvatarColor(
-                        item.id,
-                      )} text-white font-semibold fa-caption-1 font-vazir`}
-                    >
-                      {getInitials(item.title)}
-                    </div>
-                  )}
+                  <div className="relative shrink-0">
+                    {item.photo_url ? (
+                      <img
+                        className="w-[47px] h-[47px] rounded-full object-cover shrink-0"
+                        alt={item.title}
+                        src={resolveMediaUrl(item.photo_url)}
+                      />
+                    ) : (
+                      <div
+                        className={`w-[47px] h-[47px] rounded-full flex items-center justify-center shrink-0 ${getAvatarColor(
+                          item.id,
+                        )} text-white font-semibold fa-caption-1 font-vazir`}
+                      >
+                        {getInitials(item.title)}
+                      </div>
+                    )}
+                    {(item.is_online || item.status === "online") && (
+                      <span
+                        className={`absolute bottom-0 ${
+                          isRTL ? "left-0" : "right-0"
+                        } w-3 h-3 bg-emerald-500 border-2 border-white dark:border-neutral-scale1400 rounded-full shadow-sm`}
+                        title={isRTL ? "آنلاین" : "Online"}
+                      />
+                    )}
+                  </div>
 
                   {/* Info */}
                   <div className={`flex flex-col flex-1 min-w-0 justify-center ${isRTL ? "text-right" : "text-left"}`}>
