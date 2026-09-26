@@ -9,10 +9,7 @@ export const ChatDropdownMenu = ({
   onSearch,
   onDownloadPdf,
   onClearHistory,
-  onChangePhoto,
-  onDeletePhoto,
   onCourseSettings,
-  hasPhoto = false,
   isCourseChat = false,
   className = "",
 }) => {
@@ -31,28 +28,7 @@ export const ChatDropdownMenu = ({
     });
   }
 
-  if (isCourseChat && onChangePhoto) {
-    items.push({
-      id: "change-photo",
-      label: hasPhoto ? "Change Photo" : "Upload Photo",
-      labelFa: hasPhoto ? "تغییر عکس درس" : "انتخاب عکس درس",
-      Icon: Camera,
-      handler: onChangePhoto,
-      danger: false,
-    });
-  }
-
-  if (isCourseChat && onDeletePhoto) {
-    items.push({
-      id: "delete-photo",
-      label: "Remove Photo",
-      labelFa: "حذف عکس درس",
-      Icon: Trash2,
-      handler: onDeletePhoto,
-      danger: true,
-    });
-  }
-
+  
   if (onSearch) {
     items.push({
       id: "search",
@@ -88,11 +64,11 @@ export const ChatDropdownMenu = ({
 
   return (
     <div
-      className={`flex min-h-[102px] w-full min-w-[155px] ${className}`}
+      className={`flex min-h-[72px] w-full min-w-[155px] ${className}`}
       dir={isRTL ? "rtl" : "ltr"}
     >
-      <div className="relative flex min-h-[102px] w-[160px] flex-col items-start gap-2.5 rounded-2xl bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 py-2.5 px-3 shadow-[0px_2px_8px_#00000030]">
-        <div className="flex w-full flex-col items-start gap-[11px]">
+      <div className="relative flex min-h-[72px] w-[160px] flex-col items-start gap-2.5 rounded-2xl bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 py-2.5 px-3 shadow-[0px_2px_8px_#00000030]">
+        <div className="flex w-full flex-col items-start gap-[18px]">
           {items.map((item) => {
             const Icon = item.Icon;
             const displayLabel = isRTL ? item.labelFa : item.label;
@@ -103,7 +79,7 @@ export const ChatDropdownMenu = ({
                 type="button"
                 aria-label={displayLabel}
                 onClick={item.handler}
-                className={`flex items-center gap-2.5 w-full cursor-pointer hover:opacity-80 transition-opacity ${
+                className={`flex items-center gap-3.5 w-full cursor-pointer hover:opacity-80 transition-opacity ${
                   isRTL ? "flex-row text-right" : "flex-row text-left"
                 }`}
               >

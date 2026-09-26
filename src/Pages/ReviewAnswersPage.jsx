@@ -232,7 +232,7 @@ export const ReviewAnswers = ({
       </header>
 
       {/* ----------------- Questions Review List ----------------- */}
-      <section className="flex-1 px-3.5 py-4 flex flex-col gap-4 overflow-y-auto pb-24">
+      <section className="flex-1 px-3.5 py-4 flex flex-col gap-4 overflow-y-auto pb-4">
         {quizData.map((question, questionIndex) => {
           const options = normalizeOptions(question.options || []);
           const selectedAnswer = selectedAnswers[questionIndex] || "";
@@ -425,7 +425,7 @@ export const ReviewAnswers = ({
         })}
       </section>
 
-      {/* ----------------- Sticky Bottom Bar ----------------- */}
+      {/* ----------------- Sticky Bottom Bar -----------------
       <footer className="sticky bottom-0 z-30 w-full bg-white/90 dark:bg-neutral-scale1300/90 backdrop-blur-md border-t border-neutral-scale200 dark:border-neutral-scale1100 p-3.5 flex items-center justify-center shadow-lg">
         <button
           type="button"
@@ -439,7 +439,7 @@ export const ReviewAnswers = ({
           )}
           <span>{t("backToScoreReport")}</span>
         </button>
-      </footer>
+      </footer> */}
     </main>
   );
 };

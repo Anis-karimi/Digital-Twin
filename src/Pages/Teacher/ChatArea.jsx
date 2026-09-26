@@ -954,7 +954,7 @@ export const ChatArea = () => {
             {/* Dropdown Menu */}
             {isMenuOpen && (
               <div
-                className={`absolute top-[58px] ${
+                className={`absolute top-[18px] ${
                   isRTL ? "left-2" : "right-2"
                 } z-50`}
               >

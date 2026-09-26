@@ -4,7 +4,7 @@ import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
-import { CreateExamAccordion } from "./CreateExamAccordion";
+import { CreateExamAccordion } from "@/Components/CreateExamAccordion";
 import { examsApi } from "@/api/new/exams.api";
 
 export const TeacherExams = () => {
@@ -149,7 +149,7 @@ export const TeacherExams = () => {
       </header>
 
       {/* Content */}
-      <section className="w-full flex-1 min-h-0 mt-[15px] mb-[75px]">
+      <section className="w-full flex-1 min-h-0">
         {successMessage && (
           <div className="mx-3.5 mb-3 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center gap-2 text-xs font-vazir">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
@@ -158,7 +158,7 @@ export const TeacherExams = () => {
         )}
 
         {isCreatingExam ? (
-          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-8">
+          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pt-[15px]">
             <CreateExamAccordion
               courseId="c0000000-0000-4000-8000-000000000001"
               courseTitle="سیستم عامل"
@@ -167,7 +167,7 @@ export const TeacherExams = () => {
             />
           </div>
         ) : (
-          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden">
+          <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[80px]">
             <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
               {/* Section Header */}
               <div className="px-4 flex items-center justify-between gap-2">
@@ -545,7 +545,7 @@ export const TeacherExams = () => {
                           rounded-[8px]    
                           border
                           border-primery-800
-                          text-primery-1000
+                          text-neutral-scale1800
                           dark:text-neutral-scale70
                           bg-primery-100
                           hover:bg-primery-200
@@ -554,7 +554,7 @@ export const TeacherExams = () => {
                           transition-all
                         "
                       >
-                        <Pencil className="!w-[13px] !h-[13px] text-primery-1000 dark:text-neutral-scale70" />
+                        <Pencil className="!w-[13px] !h-[13px] text-neutral-scale1800 dark:text-neutral-scale70" />
 
                         <span
                           className={
@@ -588,7 +588,7 @@ export const TeacherExams = () => {
                           dark:border-neutral-scale200
                           bg-neutral-scale70
                           dark:bg-neutral-scale1200
-                          text-neutral-scale1200
+                          text-neutral-scale1800
                           dark:text-neutral-scale80
                           hover:bg-neutral-scale100
                           dark:hover:bg-neutral-scale1100

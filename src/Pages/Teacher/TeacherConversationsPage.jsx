@@ -337,17 +337,25 @@ export const TeacherConversationsPage = () => {
 
           <div className="flex items-center gap-3">
             {/* Students roster & online statuses icon */}
-            <button
-              type="button"
-              aria-label={isRTL ? "دانشجویان" : "Students"}
-              onClick={() =>
-                navigate(`/TeacherContacts/${activeTabId !== "lessons" ? activeTabId : "os"}`)
-              }
-              className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
-              title={isRTL ? "مشاهده لیست و وضعیت آنلاین دانشجویان" : "View students & online status"}
-            >
-              <UserIcon className="w-6 h-6 text-neutral-scale70" />
-            </button>
+            {location.pathname !== "/" && (
+              <button
+                type="button"
+                aria-label={isRTL ? "دانشجویان" : "Students"}
+                onClick={() =>
+                  navigate(
+                    `/TeacherContacts/${activeTabId !== "lessons" ? activeTabId : "os"}`,
+                  )
+                }
+                className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
+                title={
+                  isRTL
+                    ? "مشاهده لیست و وضعیت آنلاین دانشجویان"
+                    : "View students & online status"
+                }
+              >
+                <UserIcon className="w-6 h-6 text-neutral-scale70" />
+              </button>
+            )}
 
             {/* Notifications */}
             <button

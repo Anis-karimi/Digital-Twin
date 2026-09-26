@@ -13,6 +13,7 @@ import {
   Loader2,
   Target,
   Sparkles,
+  BookOpen,
   ArrowRight,
   ArrowLeft,
   Calendar as CalendarIcon,
@@ -299,40 +300,31 @@ export const CreateExamAccordion = ({
 
   return (
     <div
-      dir={isRTL ? "rtl" : "ltr"}
+      dir={isRTL ? "rtl " : "ltr font-inter"}
       className="w-full flex flex-col gap-3.5 pb-24 animate-in fade-in slide-in-from-bottom-2 duration-300 select-text"
     >
-      {/* Top Header / Back Bar */}
-      <div className="flex items-center justify-between px-1 mb-1">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1200 transition-colors text-neutral-scale1000 dark:text-neutral-scale300 cursor-pointer"
-            aria-label="بازگشت"
-          >
-            {isRTL ? (
-              <ArrowRight className="w-5 h-5" />
-            ) : (
-              <ArrowLeft className="w-5 h-5" />
-            )}
-          </button>
-
-          <div>
-            <h2 className="text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70 font-vazir">
-              {isRTL ? "ساخت آزمون جدید" : "Create New Exam"}
-            </h2>
-            <p className="text-[11px] text-[#2481cc] dark:text-[#52a2f6] font-vazir">
-              {isRTL ? `درس: ${courseTitle}` : `Course: ${courseTitle}`}
-            </p>
+      <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs">
+        {/* Course Header */}
+        <div className="pt-3.5 px-3.5 pb-2 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
+            <BookOpen className="w-4 h-4" />
           </div>
+
+          <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
+            {isRTL ? "نام درس" : "Course Name"}
+          </span>
         </div>
 
-
+        {/* Course Name */}
+        <div className="px-3.5 pb-3.5">
+          <div className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 text-xs  text-start">
+            {courseTitle}
+          </div>
+        </div>
       </div>
 
       {formError && (
-        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2 font-vazir animate-in fade-in">
+        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-s flex items-center gap-2 animate-in fade-in">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{formError}</span>
         </div>
@@ -346,7 +338,7 @@ export const CreateExamAccordion = ({
           <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
             <FileText className="w-4 h-4" />
           </div>
-          <label className="text-xs font-bold text-neutral-scale1600 dark:text-neutral-scale100 font-vazir">
+          <label className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
             {isRTL ? "نام آزمون" : "Exam Title"}
             <span className="text-red-500 mr-1">*</span>
           </label>
@@ -361,7 +353,7 @@ export const CreateExamAccordion = ({
               ? "مثلاً: آزمون میان‌ترم مفاهیم پایه سیستم عامل..."
               : "e.g., Operating Systems Midterm Exam..."
           }
-          className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-xs font-vazir focus:outline-none focus:ring-2 focus:ring-[#2481cc]/25 focus:border-[#2481cc] transition-all"
+          className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-xs  focus:outline-none focus:ring-2 focus:ring-[#2481cc]/25 focus:border-[#2481cc] transition-all"
         />
       </div>
 
@@ -383,10 +375,10 @@ export const CreateExamAccordion = ({
             </div>
 
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-neutral-scale1600 dark:text-neutral-scale100 font-vazir leading-tight">
+              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100  leading-tight">
                 {isRTL ? "دانشجویان شرکت‌کننده" : "Participating Students"}
               </span>
-              <span className="text-[10px] text-[#2481cc] dark:text-[#52a2f6] font-vazir leading-tight mt-0.5">
+              <span className="text-[10px] text-[#2481cc] dark:text-[#52a2f6]  leading-tight mt-0.5">
                 {isRTL
                   ? `${selectedStudentIds.length} از ${students.length} دانشجو انتخاب شده`
                   : `${selectedStudentIds.length} of ${students.length} selected`}
@@ -397,7 +389,10 @@ export const CreateExamAccordion = ({
           {/* Left: Avatar Stack Overlapping Halfway & Chevron */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Circular Avatar Stack */}
-            <div className="flex items-center py-0.5 shrink-0" dir={isRTL ? "rtl" : "ltr"}>
+            <div
+              className="flex items-center py-0.5 shrink-0"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
               {selectedStudentsObjects.slice(0, 3).map((st, i) => (
                 <div
                   key={st.id || i}
@@ -434,7 +429,7 @@ export const CreateExamAccordion = ({
                         : { marginLeft: "-9px" }
                       : {}),
                   }}
-                  className="w-6 h-6 rounded-full border-2 border-white dark:border-neutral-scale1300 bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center text-[9px] font-bold shadow-2xs shrink-0 select-none font-vazir"
+                  className="w-6 h-6 rounded-full border-2 border-white dark:border-neutral-scale1300 bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center text-[9px] font-bold shadow-2xs shrink-0 select-none "
                 >
                   +{selectedStudentsObjects.length - 3}
                 </div>
@@ -460,9 +455,11 @@ export const CreateExamAccordion = ({
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
                   placeholder={
-                    isRTL ? "جستجوی دانشجو با نام..." : "Search student by name..."
+                    isRTL
+                      ? "جستجوی دانشجو با نام..."
+                      : "Search student by name..."
                   }
-                  className="w-full pr-8 pl-3 py-1.5 text-xs rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] font-vazir"
+                  className="w-full pr-8 pl-3 py-1.5 text-xs rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] "
                 />
                 <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
               </div>
@@ -470,26 +467,28 @@ export const CreateExamAccordion = ({
               <button
                 type="button"
                 onClick={handleSelectAllStudents}
-                className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25 hover:bg-[#e1eefc] dark:hover:bg-[#203244] transition-colors cursor-pointer font-vazir shrink-0"
+                className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25 hover:bg-[#e1eefc] dark:hover:bg-[#203244] transition-colors cursor-pointer  shrink-0"
               >
                 {selectedStudentIds.length === students.length
                   ? isRTL
                     ? "لغو همه"
                     : "Deselect"
                   : isRTL
-                  ? "انتخاب همه"
-                  : "Select All"}
+                    ? "انتخاب همه"
+                    : "Select All"}
               </button>
             </div>
 
             {/* Scrollable Students List */}
             {isLoadingStudents ? (
-              <div className="py-6 flex items-center justify-center gap-2 text-xs text-neutral-500 font-vazir">
+              <div className="py-6 flex items-center justify-center gap-2 text-xs text-neutral-500 ">
                 <Loader2 className="w-4 h-4 animate-spin text-[#2481cc]" />
-                <span>{isRTL ? "در حال دریافت دانشجویان..." : "Loading students..."}</span>
+                <span>
+                  {isRTL ? "در حال دریافت دانشجویان..." : "Loading students..."}
+                </span>
               </div>
             ) : filteredStudents.length === 0 ? (
-              <div className="py-4 text-center text-xs text-neutral-400 font-vazir">
+              <div className="py-4 text-center text-s text-neutral-400 ">
                 {isRTL ? "دانشجویی یافت نشد" : "No students found"}
               </div>
             ) : (
@@ -508,7 +507,7 @@ export const CreateExamAccordion = ({
                     >
                       {/* Student info */}
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 text-[#2481cc] dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden font-vazir">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 text-[#2481cc] dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden ">
                           {st.photo_url ? (
                             <img
                               src={st.photo_url}
@@ -516,15 +515,17 @@ export const CreateExamAccordion = ({
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span>{(st.title || st.name || "د").charAt(0)}</span>
+                            <span>
+                              {(st.title || st.name || "د").charAt(0)}
+                            </span>
                           )}
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 font-vazir truncate">
+                          <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-100  truncate">
                             {st.title || st.name}
                           </span>
-                          <span className="text-[10px] text-neutral-400 font-vazir">
+                          <span className="text-[10px] text-neutral-400 ">
                             {st.statusFa || st.status || "دانشجو"}
                           </span>
                         </div>
@@ -532,7 +533,10 @@ export const CreateExamAccordion = ({
 
                       {/* Telegram Switch (tg-switch-sm compact variant) */}
                       <div onClick={(e) => e.stopPropagation()}>
-                        <label className="tg-switch tg-switch-sm shrink-0" dir="ltr">
+                        <label
+                          className="tg-switch tg-switch-sm shrink-0"
+                          dir="ltr"
+                        >
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -564,7 +568,7 @@ export const CreateExamAccordion = ({
               <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
                 <Target className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold text-neutral-scale1600 dark:text-neutral-scale100 font-vazir">
+              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
                 {isRTL ? "زمان هر دانشجو و اهداف آزمون" : "Duration & Goals"}
               </span>
             </div>
@@ -586,7 +590,7 @@ export const CreateExamAccordion = ({
           <div className="grid grid-cols-2 gap-2.5">
             {/* 1. Duration per student */}
             <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000">
-              <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 font-vazir">
+              <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 ">
                 {isRTL ? "زمان هر دانشجو" : "Per Student"}
               </span>
 
@@ -609,12 +613,12 @@ export const CreateExamAccordion = ({
                     value={durationPerStudent}
                     onChange={(e) =>
                       setDurationPerStudent(
-                        Math.max(1, parseInt(e.target.value, 10) || 1)
+                        Math.max(1, parseInt(e.target.value, 10) || 1),
                       )
                     }
-                    className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none font-vazir"
+                    className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none "
                   />
-                  <span className="text-[10px] text-neutral-400 font-vazir">
+                  <span className="text-[10px] text-neutral-400 ">
                     {isRTL ? "دقیقه" : "min"}
                   </span>
                 </div>
@@ -633,7 +637,7 @@ export const CreateExamAccordion = ({
 
             {/* 2. Number of Goals */}
             <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000">
-              <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 font-vazir">
+              <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 ">
                 {isRTL ? "تعداد هدف‌ها (Goal)" : "Goal Count"}
               </span>
 
@@ -653,9 +657,9 @@ export const CreateExamAccordion = ({
                     max="10"
                     value={goalCount}
                     onChange={(e) => handleGoalCountChange(e.target.value)}
-                    className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none font-vazir"
+                    className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none "
                   />
-                  <span className="text-[10px] text-neutral-400 font-vazir">
+                  <span className="text-[10px] text-neutral-400 ">
                     {isRTL ? "هدف" : "goals"}
                   </span>
                 </div>
@@ -675,7 +679,7 @@ export const CreateExamAccordion = ({
         {/* Extended Goals Box: Opens to enter descriptions for each goal */}
         {isGoalsOpen && goalCount > 0 && (
           <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-2.5 animate-in fade-in duration-200">
-            <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] font-vazir pt-1">
+            <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6]  pt-1">
               {isRTL
                 ? `تعریف و توضیحات ${goalCount} هدف آزمون:`
                 : `Define details for ${goalCount} goals:`}
@@ -683,12 +687,14 @@ export const CreateExamAccordion = ({
 
             {Array.from({ length: goalCount }).map((_, idx) => (
               <div key={idx} className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 font-vazir flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[9px] font-vazir font-bold">
+                <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[9px]  font-bold">
                     {idx + 1}
                   </span>
                   <span>
-                    {isRTL ? `هدف شماره ${idx + 1} (Goal ${idx + 1}):` : `Goal ${idx + 1}:`}
+                    {isRTL
+                      ? `هدف شماره ${idx + 1} (Goal ${idx + 1}):`
+                      : `Goal ${idx + 1}:`}
                   </span>
                 </label>
 
@@ -701,7 +707,7 @@ export const CreateExamAccordion = ({
                       ? `سرفصل یا سوالات مربوط به هدف ${idx + 1} را بنویسید...`
                       : `Enter details or topics for goal ${idx + 1}...`
                   }
-                  className="w-full resize-none p-2 text-xs rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] font-vazir leading-relaxed"
+                  className="w-full resize-none p-2 text-xs rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]  leading-relaxed"
                 />
               </div>
             ))}
@@ -725,11 +731,11 @@ export const CreateExamAccordion = ({
             <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
               <Clock3 className="w-4 h-4" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-neutral-scale1600 dark:text-neutral-scale100 font-vazir">
+            <div className="flex flex-col gap-1">
+              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
                 {isRTL ? "زمان‌بندی و برگزاری آزمون" : "Date & Time Scheduling"}
               </span>
-              <span className="text-[10px] text-neutral-400 font-vazir">
+              <span className="text-[10px] text-neutral-400 ">
                 {examDate} • {startTime} {isRTL ? "تا" : "to"} {endTime}
               </span>
             </div>
@@ -746,9 +752,9 @@ export const CreateExamAccordion = ({
         {isTimeOpen && (
           <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
             {/* Date Field with Calendar Picker */}
-            <div className="flex flex-col gap-1 pt-1 font-vazir">
+            <div className="flex flex-col gap-1 pt-1 ">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 font-vazir flex items-center gap-1.5">
+                <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5 text-[#2481cc]" />
                   <span>{isRTL ? "تاریخ برگزاری آزمون" : "Exam Date"}</span>
                 </label>
@@ -771,7 +777,7 @@ export const CreateExamAccordion = ({
                   value={examDate}
                   onChange={(e) => setExamDate(e.target.value)}
                   placeholder="1405/07/20"
-                  className="w-full pr-3 pl-10 py-2 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 group-hover:border-[#2481cc] text-neutral-900 dark:text-neutral-100 text-xs font-vazir font-semibold focus:outline-none focus:ring-1 focus:ring-[#2481cc] cursor-pointer transition-colors"
+                  className="w-full pr-3 pl-10 py-2 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 group-hover:border-[#2481cc] text-neutral-900 dark:text-neutral-100 text-xs  font-semibold focus:outline-none focus:ring-1 focus:ring-[#2481cc] cursor-pointer transition-colors"
                 />
                 <button
                   type="button"
@@ -780,7 +786,9 @@ export const CreateExamAccordion = ({
                     setIsDatePickerOpen(true);
                   }}
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 group-hover:text-[#2481cc] dark:group-hover:text-[#52a2f6] transition-colors cursor-pointer p-1"
-                  title={isRTL ? "باز کردن تقویم انتخاب تاریخ" : "Open Calendar"}
+                  title={
+                    isRTL ? "باز کردن تقویم انتخاب تاریخ" : "Open Calendar"
+                  }
                 >
                   <CalendarDays className="w-4 h-4" />
                 </button>
@@ -788,11 +796,11 @@ export const CreateExamAccordion = ({
             </div>
 
             {/* Start and End Time Selection (opens ClockPickerModal like calendar) */}
-            <div className="grid grid-cols-2 gap-2.5 font-vazir">
+            <div className="grid grid-cols-2 gap-2.5 ">
               {/* Start Time Field */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 font-vazir flex items-center gap-1.5">
+                  <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                     <Clock3 className="w-3.5 h-3.5 text-primery-700" />
                     <span>{isRTL ? "ساعت شروع" : "Start Time"}</span>
                   </label>
@@ -814,7 +822,7 @@ export const CreateExamAccordion = ({
                     type="text"
                     readOnly
                     value={startTime}
-                    className="w-full pr-3 pl-9 py-2 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 group-hover:border-primery-700 text-neutral-900 dark:text-neutral-100 text-xs font-vazir font-bold focus:outline-none focus:ring-1 focus:ring-primery-700 cursor-pointer transition-colors text-center"
+                    className="w-full pr-3 pl-9 py-2 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 group-hover:border-primery-700 text-neutral-900 dark:text-neutral-100 text-xs  font-bold focus:outline-none focus:ring-1 focus:ring-primery-700 cursor-pointer transition-colors text-center"
                   />
                   <button
                     type="button"
@@ -830,7 +838,7 @@ export const CreateExamAccordion = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[9.5px] px-1">
-                  <span className="text-neutral-400 font-vazir">
+                  <span className="text-neutral-400 ">
                     {isRTL ? "کلیک جهت باز کردن ساعت" : "Click to set time"}
                   </span>
                 </div>
@@ -839,7 +847,7 @@ export const CreateExamAccordion = ({
               {/* End Time Field */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 font-vazir flex items-center gap-1.5">
+                  <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                     <Clock3 className="w-3.5 h-3.5 text-primery-700" />
                     <span>{isRTL ? "ساعت پایان" : "End Time"}</span>
                   </label>
@@ -865,7 +873,7 @@ export const CreateExamAccordion = ({
                       timeError
                         ? "border-red-400 bg-red-50/30 text-red-600"
                         : "border-neutral-scale300 dark:border-neutral-scale1000 group-hover:border-primery-700 text-neutral-900 dark:text-neutral-100"
-                    } text-xs font-vazir font-bold focus:outline-none focus:ring-1 focus:ring-primery-700 cursor-pointer transition-colors text-center`}
+                    } text-xs  font-bold focus:outline-none focus:ring-1 focus:ring-primery-700 cursor-pointer transition-colors text-center`}
                   />
                   <button
                     type="button"
@@ -881,15 +889,17 @@ export const CreateExamAccordion = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[9.5px] px-1">
-                  <span className="text-neutral-400 font-vazir">
-                    {isRTL ? `حداقل مجاز: ${minCalculatedEndTime}` : `Min: ${minCalculatedEndTime}`}
+                  <span className="text-neutral-400 ">
+                    {isRTL
+                      ? `حداقل مجاز: ${minCalculatedEndTime}`
+                      : `Min: ${minCalculatedEndTime}`}
                   </span>
                 </div>
               </div>
             </div>
 
             {timeError && (
-              <span className="text-[10px] text-red-500 font-vazir flex items-center gap-1">
+              <span className="text-[10px] text-red-500  flex items-center gap-1">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 {timeError}
               </span>
@@ -906,7 +916,7 @@ export const CreateExamAccordion = ({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="flex-1 py-3 px-4 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300 font-vazir text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-center"
+          className="flex-1 py-3 px-4 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300  text-s font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-center"
         >
           {isRTL ? "انصراف" : "Cancel"}
         </button>
@@ -914,13 +924,17 @@ export const CreateExamAccordion = ({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={isSubmitting || !examTitle.trim() || selectedStudentIds.length === 0}
-          className="flex-[2] py-3 px-4 rounded-xl bg-[#2481cc] hover:bg-[#1b70b5] dark:bg-[#52a2f6] dark:hover:bg-[#3d91ea] text-white font-vazir text-xs font-bold transition-all shadow-md shadow-[#2481cc]/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]"
+          disabled={
+            isSubmitting || !examTitle.trim() || selectedStudentIds.length === 0
+          }
+          className="flex-[2] py-3 px-4 rounded-xl bg-[#2481cc] hover:bg-[#1b70b5] dark:bg-[#52a2f6] dark:hover:bg-[#3d91ea] text-white  text-s font-bold transition-all shadow-md shadow-[#2481cc]/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>{isRTL ? "در حال ایجاد آزمون..." : "Creating exam..."}</span>
+              <span>
+                {isRTL ? "در حال ایجاد آزمون..." : "Creating exam..."}
+              </span>
             </>
           ) : (
             <>
