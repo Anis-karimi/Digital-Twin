@@ -45,7 +45,7 @@ export const StudentNavigationBar = () => {
     {
       id: "exams",
       label: t("exams"),
-      route: null,
+      route: "/StudentExams",
       icon: Exam,
       iconActive: ExamFilled,
       iconClassName: "w-[15px] h-[15px]",

@@ -18,6 +18,7 @@ import { TeacherLessonsPage } from "@/Pages/Teacher/TeacherLessonPage";
 import { TeacherContacts } from "@/Pages/Teacher/TeacherContacts";
 import { StudentHome } from "@/Pages/Student/StudentHome";
 import { StudentSettings } from "@/Pages/Student/StudentSettings";
+import { StudentExams } from "@/Pages/Student/StudentExamsPage";
 
 import { QuizFirstPage } from "@/Pages/QuizFirstPage";
 import { QuizQuestionsPage } from "@/Pages/QuizQuestionsPage";
@@ -104,6 +105,7 @@ function App() {
             <Route path="/Students" element={<StudentsRoute />} />
 
             <Route path="/StudentSettings" element={<StudentSettings />} />
+            <Route path="/StudentExams" element={<StudentExams />} />
 
             {/* =================== Quiz Pages =================== */}
 
