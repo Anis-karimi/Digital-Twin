@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import "@/styles/fonts.css";
 
-export const ReviewAnswers = () => {
+export const ReviewAnswers = ({
+  isModal = false,
+  modalReviewData = null,
+  onBackToResult,
+}) => {
   const { isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,6 +28,10 @@ export const ReviewAnswers = () => {
   const isHandlingBackRef = useRef(false);
 
   useEffect(() => {
+    if (isModal) {
+      return;
+    }
+
     const handlePopState = () => {
       if (isHandlingBackRef.current) {
         isHandlingBackRef.current = false;
@@ -47,12 +55,12 @@ export const ReviewAnswers = () => {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [navigate, location.state]);
+  }, [navigate, location.state, isModal]);
 
   const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
-  const quizData = location.state?.quizData || [];
-  const selectedAnswers = location.state?.selectedAnswers || {};
+  const quizData = isModal && modalReviewData ? (modalReviewData.quizData || []) : (location.state?.quizData || []);
+  const selectedAnswers = isModal && modalReviewData ? (modalReviewData.selectedAnswers || {}) : (location.state?.selectedAnswers || {});
 
   // Store open/close state for explanations per question
   const [openExplanations, setOpenExplanations] = useState({});
@@ -137,6 +145,11 @@ export const ReviewAnswers = () => {
   };
 
   const handleBackToResult = () => {
+    if (isModal && onBackToResult) {
+      onBackToResult();
+      return;
+    }
+
     navigate("/Quiz-result", {
       replace: true,
       state: {
@@ -150,7 +163,9 @@ export const ReviewAnswers = () => {
   if (quizData.length === 0) {
     return (
       <main
-        className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none items-center justify-center p-6"
+        className={`w-full ${
+          isModal ? "h-full flex-1" : "md:w-[420px] min-h-dvh mx-auto"
+        } flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none items-center justify-center p-6`}
         dir={isRTL ? "rtl" : "ltr"}
       >
         <div className="w-full max-w-sm bg-white dark:bg-neutral-scale1300 rounded-3xl border border-neutral-scale200 dark:border-neutral-scale1100 p-8 shadow-sm text-center flex flex-col items-center gap-4">
@@ -175,7 +190,9 @@ export const ReviewAnswers = () => {
 
   return (
     <main
-      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative"
+      className={`w-full ${
+        isModal ? "h-full flex-1" : "md:w-[420px] min-h-dvh mx-auto"
+      } flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative`}
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* ----------------- Telegram App Header ----------------- */}

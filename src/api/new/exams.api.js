@@ -5,6 +5,49 @@
 
 import { requestWithFallback } from "../client";
 
+const DEFAULT_LESSON_ID = "c0000000-0000-4000-8000-000000000001";
+
+/**
+ * Fetches all exams/quizzes for a specific lesson/course.
+ * @endpoint GET /lessons/:lessonId/quizzes
+ * @param {string} [lessonId]
+ * @returns {Promise<Array<Object>>}
+ */
+export async function getLessonQuizzes(lessonId = DEFAULT_LESSON_ID) {
+  const resolvedLessonId =
+    !lessonId || lessonId === "os" ? DEFAULT_LESSON_ID : lessonId;
+  return requestWithFallback(
+    `/lessons/${resolvedLessonId}/quizzes`,
+    { method: "GET" },
+    () => []
+  );
+}
+
+/**
+ * Creates a new quiz/exam for a lesson.
+ * @endpoint POST /lessons/:lessonId/quizzes
+ * @param {string} lessonId
+ * @param {Object} quizPayload
+ * @returns {Promise<Object>}
+ */
+export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload) {
+  const resolvedLessonId =
+    !lessonId || lessonId === "os" ? DEFAULT_LESSON_ID : lessonId;
+  return requestWithFallback(
+    `/lessons/${resolvedLessonId}/quizzes`,
+    {
+      method: "POST",
+      body: JSON.stringify(quizPayload),
+    },
+    () => ({
+      success: true,
+      quiz_id: `quiz_${Date.now()}`,
+      ...quizPayload,
+      created_at: new Date().toISOString(),
+    })
+  );
+}
+
 /**
  * Fetches all exams created by the teacher.
  * @endpoint GET /teacher/exams
@@ -70,6 +113,8 @@ export async function getQuizResults(quizId) {
 }
 
 export const examsApi = {
+  getLessonQuizzes,
+  createLessonQuiz,
   getTeacherExams,
   saveGeneratedQuiz,
   submitQuizAnswers,

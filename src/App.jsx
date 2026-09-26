@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
 
 import { Nav } from "@/Components/Nav";
 
@@ -25,10 +26,17 @@ import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 
 import { TeacherExams } from "./Pages/Teacher/TeacherExamsPage";
 
-import { AppProvider } from "@/Context/AppContext";
+import { AppProvider, AppContext } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
 import { Login } from "@/Pages/Login";
 
+function StudentsRoute() {
+  const { role } = useContext(AppContext);
+  if (role === "student") {
+    return <StudentHome />;
+  }
+  return <Navigate to="/TeacherContacts/os" replace />;
+}
 
 function App() {
   return (
@@ -70,6 +78,10 @@ function App() {
                 path="/TeacherContacts/:lessonId"
                 element={<TeacherContacts />}
               />
+              <Route
+                path="/TeacherContacts"
+                element={<Navigate to="/TeacherContacts/os" replace />}
+              />
 
               <Route
                 path="/TeacherLessonsPage/:lessonId"
@@ -86,6 +98,10 @@ function App() {
             {/* ==================== Student ==================== */}
 
             <Route path="/Student" element={<StudentHome />} />
+            <Route path="/student" element={<StudentHome />} />
+            <Route path="/StudentHome" element={<StudentHome />} />
+            <Route path="/students" element={<StudentsRoute />} />
+            <Route path="/Students" element={<StudentsRoute />} />
 
             <Route path="/StudentSettings" element={<StudentSettings />} />
 

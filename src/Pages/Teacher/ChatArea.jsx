@@ -1,5 +1,5 @@
 import { useId, useState, useRef, useContext, useEffect } from "react";
-import { ArrowLeft, Camera } from "lucide-react";
+import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
@@ -17,6 +17,7 @@ import Quiz from "@/assets/icons/quiz-icon1.svg?react";
 import Send from "@/assets/icons/Send.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
+import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
 import { isPersianText } from "@/utils/textUtils";
@@ -92,6 +93,8 @@ export const ChatArea = () => {
       localStorage.getItem("user_role") === "student"
     );
 
+    const isTeacherViewingStudentChat = isStudentChat && !isStudentRole;
+
     const activeChatType = isStudentChat || isStudentRole ? "student" : "course";
     const activeTargetId = isStudentChat
       ? id
@@ -151,8 +154,9 @@ export const ChatArea = () => {
       }
 
       // If chatting with a student, return to that student's course page
-      if (isStudentChat && currentStudent?.lessonId) {
-        navigate(`/TeacherLessonsPage/${currentStudent.lessonId}`, {
+      if (isStudentChat) {
+        const targetLesson = location.state?.lessonId || currentStudent?.lessonId || "os";
+        navigate(`/TeacherLessonsPage/${targetLesson}`, {
           replace: true,
         });
         return;
@@ -180,8 +184,36 @@ export const ChatArea = () => {
     const sampleRateRef = useRef(22050);
 
     const [settings, setSettings] = useState(null);
-    const [llmModel] = useState("gemma4");
-    const [teacherName] = useState("Teacher");
+    // Real teacher name resolution directly from stored database user / course (NO mock data)
+    const [teacherName, setTeacherName] = useState(() => {
+      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
+      return full || currentUser?.full_name || currentUser?.name || currentUser?.username || "";
+    });
+
+    useEffect(() => {
+      let isMounted = true;
+      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
+      const currentResolved = full || currentUser?.full_name || currentUser?.name || currentUser?.username || "";
+      if (currentResolved) {
+        setTeacherName(currentResolved);
+        return;
+      }
+
+      // If not yet available from currentUser, fetch course teacher from backend
+      const courseIdToFetch = activeCourseId || "c0000000-0000-4000-8000-000000000001";
+      coursesApi.getCourseById(courseIdToFetch).then((course) => {
+        if (isMounted) {
+          const resolved = course?.teacher_name || course?.instructor_name || "";
+          if (resolved) {
+            setTeacherName(resolved);
+          }
+        }
+      }).catch(() => {});
+
+      return () => {
+        isMounted = false;
+      };
+    }, [currentUser, activeCourseId]);
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -233,8 +265,9 @@ export const ChatArea = () => {
     }
 
     const classNames = {
-      messagesContainer:
-        "absolute left-0 right-0 top-[60px] bottom-0 overflow-y-auto px-3 py-2 flex flex-col gap-1 pb-[95px]",
+      messagesContainer: `absolute left-0 right-0 top-[60px] bottom-0 overflow-y-auto px-3 py-2 flex flex-col gap-1 ${
+        isTeacherViewingStudentChat ? "pb-[68px]" : "pb-[95px]"
+      }`,
 
       myMessageRow: "flex justify-end w-full",
       otherMessageRow: "flex justify-start w-full",
@@ -305,8 +338,25 @@ export const ChatArea = () => {
     const currentStudent = isStudentChat ? chatEntity : null;
     const currentCourse = !isStudentChat ? chatEntity : null;
     const currentChat = chatEntity;
-
     const chatTitle = currentChat?.title || currentChat?.name || (isStudentChat ? "گفت‌وگو با دانشجو" : "گفت‌وگو با درس");
+
+    const [isQuizOpen, setIsQuizOpen] = useState(false);
+    const [isQuizMinimized, setIsQuizMinimized] = useState(false);
+
+    const courseDisplayName = (currentCourse?.title || currentChat?.title || chatTitle || "")
+      .replace(/گفت‌وگو\s*(با)?\s*/g, "")
+      .trim();
+    const quizBarTitle = courseDisplayName ? `کوییز ${courseDisplayName}` : (t("osQuiz") || "کوییز سیستم عامل");
+
+    const handleOpenQuiz = () => {
+      setIsQuizOpen(true);
+      setIsQuizMinimized(false);
+    };
+
+    const handleCloseQuiz = () => {
+      setIsQuizOpen(false);
+      setIsQuizMinimized(false);
+    };
 
     const toggleAI = () => {
         setAiEnabled(prev => !prev);
@@ -478,6 +528,8 @@ export const ChatArea = () => {
     };
 
     const handleFeedback = async (messageId, feedback) => {
+      if (isTeacherViewingStudentChat) return;
+
       const targetMsg = messages.find((m) => m.id === messageId);
       const newFeedback = targetMsg?.feedback === feedback ? null : feedback;
 
@@ -496,6 +548,56 @@ export const ChatArea = () => {
         await chatHistoryApi.submitMessageFeedback(messageId, newFeedback);
       } catch (err) {
         console.warn("Feedback submission error:", err);
+      }
+    };
+
+    const handleAddComment = async (messageId, commentText) => {
+      try {
+        const res = await chatHistoryApi.addMessageComment(messageId, teacherName, commentText);
+        const newComment = res?.comment || {
+          id: String(Date.now()),
+          teacher_name: teacherName,
+          comment: commentText,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
+        };
+
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === messageId) {
+              const prevComments = Array.isArray(msg.comments) ? msg.comments : [];
+              return {
+                ...msg,
+                comments: [...prevComments, newComment],
+              };
+            }
+            return msg;
+          })
+        );
+      } catch (err) {
+        console.warn("Error adding comment:", err);
+      }
+    };
+
+    const handleDeleteComment = async (messageId, commentId) => {
+      // Optimistically remove comment from messages state right when motion completes
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (String(msg.id) === String(messageId)) {
+            const prevComments = Array.isArray(msg.comments) ? msg.comments : [];
+            return {
+              ...msg,
+              comments: prevComments.filter((c) => String(c.id) !== String(commentId)),
+            };
+          }
+          return msg;
+        })
+      );
+
+      try {
+        await chatHistoryApi.deleteMessageComment(messageId, commentId);
+      } catch (err) {
+        console.warn("Error deleting comment:", err);
       }
     };
 
@@ -913,140 +1015,213 @@ export const ChatArea = () => {
           classNames={classNames}
           isLoading={isLoading}
           onFeedback={handleFeedback}
+          canComment={isTeacherViewingStudentChat}
+          onAddComment={handleAddComment}
+          onDeleteComment={handleDeleteComment}
+          teacherName={teacherName}
+          readOnlyFeedback={isTeacherViewingStudentChat}
         />
 
-        {/* Input */}
-        <form
-          className="absolute left-1/2 -translate-x-1/2 bottom-[15px] w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100"
-          dir={isRTL ? "rtl" : "ltr"}
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-        >
-          <label htmlFor={composerInputId} className="sr-only">
-            {t("message")}
-          </label>
-
-          {/* Dynamic typing font & direction detection */}
-          {(() => {
-            const isTypedPersian = /[\u0600-\u06FF]/.test(message);
-            const textareaFontClass = message
-              ? (isTypedPersian ? "fa-body font-vazir" : "en-body font-inter")
-              : (isRTL ? "fa-body font-vazir" : "en-body font-inter");
-            const textareaDir = message
-              ? (isTypedPersian ? "rtl" : "ltr")
-              : (isRTL ? "rtl" : "ltr");
-            const textareaAlign = message
-              ? (isTypedPersian ? "text-right" : "text-left")
-              : (isRTL ? "text-right" : "text-left");
-
-            return (
-              <textarea
-                id={composerInputId}
-                ref={textareaRef}
-                dir={textareaDir}
-                value={message}
-                placeholder={t("writeMessage")}
-                rows={1}
-                className={`absolute bottom-0 w-full ${
-                  isRTL
-                    ? "right-0 pr-[18px] pl-[84px]"
-                    : "left-0 pl-[18px] pr-[84px]"
-                } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
-                style={{
-                  minHeight: "37px",
-                  resize: "none",
-                }}
-                onChange={(event) => {
-                  const value = event.target.value;
-
-                  setMessage(value);
-                  setIsTyping(value.length > 0);
-
-                  if (!value && textareaRef.current) {
-                    textareaRef.current.style.height = "37px";
-                    textareaRef.current.parentElement.style.height = "39px";
-                  }
-                }}
-                onInput={(e) => {
-                  const el = e.target;
-
-                  el.style.height = "auto";
-                  el.style.height = el.scrollHeight + "px";
-
-                  el.parentElement.style.height = el.scrollHeight + "px";
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                disabled={isLoading || recording}
-              />
-            );
-          })()}
-
-          {/* Send / Mic button */}
-          <button
-            type="button"
-            className={`absolute bottom-[1px] ${
-              isRTL ? "left-[1px]" : "right-[1px]"
-            } w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
-              recording ? "animate-pulse" : ""
-            }`}
-            onClick={() => {
-              if (recording) {
-                stopRecording();
-                return;
-              }
-
-              if (isTyping) {
+        {/* Input / Review Mode Bar */}
+        {isTeacherViewingStudentChat ? (
+          <div
+            className="absolute left-1/2 -translate-x-1/2 bottom-[15px] w-[calc(100%-24px)] max-w-[390px] h-[44px] z-50 bg-white/95 dark:bg-neutral-scale1400/95 backdrop-blur-md rounded-[20px] border border-primery-300/60 dark:border-sky-500/40 shadow-sm flex items-center justify-center px-4 gap-2 text-primery-700 dark:text-sky-300 select-none animate-in fade-in duration-300"
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            <MessageSquareQuote className="w-4 h-4 shrink-0 text-primery-600 dark:text-sky-400" />
+            <span className="text-xs font-semibold font-vazir truncate">
+              {t("studentChatReviewMode")}
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Input */}
+            <form
+              className={`absolute left-1/2 -translate-x-1/2 ${
+                isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
+              } w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100 transition-all duration-300`}
+              dir={isRTL ? "rtl" : "ltr"}
+              onSubmit={(e) => {
+                e.preventDefault();
                 sendMessage();
-                return;
-              }
+              }}
+            >
+              <label htmlFor={composerInputId} className="sr-only">
+                {t("message")}
+              </label>
 
-              startRecording();
-            }}
-          >
-            {recording ? (
-              <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
-            ) : isTyping ? (
-              <Send
-                className={`!w-[35px] !h-[35px] ${isRTL ? "scale-x-[-1]" : ""}`}
-              />
-            ) : (
-              <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
+              {/* Dynamic typing font & direction detection */}
+              {(() => {
+                const isTypedPersian = /[\u0600-\u06FF]/.test(message);
+                const textareaFontClass = message
+                  ? (isTypedPersian ? "fa-body font-vazir" : "en-body font-inter")
+                  : (isRTL ? "fa-body font-vazir" : "en-body font-inter");
+                const textareaDir = message
+                  ? (isTypedPersian ? "rtl" : "ltr")
+                  : (isRTL ? "rtl" : "ltr");
+                const textareaAlign = message
+                  ? (isTypedPersian ? "text-right" : "text-left")
+                  : (isRTL ? "text-right" : "text-left");
+
+                return (
+                  <textarea
+                    id={composerInputId}
+                    ref={textareaRef}
+                    dir={textareaDir}
+                    value={message}
+                    placeholder={t("writeMessage")}
+                    rows={1}
+                    className={`absolute bottom-0 w-full ${
+                      isRTL
+                        ? "right-0 pr-[18px] pl-[84px]"
+                        : "left-0 pl-[18px] pr-[84px]"
+                    } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
+                    style={{
+                      minHeight: "37px",
+                      resize: "none",
+                    }}
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setMessage(value);
+                      setIsTyping(value.length > 0);
+
+                      if (!value && textareaRef.current) {
+                        textareaRef.current.style.height = "37px";
+                        textareaRef.current.parentElement.style.height = "39px";
+                      }
+                    }}
+                    onInput={(e) => {
+                      const el = e.target;
+
+                      el.style.height = "auto";
+                      el.style.height = el.scrollHeight + "px";
+
+                      el.parentElement.style.height = el.scrollHeight + "px";
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    disabled={isLoading || recording}
+                  />
+                );
+              })()}
+
+              {/* Send / Mic button */}
+              <button
+                type="button"
+                className={`absolute bottom-[1px] ${
+                  isRTL ? "left-[1px]" : "right-[1px]"
+                } w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
+                  recording ? "animate-pulse" : ""
+                }`}
+                onClick={() => {
+                  if (recording) {
+                    stopRecording();
+                    return;
+                  }
+
+                  if (isTyping) {
+                    sendMessage();
+                    return;
+                  }
+
+                  startRecording();
+                }}
+              >
+                {recording ? (
+                  <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
+                ) : isTyping ? (
+                  <Send
+                    className={`!w-[35px] !h-[35px] ${isRTL ? "scale-x-[-1]" : ""}`}
+                  />
+                ) : (
+                  <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
+                )}
+              </button>
+
+              {/* Quiz button */}
+              <button
+                type="button"
+                onClick={handleOpenQuiz}
+                aria-label={quizBarTitle}
+                title={quizBarTitle}
+                className={`absolute bottom-[6.5px] ${
+                  isRTL ? "left-12" : "right-12"
+                } w-7 h-7 flex items-center justify-center cursor-pointer`}
+              >
+                <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
+              </button>
+            </form>
+
+            {/* Telegram Mini App Minimized Docked Bar (Below typing section) */}
+            {isQuizOpen && isQuizMinimized && (
+              <div
+                onClick={() => setIsQuizMinimized(false)}
+                dir={isRTL ? "rtl" : "ltr"}
+                className="absolute left-1/2 -translate-x-1/2 bottom-[8px] w-[calc(100%-24px)] max-w-[390px] h-[38px] z-50 bg-white/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-2xl border border-primery-500/30 dark:border-sky-500/30 shadow-md shadow-primery-900/10 flex items-center justify-between px-3 cursor-pointer select-none transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] animate-in slide-in-from-bottom-2 fade-in"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative w-6 h-6 rounded-lg bg-gradient-to-tr from-primery-600 to-sky-400 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Quiz className="w-3.5 h-3.5" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-scale1300 animate-pulse" />
+                  </div>
+
+                  {/* Title: کوییز سیستم عامل */}
+                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-100 truncate font-vazir">
+                    {quizBarTitle}
+                  </span>
+
+                  {/* Status Tag */}
+                  <span className="text-[10px] font-medium text-primery-700 dark:text-sky-400 bg-primery-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-full border border-primery-200/50 dark:border-sky-800/40 truncate">
+                    {t("inProgressQuiz") || "در حال اجرا"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsQuizMinimized(false);
+                    }}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-primery-600 dark:hover:text-sky-400 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    title={t("expandQuiz") || "بزرگ کردن"}
+                    aria-label={t("expandQuiz") || "بزرگ کردن"}
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCloseQuiz();
+                    }}
+                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                    title={t("closeQuiz") || "بستن"}
+                    aria-label={t("closeQuiz") || "بستن"}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
 
-          {/* Quiz button */}
-          <button
-            type="button"
-            onClick={() => {
-              sessionStorage.setItem(
-                "quizReturnToChat",
-                JSON.stringify({
-                  chatPath: location.pathname + location.search,
-                  chatBackTo:
-                    location.state?.backTo ||
-                    (isStudentChat && (currentStudent?.lessonId || currentStudent?.courseId)
-                      ? `/TeacherLessonsPage/${currentStudent.lessonId || currentStudent.courseId}`
-                      : "/"),
-
-                }),
-              );
-
-              navigate("/QuizFirstPage");
-            }}
-            className={`absolute bottom-[6.5px] ${
-              isRTL ? "left-12" : "right-12"
-            } w-7 h-7 flex items-center justify-center cursor-pointer`}
-          >
-            <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
-          </button>
-        </form>
+            {/* Telegram Mini App Bottom Sheet Modal */}
+            <TelegramQuizBottomSheet
+              isOpen={isQuizOpen}
+              isMinimized={isQuizMinimized}
+              onMinimize={() => setIsQuizMinimized(true)}
+              onExpand={() => setIsQuizMinimized(false)}
+              onClose={handleCloseQuiz}
+              courseTitle={courseDisplayName}
+            />
+          </>
+        )}
 
         {/* Footer blur */}
         <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[55px] flex bg-transparent backdrop-blur-[1px] pointer-events-none" />

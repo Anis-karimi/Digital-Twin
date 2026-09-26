@@ -72,6 +72,21 @@ export function AppProvider({ children }) {
     }
   }, [language]);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token") || localStorage.getItem("session_token");
+    if (token) {
+      authApi.getCurrentUserProfile().then((res) => {
+        const u = res?.user || res;
+        if (u && (u.first_name || u.username || u.name)) {
+          setCurrentUser((prev) => ({ ...(prev || {}), ...u }));
+          try {
+            localStorage.setItem("current_user", JSON.stringify(u));
+          } catch {}
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   const toggleLanguage = () => {
     setLanguage((prev) => (prev === "fa" ? "en" : "fa"));
   };

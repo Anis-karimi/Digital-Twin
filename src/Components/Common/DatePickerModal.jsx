@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Check } from "lucide-react";
 import { AppContext } from "@/Context/AppContext";
 import {
@@ -193,18 +194,29 @@ export const DatePickerModal = ({
 
   const defaultTitle = t("selectDate");
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 999999,
+        backgroundColor: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+      }}
       dir={isRTL ? "rtl" : "ltr"}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && onClose) onClose();
       }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title || defaultTitle}
+        onClick={(e) => e.stopPropagation()}
         className={`w-full max-w-[340px] bg-white dark:bg-neutral-scale1300 rounded-[20px] shadow-2xl border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden flex flex-col ${
           isRTL ? "font-vazir" : "font-inter"
         }`}
@@ -411,6 +423,10 @@ export const DatePickerModal = ({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default DatePickerModal;

@@ -113,6 +113,54 @@ export async function saveConversationTurn(chatType, targetId, payload) {
 }
 
 /**
+ * Adds a teacher's quoted comment to a bot message.
+ * @endpoint POST /messages/:messageId/comments
+ * @param {string|number} messageId
+ * @param {string} teacherName
+ * @param {string} comment
+ * @returns {Promise<Object>}
+ */
+export async function addMessageComment(messageId, teacherName, comment) {
+  return requestWithFallback(
+    `/messages/${messageId}/comments`,
+    {
+      method: "POST",
+      body: JSON.stringify({ teacher_name: teacherName, comment }),
+    },
+    () => {
+      const now = new Date();
+      return {
+        success: true,
+        comment: {
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+          teacher_name: teacherName,
+          comment,
+          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
+        },
+      };
+    }
+  );
+}
+
+/**
+ * Deletes a teacher's comment from a message.
+ * @endpoint DELETE /messages/:messageId/comments/:commentId
+ * @param {string|number} messageId
+ * @param {string} commentId
+ * @returns {Promise<Object>}
+ */
+export async function deleteMessageComment(messageId, commentId) {
+  return requestWithFallback(
+    `/messages/${messageId}/comments/${commentId}`,
+    {
+      method: "DELETE",
+    },
+    () => ({ success: true })
+  );
+}
+
+/**
  * Backward compatibility alias for saveConversationTurn.
  */
 export const sendMessageWithRAG = saveConversationTurn;
@@ -124,6 +172,9 @@ export const chatHistoryApi = {
   sendMessageWithRAG,
   submitMessageFeedback,
   clearChatHistory,
+  addMessageComment,
+  deleteMessageComment,
 };
 
 export default chatHistoryApi;
+

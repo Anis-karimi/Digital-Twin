@@ -13,15 +13,20 @@ import {
 } from "lucide-react";
 import "@/styles/fonts.css";
 
-export const QuizQuestionsPage = () => {
+export const QuizQuestionsPage = ({
+  isModal = false,
+  modalQuizData = null,
+  onFinishQuiz,
+  onExitQuiz,
+}) => {
   const { language, isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
 
   const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
-  // Retrieve generated questions passed from QuizFirstPage
-  const quizData = location.state?.quizData || [];
+  // Retrieve generated questions passed from QuizFirstPage or props
+  const quizData = isModal && modalQuizData ? modalQuizData : (location.state?.quizData || []);
   const totalQuestions = quizData.length;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -49,6 +54,11 @@ export const QuizQuestionsPage = () => {
   const pendingResultRef = useRef(null);
 
   const handleExitQuiz = () => {
+    if (isModal && onExitQuiz) {
+      onExitQuiz();
+      return;
+    }
+
     isExitingQuizRef.current = true;
     const savedReturn = sessionStorage.getItem("quizReturnToChat");
 
@@ -69,6 +79,10 @@ export const QuizQuestionsPage = () => {
   };
 
   useEffect(() => {
+    if (isModal) {
+      return;
+    }
+
     // Push a new history entry while retaining the existing quizData state
     navigate(location.pathname + location.search + location.hash, {
       state: location.state,
@@ -113,7 +127,7 @@ export const QuizQuestionsPage = () => {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [isModal]);
 
   // Empty state if no questions are available
   if (totalQuestions === 0) {
@@ -335,6 +349,11 @@ export const QuizQuestionsPage = () => {
         quizData,
       };
 
+      if (isModal && onFinishQuiz) {
+        onFinishQuiz(pendingResultRef.current);
+        return;
+      }
+
       isFinishingQuizRef.current = true;
       window.history.back();
     }
@@ -348,21 +367,26 @@ export const QuizQuestionsPage = () => {
 
   return (
     <main
-      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative"
+      className={`w-full ${
+        isModal ? "h-full flex-1" : "md:w-[420px] min-h-dvh mx-auto"
+      } flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden relative`}
       dir={isRTL ? "rtl" : "ltr"}
     >
-      {/* ----------------- Telegram App Header ----------------- */}
+      {/* ----------------- Sub-Header / Progress Bar ----------------- */}
       <header className="sticky top-0 z-40 w-full bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 text-white shadow-sm flex flex-col">
-        <div className="h-[60px] flex items-center justify-between px-3">
-          {/* Close Button */}
-          <button
-            type="button"
-            onClick={() => setShowExitConfirmation(true)}
-            aria-label={t("closeQuiz")}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className={`${isModal ? "h-[48px]" : "h-[60px]"} flex items-center justify-between px-3`}>
+          {!isModal ? (
+            <button
+              type="button"
+              onClick={() => setShowExitConfirmation(true)}
+              aria-label={t("closeQuiz")}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="w-2" />
+          )}
 
           {/* Question Index Badge */}
           <div className="flex items-center gap-2">

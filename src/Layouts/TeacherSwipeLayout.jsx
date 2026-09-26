@@ -196,8 +196,8 @@ export const TeacherSwipeLayout = () => {
       navigate("/TeacherNotification");
     }
 
-    if (id === "students" && currentLessonId) {
-      navigate(`/TeacherContacts/${currentLessonId}`);
+    if (id === "students") {
+      navigate(`/TeacherContacts/${currentLessonId || "os"}`);
     }
   };
 

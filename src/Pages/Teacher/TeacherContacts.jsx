@@ -59,6 +59,7 @@ export const TeacherContacts = () => {
   const [currentCourse, setCurrentCourse] = useState(null);
 
   const { lessonId } = useParams();
+  const courseId = lessonId || "os";
   const navigate = useNavigate();
   const { isRTL, t } = useContext(AppContext);
 
@@ -66,13 +67,13 @@ export const TeacherContacts = () => {
 
   useEffect(() => {
     let isMounted = true;
-    studentsApi.getStudentsByCourse(lessonId).then((data) => {
+    studentsApi.getStudentsByCourse(courseId).then((data) => {
       if (isMounted && Array.isArray(data)) {
         setLessonStudents(data);
       }
     });
 
-    coursesApi.getCourseById(lessonId).then((course) => {
+    coursesApi.getCourseById(courseId).then((course) => {
       if (isMounted) {
         setCurrentCourse(course);
       }
@@ -81,10 +82,14 @@ export const TeacherContacts = () => {
     return () => {
       isMounted = false;
     };
-  }, [lessonId]);
+  }, [courseId]);
 
   const handleBack = () => {
-    navigate(-1);
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
   };
 
   // Toggle student blocked state
@@ -103,7 +108,7 @@ export const TeacherContacts = () => {
     setOpenMenu(null);
 
     try {
-      await studentsApi.toggleBlockStudent(lessonId, studentId, nextBlocked);
+      await studentsApi.toggleBlockStudent(courseId, studentId, nextBlocked);
     } catch (error) {
       console.error("Failed to toggle block status:", error);
     }
@@ -170,27 +175,46 @@ export const TeacherContacts = () => {
                 return (
                   <li
                     key={student.id}
-                    className="relative flex items-center h-[62px] w-full"
+                    onClick={() =>
+                      navigate(`/ChatArea/student/${student.id}`, {
+                        state: {
+                          studentId: student.id,
+                          lessonId: courseId,
+                          backTo: `/TeacherContacts/${courseId}`,
+                        },
+                      })
+                    }
+                    className="relative flex items-center h-[62px] w-full cursor-pointer hover:bg-neutral-scale50 dark:hover:bg-neutral-scale1200 px-2 rounded-xl transition-colors"
                   >
-                    {/* Avatar */}
-                    {student.photo_url ? (
-                      <img
-                        src={resolveMediaUrl(student.photo_url)}
-                        alt={student.title}
-                        className="w-11 h-11 rounded-full object-cover shrink-0"
-                      />
-                    ) : (
-                      <div
-                        className={`w-11 h-11 rounded-full shrink-0 flex items-center justify-center ${getAvatarColor(
-                          student.id,
-                        )}`}
-                        aria-hidden="true"
-                      >
-                        <span className="text-white fa-titles-3 font-vazir">
-                          {getInitials(student.title)}
-                        </span>
-                      </div>
-                    )}
+                    {/* Avatar with online badge */}
+                    <div className="relative shrink-0">
+                      {student.photo_url ? (
+                        <img
+                          src={resolveMediaUrl(student.photo_url)}
+                          alt={student.title}
+                          className="w-11 h-11 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className={`w-11 h-11 rounded-full shrink-0 flex items-center justify-center ${getAvatarColor(
+                            student.id,
+                          )}`}
+                          aria-hidden="true"
+                        >
+                          <span className="text-white fa-titles-3 font-vazir">
+                            {getInitials(student.title)}
+                          </span>
+                        </div>
+                      )}
+                      {(student.is_online || student.status === "online") && (
+                        <span
+                          className={`absolute bottom-0 ${
+                            isRTL ? "left-0" : "right-0"
+                          } w-3 h-3 bg-emerald-500 border-2 border-white dark:border-neutral-scale1300 rounded-full shadow-sm`}
+                          title={isRTL ? "آنلاین" : "Online"}
+                        />
+                      )}
+                    </div>
 
                     {/* Student information - student names from backend are always Persian and use Vazirmatn */}
                     <div
@@ -222,13 +246,20 @@ export const TeacherContacts = () => {
                         className={`truncate mt-0.5 ${
                           isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
                         } ${
-                          student.status === "online"
-                            ? "text-primery-800 dark:text-neutral-scale200"
-                            : "text-neutral-scale800 dark:text-neutral-scale200"
+                          student.is_online || student.status === "online"
+                            ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                            : "text-neutral-scale800 dark:text-neutral-scale300"
                         }`}
                         dir={isRTL ? "rtl" : "ltr"}
                       >
-                        {displayStatus || ""}
+                        {displayStatus ||
+                          (student.is_online || student.status === "online"
+                            ? isRTL
+                              ? "آنلاین"
+                              : "Online"
+                            : isRTL
+                            ? "اخیراً آنلاین بوده"
+                            : "Last seen recently")}
                       </div>
                     </div>
 
@@ -241,9 +272,10 @@ export const TeacherContacts = () => {
                           : `Options for ${student.title}`
                       }
                       aria-expanded={openMenu === index}
-                      onClick={() =>
-                        setOpenMenu(openMenu === index ? null : index)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenu(openMenu === index ? null : index);
+                      }}
                       className={`w-6 h-6 shrink-0 flex items-center justify-center ${
                         isRTL ? "mr-auto ml-1" : "ml-auto mr-1"
                       } cursor-pointer`}
@@ -259,12 +291,16 @@ export const TeacherContacts = () => {
                       <>
                         <div
                           className="fixed inset-0 z-40"
-                          onClick={() => setOpenMenu(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenu(null);
+                          }}
                           aria-hidden="true"
                         />
 
                         <div
                           role="menu"
+                          onClick={(e) => e.stopPropagation()}
                           className={`absolute ${
                             isRTL ? "left-2" : "right-2"
                           } top-8 z-50 min-w-[90px] rounded-md bg-white dark:bg-neutral-scale1200 shadow-effects-drop-shadow-bottom border border-neutral-scale100 dark:border-neutral-scale1000 py-1`}

@@ -17,7 +17,13 @@ import {
 } from "lucide-react";
 import "@/styles/fonts.css";
 
-export const QuizFirstPage = ({ language: propLanguage }) => {
+export const QuizFirstPage = ({
+  language: propLanguage,
+  isModal = false,
+  onStartQuiz,
+  onClose,
+  initialTopic = "",
+}) => {
   const {
     language: contextLang,
     isRTL,
@@ -29,7 +35,7 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
   const navigate = useNavigate();
   const inputId = useId();
 
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(initialTopic || "");
   const [questionCount, setQuestionCount] = useState("5");
   const [difficulty, setDifficulty] = useState("normal"); // 'easy' | 'normal' | 'hard'
   const [submissionMessage, setSubmissionMessage] = useState("");
@@ -63,6 +69,11 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
   const currentLevel = difficultyLevels[difficultyIndex] || difficultyLevels[1];
 
   const handleClose = () => {
+    if (isModal && onClose) {
+      onClose();
+      return;
+    }
+
     const savedReturn = sessionStorage.getItem("quizReturnToChat");
     if (savedReturn) {
       try {
@@ -119,6 +130,11 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
         throw new Error("No quiz questions were generated.");
       }
 
+      if (isModal && onStartQuiz) {
+        onStartQuiz(rawQuiz);
+        return;
+      }
+
       // Navigate to QuizQuestionsPage with identical payload state
       navigate("/QuizQuestionsPage", {
         replace: true,
@@ -143,41 +159,43 @@ export const QuizFirstPage = ({ language: propLanguage }) => {
 
   return (
     <main
-      className="w-full md:w-[420px] min-h-dvh mx-auto flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden"
+      className={`w-full ${
+        isModal ? "h-full flex-1" : "md:w-[420px] min-h-dvh mx-auto"
+      } flex flex-col bg-[#f0f2f5] dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 transition-colors duration-200 select-none overflow-x-hidden`}
       dir={isRTL ? "rtl" : "ltr"}
     >
-      {/* ----------------- Telegram App Header ----------------- */}
-      <header className="sticky top-0 z-40 w-full h-[60px] bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 flex items-center justify-between px-3 text-white shadow-sm">
-        <div className="flex items-center gap-2 min-w-0">
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label={t("closeQuiz")}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
-          >
-            <BackIcon className="w-5 h-5" />
-          </button>
+      {/* ----------------- Telegram App Header (standalone only) ----------------- */}
+      {!isModal && (
+        <header className="sticky top-0 z-40 w-full h-[60px] bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 flex items-center justify-between px-3 text-white shadow-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={t("closeQuiz")}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
+            >
+              <BackIcon className="w-5 h-5" />
+            </button>
 
-          <div className="flex flex-col min-w-0">
-            <h1
-              className={`text-sm font-semibold truncate ${
-                isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
-              }`}
-            >
-              {t("quizGenerator")}
-            </h1>
-            <span
-              className={`text-[11px] text-white/70 truncate ${
-                isRTL ? "fa-caption-4 font-vazir" : "en-caption-4 font-inter"
-              }`}
-            >
-              {t("aiAssistant")}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <h1
+                className={`text-sm font-semibold truncate ${
+                  isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
+                }`}
+              >
+                {t("quizGenerator")}
+              </h1>
+              <span
+                className={`text-[11px] text-white/70 truncate ${
+                  isRTL ? "fa-caption-4 font-vazir" : "en-caption-4 font-inter"
+                }`}
+              >
+                {t("aiAssistant")}
+              </span>
+            </div>
           </div>
-        </div>
-
-
-      </header>
+        </header>
+      )}
 
       {/* ----------------- Content Body ----------------- */}
       <section className="flex-1 px-3.5 py-4 flex flex-col gap-3.5 overflow-y-auto">
