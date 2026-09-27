@@ -6,17 +6,31 @@
 
 import { BACKEND_URL as DEFAULT_BACKEND_URL, DGTW_URL as DEFAULT_DGTW_URL } from "@/Services/BackendConfige";
 
+const isBrowser = typeof window !== "undefined";
+
+// When accessed directly via Vite dev server (:5173) or reverse proxy,
+// relative /api/v1 routes through Vite/Traefik proxy cleanly without CORS or firewall port issues.
 const defaultNewBackendUrl =
-  typeof window !== "undefined" &&
-  window.location.hostname &&
-  window.location.hostname !== "localhost" &&
-  window.location.hostname !== "127.0.0.1"
-    ? `http://${window.location.hostname}:8080/api/v1`
-    : "http://localhost:8080/api/v1";
+  isBrowser && window.location.port === "5173"
+    ? "/api/v1"
+    : isBrowser &&
+        window.location.hostname &&
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1"
+      ? `${window.location.protocol}//${window.location.hostname}:8080/api/v1`
+      : "/api/v1";
+
+const defaultBackendUrl =
+  isBrowser && window.location.port === "5173"
+    ? ""
+    : DEFAULT_BACKEND_URL || "http://172.20.13.39:8506";
 
 export const API_CONFIG = {
   /** Main Backend URL (LLM, Quiz, Admin, Documents) */
-  BACKEND_URL: import.meta.env.VITE_BACKEND_URL || DEFAULT_BACKEND_URL || "http://172.20.13.39:8506",
+  BACKEND_URL:
+    import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== ""
+      ? import.meta.env.VITE_BACKEND_URL
+      : defaultBackendUrl,
 
   /** Digital Twin Service URL (Audio TTS streaming and user static media) */
   DGTW_URL: import.meta.env.VITE_DGTW_URL || DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir",
@@ -25,7 +39,10 @@ export const API_CONFIG = {
   STT_WS_URL: import.meta.env.VITE_STT_WS_URL || "wss://172.20.13.39:8881/ws",
 
   /** New Backend URL for courses, students, auth, chat history, and navigation */
-  NEW_BACKEND_URL: import.meta.env.VITE_NEW_BACKEND_URL || defaultNewBackendUrl,
+  NEW_BACKEND_URL:
+    import.meta.env.VITE_NEW_BACKEND_URL !== undefined && import.meta.env.VITE_NEW_BACKEND_URL !== ""
+      ? import.meta.env.VITE_NEW_BACKEND_URL
+      : defaultNewBackendUrl,
 
   /** Flag to toggle live requests to the new backend */
   USE_NEW_BACKEND: import.meta.env.VITE_USE_NEW_BACKEND !== "false",

@@ -23,5 +23,23 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      "/api/v1": {
+        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        changeOrigin: true,
+      },
+      "/bot/v1": {
+        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        changeOrigin: true,
+      },
+      "/uploads": {
+        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        changeOrigin: true,
+      },
+      "/api": {
+        target: process.env.LEGACY_BACKEND_PROXY_URL || "http://172.20.13.39:8506",
+        changeOrigin: true,
+      },
+    },
   },
 });

@@ -10,8 +10,13 @@ services:
       - "5173:5173"
     environment:
       - NODE_ENV=development
-      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
-      - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-}
+      - VITE_DGTW_URL=${VITE_DGTW_URL:-https://dgtw.um.ac.ir}
+      - VITE_NEW_BACKEND_URL=${VITE_NEW_BACKEND_URL:-}
+      - BACKEND_PROXY_URL=${BACKEND_PROXY_URL:-http://host.docker.internal:7000}
+      - LEGACY_BACKEND_PROXY_URL=${LEGACY_BACKEND_PROXY_URL:-http://172.20.13.39:8506}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/app/src
       - ./public:/app/public
