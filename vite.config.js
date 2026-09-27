@@ -25,20 +25,40 @@ export default defineConfig({
     },
     proxy: {
       "/api/v1": {
-        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, req) => {
+            console.error(`[Vite Proxy Error -> ${req.url}]:`, err.message);
+          });
+        },
       },
       "/bot/v1": {
-        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, req) => {
+            console.error(`[Vite Proxy Error -> ${req.url}]:`, err.message);
+          });
+        },
       },
       "/uploads": {
-        target: process.env.BACKEND_PROXY_URL || "http://host.docker.internal:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, req) => {
+            console.error(`[Vite Proxy Error -> ${req.url}]:`, err.message);
+          });
+        },
       },
       "/api": {
         target: process.env.LEGACY_BACKEND_PROXY_URL || "http://172.20.13.39:8506",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (err, req) => {
+            console.error(`[Vite Proxy Error -> ${req.url}]:`, err.message);
+          });
+        },
       },
     },
   },
