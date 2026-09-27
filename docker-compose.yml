@@ -4,15 +4,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    image: digital-twin-dev:latest
     container_name: digital-twin-dev
     ports:
       - "5173:5173"
     environment:
+      - NODE_ENV=development
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
       - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
     volumes:
       - .:/app
-      - /app/node_modules
+      - digital-twin-node-modules:/app/node_modules
     stdin_open: true
     tty: true
 
@@ -24,12 +26,17 @@ services:
       args:
         - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
         - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
+    image: digital-twin-prod:latest
     container_name: digital-twin-prod
     ports:
       - "8080:80"
     restart: unless-stopped
     profiles:
       - prod
+
+volumes:
+  digital-twin-node-modules:
+    name: digital-twin-node-modules
 
 networks:
   default:
