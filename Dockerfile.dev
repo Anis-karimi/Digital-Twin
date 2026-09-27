@@ -11,14 +11,11 @@ COPY package*.json .npmrc* ./
 # Install dependencies cleanly including devDependencies
 RUN npm install --include=dev
 
-# Cache installed modules so bind mount / volume mount cannot shadow them
-RUN cp -a /app/node_modules /node_modules_cache
-
 # Copy application source code
 COPY . .
 
 # Expose Vite development port
 EXPOSE 5173
 
-# Ensure /app/node_modules is populated from cache if volume is empty, then start Vite
-CMD ["sh", "-c", "if [ ! -f /app/node_modules/.bin/vite ]; then echo 'Initializing node_modules from image cache...'; cp -a /node_modules_cache/. /app/node_modules/; fi && exec npm run dev -- --host 0.0.0.0"]
+# Start Vite dev server bound to 0.0.0.0
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

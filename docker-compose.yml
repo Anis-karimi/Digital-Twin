@@ -13,8 +13,10 @@ services:
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
       - VITE_DGTW_URL=${VITE_DGTW_URL:-http://localhost:5000}
     volumes:
-      - .:/app
-      - digital-twin-node-modules:/app/node_modules
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
     stdin_open: true
     tty: true
 
@@ -33,10 +35,6 @@ services:
     restart: unless-stopped
     profiles:
       - prod
-
-volumes:
-  digital-twin-node-modules:
-    name: digital-twin-node-modules
 
 networks:
   default:
