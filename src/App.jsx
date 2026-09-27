@@ -1,8 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useContext } from "react";
 
-import { Nav } from "@/Components/Nav";
-
 import { TeacherResource } from "@/Pages/Teacher/TeacherResourcesManagement";
 import { Language } from "@/Pages/Language";
 import { Theme } from "@/Pages/Theme";
@@ -11,11 +9,10 @@ import { TeacherNotification } from "@/Pages/Teacher/TeacherNotification";
 import { TeacherHome } from "@/Pages/Teacher/TeacherHome";
 import { TeacherSettings } from "@/Pages/Teacher/TeacherSettings";
 import { ChatArea } from "@/Pages/Teacher/ChatArea";
-
-// import { TeacherMyCourses } from "@/Pages/Teacher/TeacherMyCoursesPage";
-
 import { TeacherLessonsPage } from "@/Pages/Teacher/TeacherLessonPage";
 import { TeacherContacts } from "@/Pages/Teacher/TeacherContacts";
+import { TeacherExams } from "@/Pages/Teacher/TeacherExamsPage";
+
 import { StudentHome } from "@/Pages/Student/StudentHome";
 import { StudentSettings } from "@/Pages/Student/StudentSettings";
 import { StudentExams } from "@/Pages/Student/StudentExamsPage";
@@ -27,10 +24,9 @@ import { QuizQuestionsPage } from "@/Pages/QuizQuestionsPage";
 import { QuizResultPage } from "@/Pages/QuizResultPage";
 import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 
-import { TeacherExams } from "./Pages/Teacher/TeacherExamsPage";
-
 import { AppProvider, AppContext } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
+import { StudentLayout } from "@/Layouts/StudentLayout";
 import { Login } from "@/Pages/Login";
 
 function StudentsRoute() {
@@ -46,7 +42,6 @@ function App() {
     <AppProvider>
       <div style={{ textAlign: "center" }}>
         <Router>
-          <Nav />
 
           <Routes>
             {/* ==================== Auth ==================== */}
@@ -100,24 +95,27 @@ function App() {
 
             {/* ==================== Student ==================== */}
 
-            <Route path="/Student" element={<StudentHome />} />
-            <Route path="/student" element={<StudentHome />} />
-            <Route path="/StudentHome" element={<StudentHome />} />
-            <Route path="/students" element={<StudentsRoute />} />
-            <Route path="/Students" element={<StudentsRoute />} />
+            <Route element={<StudentLayout />}>
 
-            <Route path="/StudentSettings" element={<StudentSettings />} />
-            <Route path="/StudentExams" element={<StudentExams />} />
-            <Route path="/studentexams" element={<Navigate to="/StudentExams" replace />} />
-            <Route path="/StudentExam" element={<Navigate to="/StudentExams" replace />} />
-            <Route path="/studentexam" element={<Navigate to="/StudentExams" replace />} />
-            <Route path="/StudentExam/:id" element={<StudentExamPage />} />
-            <Route path="/studentexam/:id" element={<StudentExamPage />} />
-            <Route path="/StudentExamResult/:id" element={<StudentExamResultPage />} />
-            <Route path="/studentexamresult/:id" element={<StudentExamResultPage />} />
-            <Route path="/ExamResult/:id" element={<StudentExamResultPage />} />
-            <Route path="/examresult/:id" element={<StudentExamResultPage />} />
+              <Route path="/Student" element={<StudentHome />} />
+              <Route path="/student" element={<StudentHome />} />
+              <Route path="/StudentHome" element={<StudentHome />} />
+              <Route path="/students" element={<StudentsRoute />} />
+              <Route path="/Students" element={<StudentsRoute />} />
 
+              <Route path="/StudentSettings" element={<StudentSettings />} />
+              <Route path="/StudentExams" element={<StudentExams />} />
+              <Route path="/studentexams" element={<Navigate to="/StudentExams" replace />} />
+              <Route path="/StudentExam" element={<Navigate to="/StudentExams" replace />} />
+              <Route path="/studentexam" element={<Navigate to="/StudentExams" replace />} />
+              <Route path="/StudentExam/:id" element={<StudentExamPage />} />
+              <Route path="/studentexam/:id" element={<StudentExamPage />} />
+              <Route path="/StudentExamResult/:id" element={<StudentExamResultPage />} />
+              <Route path="/studentexamresult/:id" element={<StudentExamResultPage />} />
+              <Route path="/ExamResult/:id" element={<StudentExamResultPage />} />
+              <Route path="/examresult/:id" element={<StudentExamResultPage />} />
+
+            </Route>
             {/* =================== Quiz Pages =================== */}
 
             <Route path="/QuizFirstPage" element={<QuizFirstPage />} />

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Award,
   BarChart3,
+  AlertCircle,
   BookOpen,
 } from "lucide-react";
 import "@/styles/Allpages.css";
@@ -15,12 +16,115 @@ import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
-import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
-import { FooterGlass } from "@/Components/FooterGlass";
 import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
 import { toPersianDigits } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
+
+
+const mockStudentExams = [
+  // 🟢 Active / In Progress
+  {
+    id: "exam-001",
+    assignment_id: "exam-001",
+    session_id: "session-001",
+    title: "آزمون فصل اول",
+    course: "سیستم عامل",
+    topic: "مفاهیم اولیه سیستم عامل، ساختار سیستم‌ها و System Calls",
+    date: "1405/07/05",
+    startAt: "2026-09-27T13:30:00+03:30",
+    endAt: "2026-09-27T14:30:00+03:30",
+    duration: 60,
+    status: "active",
+    score: null,
+    passed: null,
+
+    windowStart: "13:00",
+    windowEnd: "16:00",
+
+    studentSlotStart: "13:30",
+    studentSlotEnd: "14:30",
+
+    gapMinutes: 5,
+  },
+
+  // 🔵 Upcoming / Waiting for student's slot
+  {
+    id: "exam-002",
+    assignment_id: "exam-002",
+    session_id: "session-002",
+    title: "آزمون میان‌ترم",
+    course: "سیستم عامل",
+    topic: "مدیریت پردازش‌ها، Threadها و زمان‌بندی پردازنده",
+    date: "1405/07/05",
+    startAt: "2026-09-27T15:00:00+03:30",
+    endAt: "2026-09-27T15:30:00+03:30",
+    duration: 30,
+    status: "assigned",
+    score: null,
+    passed: null,
+
+    windowStart: "18:00",
+    windowEnd: "22:00",
+
+    studentSlotStart: "19:00",
+    studentSlotEnd: "19:30",
+
+    gapMinutes: 5,
+  },
+
+  // 🟡 Assigned / Current Slot
+  {
+    id: "exam-003",
+    assignment_id: "exam-003",
+    session_id: "session-003",
+    title: "آزمون مدیریت حافظه",
+    course: "سیستم عامل",
+    topic: "Paging، Segmentation و Virtual Memory",
+    date: "1405/07/05",
+    startAt: "2026-09-27T14:00:00+03:30",
+    endAt: "2026-09-27T14:25:00+03:30",
+    duration: 25,
+    status: "assigned",
+    score: null,
+    passed: null,
+
+    windowStart: "14:00",
+    windowEnd: "17:00",
+
+    studentSlotStart: "14:00",
+    studentSlotEnd: "14:25",
+
+    gapMinutes: 5,
+  },
+
+  // 🟢 Completed / Has Result
+  {
+    id: "exam-004",
+    assignment_id: "exam-004",
+    session_id: "session-004",
+    title: "آزمون فصل دوم",
+    course: "سیستم عامل",
+    topic: "فرآیندها، Threadها و ارتباط بین فرآیندها",
+    date: "1405/07/03",
+    startAt: "2026-09-25T10:00:00+03:30",
+    endAt: "2026-09-25T10:30:00+03:30",
+    duration: 30,
+    status: "completed",
+    score: 0.87,
+    passed: true,
+
+    windowStart: "09:00",
+    windowEnd: "14:00",
+
+    studentSlotStart: "10:00",
+    studentSlotEnd: "10:30",
+
+    gapMinutes: 5,
+  },
+];
+
+
   const navigate = useNavigate();
   const { isRTL, t } = useContext(AppContext);
 
@@ -28,6 +132,24 @@ export const StudentExams = () => {
   const [loading, setLoading] = useState(true);
   const [schedulingExam, setSchedulingExam] = useState(null);
   const [turnWarning, setTurnWarning] = useState("");
+
+  const [now, setNow] = useState(new Date());
+
+  const formatCountdown = (milliseconds) => {
+    if (milliseconds <= 0) return "00:00:00";
+
+    const totalSeconds = Math.floor(milliseconds / 1000);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return [
+      String(hours).padStart(2, "0"),
+      String(minutes).padStart(2, "0"),
+      String(seconds).padStart(2, "0"),
+    ].join(":");
+  };
 
   const checkSlotTiming = (exam) => {
     if (exam.status === "completed") {
@@ -40,28 +162,37 @@ export const StudentExams = () => {
       return { status: "ready", canEnter: true };
     }
 
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentTime = now;
+    const currentMinutes =
+      currentTime.getHours() * 60 + currentTime.getMinutes();
 
     const [sh, sm] = String(exam.studentSlotStart).split(":").map(Number);
     const [eh, em] = String(exam.studentSlotEnd).split(":").map(Number);
-    const slotStartMinutes = sh * 60 + sm;
-    const slotEndMinutes = eh * 60 + em;
 
-    // 1-minute early grace period for buffer
-    if (currentMinutes < slotStartMinutes - 1) {
-      const waitMins = slotStartMinutes - currentMinutes;
+    const slotStart = new Date(currentTime);
+    slotStart.setHours(sh, sm, 0, 0);
+
+    const slotEnd = new Date(currentTime);
+    slotEnd.setHours(eh, em, 0, 0);
+
+    const remainingUntilStart = slotStart.getTime() - currentTime.getTime();
+
+    if (remainingUntilStart > 60 * 1000) {
+      const waitMins = Math.ceil(remainingUntilStart / 60000);
+
       const waitStr =
         waitMins >= 60
           ? `${Math.floor(waitMins / 60)} ساعت و ${waitMins % 60} دقیقه دیگر`
           : `${waitMins} دقیقه دیگر`;
+
       return {
         status: "upcoming",
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
         waitStr,
-        message: `نوبت حضور شما هنوز فرا نرسیده است (${waitStr} - ساعت ${toPersianDigits(exam.studentSlotStart)} تا ${toPersianDigits(exam.studentSlotEnd)}). امکان ورود قبل از نوبت وجود ندارد. لطفاً در ساعت مقرر مراجعه فرمایید یا در صورت تمایل نوبت خود را تغییر دهید.`,
+        remainingUntilStart,
+        message: `نوبت حضور شما هنوز فرا نرسیده است.`,
       };
     }
 
@@ -71,22 +202,23 @@ export const StudentExams = () => {
       windowEndMinutes = wh * 60 + wm;
     }
 
-    if (currentMinutes > slotEndMinutes) {
+    if (currentTime > slotEnd) {
       if (currentMinutes <= windowEndMinutes) {
         return {
           status: "current",
           canEnter: true,
           slotStart: exam.studentSlotStart,
           slotEnd: exam.studentSlotEnd,
-          message: "بازه آزمون فعال است. ورود به آزمون در نوبت جاری...",
+          message: "بازه آزمون فعال است.",
         };
       }
+
       return {
         status: "passed",
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
-        message: `زمان برگزاری این آزمون به پایان رسیده است (ساعت ${toPersianDigits(exam.studentSlotEnd)}).`,
+        message: `زمان برگزاری این آزمون به پایان رسیده است.`,
       };
     }
 
@@ -116,92 +248,113 @@ export const StudentExams = () => {
   };
 
   // Fetch real assigned exams from backend
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   setLoading(true);
 
-    examsApi
-      .getMyStudentExams()
-      .then((data) => {
-        if (!isMounted) return;
-        if (Array.isArray(data) && data.length > 0) {
-          const seenIds = new Set();
-          const seenTitles = new Set();
-          const mapped = [];
+  //   examsApi
+  //     .getMyStudentExams()
+  //     .then((data) => {
+  //       if (!isMounted) return;
+  //       if (Array.isArray(data) && data.length > 0) {
+  //         const seenIds = new Set();
+  //         const seenTitles = new Set();
+  //         const mapped = [];
 
-          for (const item of data) {
-            const key = String(item.id || item.assignment_id);
-            const titleKey = (item.title || "").trim().toLowerCase();
-            if (seenIds.has(key) || (titleKey && seenTitles.has(titleKey))) continue;
-            seenIds.add(key);
-            if (titleKey) seenTitles.add(titleKey);
+  //         for (const item of data) {
+  //           const key = String(item.id || item.assignment_id);
+  //           const titleKey = (item.title || "").trim().toLowerCase();
+  //           if (seenIds.has(key) || (titleKey && seenTitles.has(titleKey))) continue;
+  //           seenIds.add(key);
+  //           if (titleKey) seenTitles.add(titleKey);
 
-            const topic = (Array.isArray(item.goals) && item.goals.length > 0)
-              ? item.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
-              : (item.topic || item.description || item.title);
+  //           const topic = (Array.isArray(item.goals) && item.goals.length > 0)
+  //             ? item.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
+  //             : (item.topic || item.description || item.title);
 
-            mapped.push({
-              id: key,
-              assignment_id: item.assignment_id || key,
-              session_id: item.session_id,
-              title: item.title,
-              course: item.course || "سیستم عامل",
-              topic: topic || "مباحث آزمون",
-              date: item.date || item.exam_date || "1405/07/20",
-              startAt: item.start_at,
-              endAt: item.end_at,
-              duration: item.duration || item.duration_minutes || 20,
-              status: item.status || "assigned",
-              score: item.score,
-              passed: item.passed,
-              windowStart: item.window_start || item.start_at || "10:00",
-              windowEnd: item.window_end || item.end_at || "14:00",
-              studentSlotStart: item.student_slot_start,
-              studentSlotEnd: item.student_slot_end,
-              gapMinutes: item.gap_minutes || 5,
-            });
-          }
-          setExams(mapped);
-        } else {
-          // Fallback to course quizzes if empty
-          examsApi.getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
-            .then((quizzes) => {
-              if (!isMounted || !Array.isArray(quizzes) || quizzes.length === 0) return;
-              const mapped = quizzes.map((q) => {
-                const topic = (Array.isArray(q.goals) && q.goals.length > 0)
-                  ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
-                  : (q.description || "مباحث آزمون");
+  //           mapped.push({
+  //             id: key,
+  //             assignment_id: item.assignment_id || key,
+  //             session_id: item.session_id,
+  //             title: item.title,
+  //             course: item.course || "سیستم عامل",
+  //             topic: topic || "مباحث آزمون",
+  //             date: item.date || item.exam_date || "1405/07/20",
+  //             startAt: item.start_at,
+  //             endAt: item.end_at,
+  //             duration: item.duration || item.duration_minutes || 20,
+  //             status: item.status || "assigned",
+  //             score: item.score,
+  //             passed: item.passed,
+  //             windowStart: item.window_start || item.start_at || "10:00",
+  //             windowEnd: item.window_end || item.end_at || "14:00",
+  //             studentSlotStart: item.student_slot_start,
+  //             studentSlotEnd: item.student_slot_end,
+  //             gapMinutes: item.gap_minutes || 5,
+  //           });
+  //         }
+  //         setExams(mapped);
+  //       } else {
+  //         // Fallback to course quizzes if empty
+  //         examsApi.getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
+  //           .then((quizzes) => {
+  //             if (!isMounted || !Array.isArray(quizzes) || quizzes.length === 0) return;
+  //             const mapped = quizzes.map((q) => {
+  //               const topic = (Array.isArray(q.goals) && q.goals.length > 0)
+  //                 ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
+  //                 : (q.description || "مباحث آزمون");
 
-                return {
-                  id: q.quiz_id || q.id,
-                  assignment_id: q.quiz_id || q.id,
-                  session_id: null,
-                  title: q.title,
-                  course: "سیستم عامل",
-                  topic: topic || "مباحث آزمون",
-                  date: q.exam_date || "1405/07/20",
-                  duration: q.duration_minutes || 20,
-                  status: "assigned",
-                  score: null,
-                  passed: null,
-                };
-              });
-              setExams(mapped);
-            })
-            .catch(() => {});
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to load student exams:", err);
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+  //               return {
+  //                 id: q.quiz_id || q.id,
+  //                 assignment_id: q.quiz_id || q.id,
+  //                 session_id: null,
+  //                 title: q.title,
+  //                 course: "سیستم عامل",
+  //                 topic: topic || "مباحث آزمون",
+  //                 date: q.exam_date || "1405/07/20",
+  //                 duration: q.duration_minutes || 20,
+  //                 status: "assigned",
+  //                 score: null,
+  //                 passed: null,
+  //               };
+  //             });
+  //             setExams(mapped);
+  //           })
+  //           .catch(() => {});
+  //       }
+  //     })
+  //     .catch((err) => {
+  //       console.warn("Failed to load student exams:", err);
+  //     })
+  //     .finally(() => {
+  //       if (isMounted) setLoading(false);
+  //     });
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, []);
+
+
+
+// Temporary mock exams
+useEffect(() => {
+  setLoading(true);
+
+  const timer = setTimeout(() => {
+    setExams(mockStudentExams);
+    setLoading(false);
+  }, 300);
+
+  return () => clearTimeout(timer);
+}, []);
+
+
+
+
+
+
+
 
   const getExamStatus = (exam) => {
     if (exam.status === "completed") return "completed";
@@ -240,15 +393,24 @@ export const StudentExams = () => {
             onClick={() => navigate(-1)}
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-neutral-scale70 cursor-pointer"
+            className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
-            <ArrowLeft className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
+            <ArrowLeft
+              className={`!w-6 !h-6 text-neutral-scale70 ${
+                isRTL ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
-          <h1 className="flex-1 text-center font-vazir font-semibold text-lg text-neutral-scale70">
+          <h1
+            className={`flex-1 mx-2 text-neutral-scale70 ${
+              isRTL
+                ? "fa-title-1 font-vazir text-right"
+                : "en-title-1 font-inter text-left"
+            } truncate whitespace-nowrap`}
+          >
             {isRTL ? "آزمون‌ها" : "Exams"}
           </h1>
-          <div className="w-10" />
         </div>
       </header>
 
@@ -294,9 +456,36 @@ export const StudentExams = () => {
               ) : (
                 exams.map((exam) => {
                   const status = getExamStatus(exam);
+                  const timing = checkSlotTiming(exam);
+
                   const isCompleted = status === "completed";
-                  const isActive = status === "active";
-                  const isScheduled = status === "assigned";
+
+                  /*
+                   * Active:
+                   * آزمون فعال شده ولی دانشجو هنوز وارد آزمون نشده.
+                   */
+                  const isReadyToStart =
+                    status === "active" ||
+                    (status === "assigned" && timing.status === "current");
+
+                  /*
+                   * Started:
+                   * دانشجو قبلاً وارد آزمون شده و از آن خارج شده،
+                   * بنابراین باید Resume Exam نمایش داده شود.
+                   */
+                  const isStarted = exam.status === "started";
+
+                  /*
+                   * برای کنترل استایل‌هایی که قبلاً با isActive کار می‌کردند،
+                   * این دو حالت را با هم در نظر می‌گیریم.
+                   */
+                  const isActive = isReadyToStart || isStarted;
+
+                  const isScheduled = status === "assigned" && !isActive;
+
+                  const isUpcoming = timing.status === "upcoming";
+                  const isPassed = timing.status === "passed";
+   
 
                   return (
                     <div
@@ -316,20 +505,20 @@ export const StudentExams = () => {
                               dark:bg-emerald-950/20
                             `
                             : isActive
-                            ? `
-                              border-success-500
-                              dark:border-success-600
-                              bg-green-50
+                              ? `
+                              border-warning-500
+                              dark:border-warning-600
+                              bg-yellow-50
                               dark:bg-green-950/30
                             `
-                            : isScheduled
-                            ? `
+                              : isScheduled
+                                ? `
                               border-primery-500
                               dark:border-primery-800
-                              bg-blue-100
+                              bg-blue-50
                               dark:bg-blue-950/30
                             `
-                            : `
+                                : `
                               border-neutral-scale600
                               dark:border-neutral-scale1500
                               bg-neutral-scale90
@@ -356,10 +545,10 @@ export const StudentExams = () => {
                                 isCompleted
                                   ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300"
                                   : isActive
-                                  ? "bg-success-100 dark:bg-success-1000 text-success-1000 dark:text-success-100"
-                                  : isScheduled
-                                  ? "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90"
-                                  : "bg-neutral-scale300 dark:bg-neutral-scale1200 text-neutral-scale700 dark:text-neutral-scale400"
+                                    ? "bg-warning-100 dark:bg-warning-1000 text-warning-1000 dark:text-warning-100"
+                                    : isScheduled
+                                      ? "bg-primery-90 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90"
+                                      : "bg-neutral-scale300 dark:bg-neutral-scale1200 text-neutral-scale700 dark:text-neutral-scale400"
                               }
                             `}
                           >
@@ -401,10 +590,10 @@ export const StudentExams = () => {
                                 isCompleted
                                   ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
                                   : isActive
-                                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-500/30"
-                                  : isScheduled
-                                  ? "bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 border border-primery-500/30"
-                                  : "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale400"
+                                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-500/30"
+                                    : isScheduled
+                                      ? "bg-blue-100 dark:bg-primery-1000 text-primery-800 dark:text-primery-90 border border-blue-500/30"
+                                      : "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale400"
                               }
                             `}
                           >
@@ -417,21 +606,28 @@ export const StudentExams = () => {
                                   isCompleted
                                     ? "bg-emerald-600"
                                     : isActive
-                                    ? "bg-amber-500 animate-ping"
-                                    : isScheduled
-                                    ? "bg-primery-600"
-                                    : "bg-neutral-scale600"
+                                      ? "bg-amber-500 animate-ping"
+                                      : isScheduled
+                                        ? "bg-primery-600"
+                                        : "bg-neutral-scale600"
                                 }
                               `}
                             />
                             <span className="fa-caption-1 font-vazir text-[11px] font-medium">
                               {isCompleted
-                                ? (exam.score != null ? `تکمیل شده (${Math.round(exam.score * 100)}%)` : "تکمیل شده")
+                                ? exam.score != null
+                                  ? `تکمیل شده (${Math.round(exam.score * 100)}%)`
+                                  : "تکمیل شده"
                                 : isActive
-                                ? "در حال برگزاری"
-                                : isScheduled
-                                ? (checkSlotTiming(exam).status === "current" ? "آماده شروع" : checkSlotTiming(exam).status === "upcoming" ? "در انتظار نوبت" : "تعریف شده")
-                                : "پایان یافته"}
+                                  ? "در حال برگزاری"
+                                  : isScheduled
+                                    ? checkSlotTiming(exam).status === "current"
+                                      ? "آماده شروع"
+                                      : checkSlotTiming(exam).status ===
+                                          "upcoming"
+                                        ? "در انتظار نوبت"
+                                        : "تعریف شده"
+                                    : "پایان یافته"}
                             </span>
                           </div>
                         </div>
@@ -447,10 +643,10 @@ export const StudentExams = () => {
                             isCompleted
                               ? "bg-emerald-500/20"
                               : isActive
-                              ? "bg-success-500/20"
-                              : isScheduled
-                              ? "bg-primery-500/20"
-                              : "bg-neutral-scale300 dark:bg-neutral-scale1200"
+                                ? "bg-success-500/20"
+                                : isScheduled
+                                  ? "bg-primery-500/20"
+                                  : "bg-neutral-scale300 dark:bg-neutral-scale1200"
                           }
                         `}
                       />
@@ -477,7 +673,11 @@ export const StudentExams = () => {
 
                         <div className="flex items-center gap-[5px]">
                           <Clock3 className="!w-[14px] !h-[14px] shrink-0 text-primery-600 dark:text-primery-400" />
-                          <span>{exam.duration ? `${exam.duration} دقیقه` : "۲۰ دقیقه"}</span>
+                          <span>
+                            {exam.duration
+                              ? `${exam.duration} دقیقه`
+                              : "۲۰ دقیقه"}
+                          </span>
                         </div>
                       </div>
 
@@ -487,10 +687,13 @@ export const StudentExams = () => {
                         <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
                           <span className="flex items-center gap-1 font-medium">
                             <Clock3 className="w-3 h-3 text-[#2481cc]" />
-                            <span>{isRTL ? "بازه کلی آزمون:" : "Overall Window:"}</span>
+                            <span>
+                              {isRTL ? "بازه کلی آزمون:" : "Overall Window:"}
+                            </span>
                           </span>
                           <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                            {toPersianDigits(exam.windowStart || "10:00")} تا {toPersianDigits(exam.windowEnd || "14:00")}
+                            {toPersianDigits(exam.windowStart || "10:00")} تا{" "}
+                            {toPersianDigits(exam.windowEnd || "14:00")}
                           </span>
                         </div>
 
@@ -498,33 +701,53 @@ export const StudentExams = () => {
                         <div className="flex items-center justify-between pt-1 border-t border-neutral-200/50 dark:border-neutral-800">
                           <span className="flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>{isActive ? (isRTL ? "وضعیت جلسه:" : "Session Status:") : (isRTL ? "نوبت حضور شما:" : "Your Slot:")}</span>
+                            <span>
+                              {isActive
+                                ? isRTL
+                                  ? "وضعیت جلسه:"
+                                  : "Session Status:"
+                                : isRTL
+                                  ? "نوبت حضور شما:"
+                                  : "Your Slot:"}
+                            </span>
                           </span>
                           <span className="font-bold text-xs text-emerald-800 dark:text-emerald-300">
                             {isActive ? (
                               <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                                {isRTL ? "در حال برگزاری (پاسخ به سوالات)" : "In Progress"}
+                                {isRTL
+                                  ? "در حال برگزاری (پاسخ به سوالات)"
+                                  : "In Progress"}
                               </span>
                             ) : exam.studentSlotStart && exam.studentSlotEnd ? (
                               `${toPersianDigits(exam.studentSlotStart)} تا ${toPersianDigits(exam.studentSlotEnd)}`
                             ) : (
-                              <span>{toPersianDigits(exam.windowStart || "10:00")}</span>
+                              <span>
+                                {toPersianDigits(exam.windowStart || "10:00")}
+                              </span>
                             )}
                           </span>
                         </div>
                       </div>
 
                       {/* Button: Time Schedule Reschedule (Strictly only if assigned and not yet started or completed) */}
-                      {exam.status === "assigned" && (
-                        <button
-                          type="button"
-                          onClick={() => setSchedulingExam(exam)}
-                          className="w-full mt-2 h-7 rounded-lg border border-[#2481cc]/40 dark:border-[#52a2f6]/40 bg-[#edf5fd]/70 dark:bg-[#182533]/70 hover:bg-[#e1eefc] dark:hover:bg-[#203244] text-[#2481cc] dark:text-[#52a2f6] text-[11px] font-bold font-vazir flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Clock3 className="w-3.5 h-3.5" />
-                          <span>{isRTL ? "زمان‌بندی و تغییر نوبت حضور" : "Change Time Slot"}</span>
-                        </button>
-                      )}
+                      {/* Change Time Slot - only before the exam starts */}
+                      {exam.status === "assigned" &&
+                        !isActive &&
+                        !isCompleted && (
+                          <button
+                            type="button"
+                            onClick={() => setSchedulingExam(exam)}
+                            className="w-full mt-2 h-7 rounded-lg border border-[#2481cc]/40 dark:border-[#52a2f6]/40 bg-[#edf5fd]/70 dark:bg-[#182533]/70 hover:bg-[#e1eefc] dark:hover:bg-[#203244] text-[#2481cc] dark:text-[#52a2f6] text-[11px] font-bold font-vazir flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Clock3 className="w-3.5 h-3.5" />
+
+                            <span>
+                              {isRTL
+                                ? "زمان‌بندی و تغییر نوبت حضور"
+                                : "Change Time Slot"}
+                            </span>
+                          </button>
+                        )}
 
                       {/* Action Button */}
                       {(() => {
@@ -535,65 +758,118 @@ export const StudentExams = () => {
                         return (
                           <button
                             type="button"
+                            disabled={isUpcoming || isPassed}
                             onClick={() => handleStartExam(exam)}
                             className={`
-                              w-full
-                              flex
-                              items-center
-                              justify-center
-                              gap-[6px]
-                              h-[36px]
-                              mt-[10px]
-                              px-[10px]
-                              rounded-[9px]
-                              font-vazir
-                              text-xs
-                              font-semibold
-                              transition-all
-                              active:scale-[0.98]
-                              cursor-pointer
-                              shadow-xs
-                              ${
-                                isCompleted
-                                  ? "bg-emerald-700 hover:bg-emerald-800 text-white"
-                                  : isActive
-                                  ? "bg-amber-600 hover:bg-amber-700 text-white animate-pulse"
-                                  : isUpcoming
-                                  ? "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale1000 dark:text-neutral-scale300 hover:bg-neutral-scale300 dark:hover:bg-neutral-scale1000 border border-neutral-scale300 dark:border-neutral-scale1000"
-                                  : isPassed
-                                  ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30"
-                                  : "bg-primery-700 hover:bg-primery-800 text-white shadow-primery-700/20 shadow-md"
-                              }
-                            `}
+    w-full
+    flex
+    items-center
+    justify-center
+    gap-[6px]
+    h-[36px]
+    mt-[10px]
+    px-[10px]
+    rounded-[9px]
+    font-vazir
+    text-xs
+    font-semibold
+    transition-all
+    ${
+      isCompleted
+        ? `
+          bg-emerald-700
+          hover:bg-emerald-800
+          text-white
+          cursor-pointer
+        `
+        : isActive
+          ? `
+            bg-amber-600
+            hover:bg-amber-700
+            text-white
+            cursor-pointer
+            active:scale-[0.98]
+          `
+          : isUpcoming
+            ? `
+              bg-neutral-scale200
+              dark:bg-neutral-scale1100
+              text-neutral-scale1000
+              dark:text-neutral-scale300
+              border
+              border-neutral-scale300
+              dark:border-neutral-scale1000
+              cursor-not-allowed
+            `
+            : isPassed
+              ? `
+                bg-red-500/10
+                text-red-600
+                dark:text-red-400
+                border
+                border-red-500/30
+                cursor-not-allowed
+              `
+              : `
+                bg-primery-700
+                hover:bg-primery-800
+                text-white
+                cursor-pointer
+              `
+    }
+  `}
                           >
                             {isCompleted ? (
                               <>
                                 <BarChart3 className="!w-[14px] !h-[14px]" />
-                                <span>{isRTL ? "مشاهده کارنامه و نتیجه" : "View Result & Report"}</span>
+                                <span>
+                                  {isRTL
+                                    ? "مشاهده کارنامه و نتیجه"
+                                    : "View Result & Report"}
+                                </span>
+                              </>
+                            ) : isUpcoming ? (
+                              <>
+                                <Clock3 className="!w-[14px] !h-[14px]" />
+
+                                <span>
+                                  {isRTL ? "شروع آزمون" : "Start Exam"}
+                                </span>
+
+                                <span
+                                  dir="ltr"
+                                  className="font-inter font-bold tabular-nums"
+                                >
+                                  {formatCountdown(timing.remainingUntilStart)}
+                                </span>
                               </>
                             ) : isActive ? (
                               <>
                                 <Play className="!w-[14px] !h-[14px]" />
-                                <span>{isRTL ? "ادامه آزمون (در حال برگزاری)" : "Resume Exam"}</span>
-                              </>
-                            ) : isUpcoming ? (
-                              <>
-                                <Clock3 className="!w-[14px] !h-[14px] text-amber-500" />
+
                                 <span>
                                   {isRTL
-                                    ? `در انتظار نوبت (${toPersianDigits(exam.studentSlotStart || "10:00")})`
-                                    : `Upcoming Slot (${exam.studentSlotStart})`}
+                                    ? "ادامه آزمون (در حال برگزاری)"
+                                    : "Resume Exam"}
                                 </span>
                               </>
                             ) : isPassed ? (
                               <>
                                 <AlertCircle className="!w-[14px] !h-[14px]" />
-                                <span>{isRTL ? "زمان نوبت شما به پایان رسیده" : "Slot Expired"}</span>
+
+                                <span>
+                                  {isRTL
+                                    ? "زمان نوبت شما به پایان رسیده"
+                                    : "Slot Expired"}
+                                </span>
                               </>
                             ) : (
                               <>
                                 <Play className="!w-[14px] !h-[14px]" />
-                                <span>{isRTL ? "شروع آزمون شفاهی (نوبت شما)" : "Start Oral Exam"}</span>
+
+                                <span>
+                                  {isRTL ? "شروع آزمون" : "Start Exam"}
+                                </span>
                               </>
                             )}
                           </button>
@@ -642,10 +918,6 @@ export const StudentExams = () => {
         />
       )}
 
-      {/* Footer Navigation Bar */}
-      <FooterGlass>
-        <StudentNavigationBar />
-      </FooterGlass>
     </main>
   );
 };
