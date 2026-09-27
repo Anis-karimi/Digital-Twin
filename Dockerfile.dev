@@ -4,12 +4,24 @@ WORKDIR /app
 
 # Ensure development environment
 ENV NODE_ENV=development
+ENV PATH="/app/node_modules/.bin:$PATH"
 
 # Copy dependency definitions and npm configuration
 COPY package*.json .npmrc* ./
 
-# Install dependencies cleanly including devDependencies
-RUN npm install --include=dev
+# Install dependencies cleanly (sanitizing any proxy variables passed by Docker build)
+RUN for var in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY all_proxy ALL_PROXY npm_config_proxy npm_config_https_proxy; do \
+      eval val=\$$var; \
+      if [ -z "$val" ]; then \
+        unset $var; \
+      else \
+        case "$val" in \
+          http://*|https://*|socks5://*) ;; \
+          *) eval export $var="http://\$val" ;; \
+        esac; \
+      fi; \
+    done && \
+    npm install --include=dev
 
 # Copy application source code
 COPY . .
@@ -17,5 +29,5 @@ COPY . .
 # Expose Vite development port
 EXPOSE 5173
 
-# Start Vite dev server bound to 0.0.0.0
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Start Vite directly with Node to bypass shell PATH lookup
+CMD ["node", "./node_modules/vite/bin/vite.js", "--host", "0.0.0.0"]
