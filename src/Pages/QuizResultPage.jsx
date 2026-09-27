@@ -99,6 +99,15 @@ export const QuizResultPage = ({
     navigate("/", { replace: true });
   };
 
+  const stateData = (isModal && modalResultData ? modalResultData : location.state) || {};
+
+  useEffect(() => {
+    if (stateData?.exam) {
+      const targetId = stateData.exam.assignment_id || stateData.exam.id;
+      navigate(`/StudentExamResult/${targetId}`, { state: stateData, replace: true });
+    }
+  }, [stateData, navigate]);
+
   // Retrieve quiz evaluation stats from location state or modal props
   const {
     correctCount = 0,
@@ -106,7 +115,7 @@ export const QuizResultPage = ({
     totalQuestions = 0,
     quizData = [],
     selectedAnswers = {},
-  } = (isModal && modalResultData ? modalResultData : location.state) || {};
+  } = stateData;
 
   const totalAnswers = correctCount + incorrectCount;
   const unansweredCount = Math.max(0, totalQuestions - totalAnswers);

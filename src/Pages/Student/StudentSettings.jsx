@@ -31,12 +31,28 @@ const settingsItems = [
 ];
 
 export const StudentSettings = () => {
-  const { isRTL, logoutUser, t } = useContext(AppContext);
+  const { isRTL, logoutUser, t, currentUser } = useContext(AppContext);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const [photoPreview, setPhotoPreview] = useState("");
   const [settings, setSettings] = useState(null);
+
+  const firstName =
+    currentUser?.first_name ||
+    (currentUser?.name ? currentUser.name.split(" ")[0] : "علیرضا");
+  const lastName =
+    currentUser?.last_name ||
+    (currentUser?.name ? currentUser.name.split(" ").slice(1).join(" ") : "رضایی");
+  const fullName = `${firstName} ${lastName}`.trim() || "علیرضا رضایی";
+  const email =
+    currentUser?.email ||
+    (currentUser?.username
+      ? currentUser.username.includes("@")
+        ? currentUser.username
+        : `${currentUser.username}@dt.internal`
+      : "alireza_rezaei@dt.internal");
+  const avatar = photoPreview || currentUser?.photo_url || currentUser?.profile_url;
 
   const loadSettings = async () => {
     try {
@@ -87,14 +103,16 @@ export const StudentSettings = () => {
       >
         {/* // ---------------------- Profile photo ---------------------------- */}
         <div className="flex w-[104px] h-[143px] relative mt-1.5 mx-auto flex-col items-center gap-[15px]">
-          {photoPreview ? (
+          {avatar ? (
             <img
               className="relative self-stretch w-full rounded-full aspect-[1] object-cover border-[3px] border-neutral-scale100"
               alt="Profile photo"
-              src={photoPreview}
+              src={avatar}
             />
           ) : (
-            <div className="relative self-stretch w-full rounded-full aspect-[1] bg-primery-90 border-[1px] border-primery-100" />
+            <div className="relative self-stretch w-full rounded-full aspect-[1] bg-primery-90 dark:bg-primery-900 border-[1px] border-primery-100 flex items-center justify-center text-primery-700 dark:text-primery-200 font-bold text-2xl font-vazir">
+              {firstName.charAt(0)}
+            </div>
           )}
 
           <button
@@ -114,7 +132,7 @@ export const StudentSettings = () => {
             onChange={handleImageChange}
           />
           <h1 className="relative self-stretch fa-title-2 text-center text-neutral-scale1800 dark:text-neutral-scale70">
-            محیا محمدی
+            {fullName}
           </h1>
         </div>
 
@@ -137,7 +155,7 @@ export const StudentSettings = () => {
                 isRTL ? "text-right" : "text-left"
               }`}
             >
-              محیا
+              {firstName}
             </div>
             <div className="w-full border-t border-neutral-scale300 dark:border-neutral-scale1000 my-0.5" />
             <div
@@ -145,7 +163,7 @@ export const StudentSettings = () => {
                 isRTL ? "text-right" : "text-left"
               }`}
             >
-              محمدی
+              {lastName}
             </div>
           </section>
 
@@ -169,7 +187,7 @@ export const StudentSettings = () => {
               dir="ltr"
               style={{ textAlign: isRTL ? "right" : "left" }}
             >
-              mahyamohamdy@gmail.com
+              {email}
             </div>
           </section>
 

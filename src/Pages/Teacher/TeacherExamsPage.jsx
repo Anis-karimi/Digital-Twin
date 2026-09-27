@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { CreateExamAccordion } from "@/Components/CreateExamAccordion";
 import { examsApi } from "@/api/new/exams.api";
+import { TeacherExamResultsModal } from "@/Components/TeacherExamResultsModal";
+import { TeacherEditExamModal } from "@/Components/TeacherEditExamModal";
 
 export const TeacherExams = () => {
   const navigate = useNavigate();
@@ -13,6 +15,8 @@ export const TeacherExams = () => {
 
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [editingExam, setEditingExam] = useState(null);
+  const [resultsExam, setResultsExam] = useState(null);
 
   const [exams, setExams] = useState([
     {
@@ -57,27 +61,49 @@ export const TeacherExams = () => {
     },
   ]);
 
-  // Load backend exams if available
-  useEffect(() => {
-    let isMounted = true;
+  const deduplicateExams = (items) => {
+    const seenIds = new Set();
+    const seenTitles = new Set();
+    return items.filter((item) => {
+      const idKey = String(item.id || item.quiz_id);
+      const titleKey = (item.title || "").trim().toLowerCase();
+      if (seenIds.has(idKey)) return false;
+      if (titleKey && seenTitles.has(titleKey)) return false;
+      seenIds.add(idKey);
+      if (titleKey) seenTitles.add(titleKey);
+      return true;
+    });
+  };
+
+  const loadExams = () => {
     examsApi
       .getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
       .then((data) => {
-        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        if (!Array.isArray(data) || data.length === 0) return;
         const mapped = data.map((q) => {
           let timeDisplay = "10:00 - 10:25";
           if (q.start_at && q.end_at) {
             try {
-              const s = new Date(q.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-              const e = new Date(q.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-              timeDisplay = `${s} - ${e}`;
-            } catch {}
+              if (typeof q.start_at === "string" && q.start_at.includes(":") && !q.start_at.includes("T")) {
+                timeDisplay = `${q.start_at} - ${q.end_at}`;
+              } else {
+                const s = new Date(q.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const e = new Date(q.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                timeDisplay = `${s} - ${e}`;
+              }
+            } catch {
+              timeDisplay = `${q.start_at} - ${q.end_at}`;
+            }
           }
+          const topic = (Array.isArray(q.goals) && q.goals.length > 0)
+            ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
+            : (q.description || "مباحث آزمون");
+
           return {
-            id: q.quiz_id,
+            id: q.quiz_id || q.id,
             title: q.title,
             course: "سیستم عامل",
-            topic: (q.goals && q.goals.length > 0) ? q.goals.join("، ") : (q.description || "مباحث آزمون"),
+            topic: topic || "مباحث آزمون",
             date: q.exam_date || "1405/07/20",
             time: timeDisplay,
             duration: `${q.duration_minutes || 10} دقیقه هر دانشجو`,
@@ -86,27 +112,44 @@ export const TeacherExams = () => {
           };
         });
 
-        setExams((prev) => {
-          const mappedIds = new Set(mapped.map((m) => String(m.id)));
-          return [...mapped, ...prev.filter((p) => !mappedIds.has(String(p.id)))];
-        });
+        setExams(deduplicateExams(mapped));
       })
       .catch(() => {});
+  };
 
-    return () => {
-      isMounted = false;
-    };
+  // Load backend exams on mount
+  useEffect(() => {
+    loadExams();
   }, []);
 
-  const handleExamCreated = (newExam) => {
-    setExams((prev) => [newExam, ...prev]);
+  const handleExamCreated = () => {
     setIsCreatingExam(false);
     setSuccessMessage(
       isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست قرار گرفت!" : "New exam created successfully!"
     );
+    loadExams();
     setTimeout(() => {
       setSuccessMessage("");
     }, 4500);
+  };
+
+  const handleEdit = (exam) => {
+    setEditingExam(exam);
+  };
+
+  const handleViewResults = (exam) => {
+    setResultsExam(exam);
+  };
+
+  const handleExamUpdated = () => {
+    setEditingExam(null);
+    setSuccessMessage(
+      isRTL ? "مشخصات آزمون با موفقیت ویرایش شد!" : "Exam updated successfully!"
+    );
+    loadExams();
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 4000);
   };
 
   return (
@@ -528,20 +571,20 @@ export const TeacherExams = () => {
                       </div>
                     </div>
 
-                    {/* Edit Button */}
-                    {isScheduled && (
+                    {/* Action Buttons: Edit and Results */}
+                    <div className="flex items-center gap-2 mt-[12px] w-full">
+                      {/* Edit Button */}
                       <button
                         type="button"
-                        onClick={() => console.log("Edit Exam", exam.id)}
+                        onClick={() => handleEdit(exam)}
                         className="
-                          w-full
+                          flex-1
                           flex
                           items-center
                           justify-center
                           gap-[5px]
                           h-[32px]
-                          mt-[12px]
-                          px-[10px]
+                          px-[8px]
                           rounded-[8px]    
                           border
                           border-primery-800
@@ -552,10 +595,10 @@ export const TeacherExams = () => {
                           dark:bg-primery-1000
                           active:scale-[0.98]
                           transition-all
+                          cursor-pointer
                         "
                       >
                         <Pencil className="!w-[13px] !h-[13px] text-neutral-scale1800 dark:text-neutral-scale70" />
-
                         <span
                           className={
                             isRTL
@@ -566,22 +609,19 @@ export const TeacherExams = () => {
                           {isRTL ? "ویرایش" : "Edit"}
                         </span>
                       </button>
-                    )}
 
-                    {/* Results Button */}
-                    {!isActive && !isScheduled && (
+                      {/* Results Button */}
                       <button
                         type="button"
-                        onClick={() => console.log("View Results", exam.id)}
+                        onClick={() => handleViewResults(exam)}
                         className="
-                          w-full
+                          flex-1
                           flex
                           items-center
                           justify-center
                           gap-[5px]
                           h-[32px]
-                          mt-[12px]
-                          px-[10px]
+                          px-[8px]
                           rounded-[8px]
                           border
                           border-neutral-scale600
@@ -599,8 +639,7 @@ export const TeacherExams = () => {
                           cursor-pointer
                         "
                       >
-                        <BarChart3 className="!w-[15px] !h-[15px] dark:text-neutral-scale80" />
-
+                        <BarChart3 className="!w-[14px] !h-[14px] dark:text-neutral-scale80" />
                         <span
                           className={
                             isRTL
@@ -608,10 +647,10 @@ export const TeacherExams = () => {
                               : "en-caption-1 font-inter"
                           }
                         >
-                          {isRTL ? "مشاهده نتایج" : "View Results"}
+                          {isRTL ? "نتایج" : "Results"}
                         </span>
                       </button>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -620,6 +659,25 @@ export const TeacherExams = () => {
         </div>
         )}
       </section>
+
+      {/* Teacher Edit Exam Modal */}
+      {editingExam && (
+        <TeacherEditExamModal
+          isOpen={Boolean(editingExam)}
+          onClose={() => setEditingExam(null)}
+          exam={editingExam}
+          onSuccess={handleExamUpdated}
+        />
+      )}
+
+      {/* Teacher Exam Results Modal */}
+      {resultsExam && (
+        <TeacherExamResultsModal
+          isOpen={Boolean(resultsExam)}
+          onClose={() => setResultsExam(null)}
+          exam={resultsExam}
+        />
+      )}
     </main>
   );
 };

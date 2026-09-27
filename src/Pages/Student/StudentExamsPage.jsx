@@ -6,809 +6,646 @@ import {
   Play,
   Hourglass,
   CheckCircle2,
+  Award,
+  BarChart3,
+  BookOpen,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
+import { examsApi } from "@/api/new/exams.api";
+import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
+import { FooterGlass } from "@/Components/FooterGlass";
+import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
+import { toPersianDigits } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
-  /*
-   * هر آزمون اینجا زمان اختصاصی همین دانشجو را دارد.
-   *
-   * startAt / endAt باید در نسخه واقعی از Backend بیاید.
-   */
-  const [exams] = useState([
-    {
-      id: 1,
-      title: "آزمون فصل اول",
-      course: "سیستم عامل",
-      topic: "مفاهیم اولیه سیستم عامل",
-      date: "1405/07/10",
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [schedulingExam, setSchedulingExam] = useState(null);
+  const [turnWarning, setTurnWarning] = useState("");
 
-      // زمان اختصاص داده شده به این دانشجو
-      startAt: "2026-09-26T10:15:00+03:30",
-      endAt: "2026-09-26T10:35:00+03:30",
+  const checkSlotTiming = (exam) => {
+    if (exam.status === "completed") {
+      return { status: "completed", canEnter: true };
+    }
+    if (exam.status === "started" || exam.status === "active") {
+      return { status: "active", canEnter: true };
+    }
+    if (!exam.studentSlotStart || !exam.studentSlotEnd) {
+      return { status: "ready", canEnter: true };
+    }
 
-      // برای تست می‌توانی زمان‌ها را تغییر بدهی
-      duration: 20,
-    },
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    {
-      id: 2,
-      title: "آزمون میان‌ترم",
-      course: "سیستم عامل",
-      topic: "مدیریت پردازش‌ها",
-      date: "1405/07/15",
+    const [sh, sm] = String(exam.studentSlotStart).split(":").map(Number);
+    const [eh, em] = String(exam.studentSlotEnd).split(":").map(Number);
+    const slotStartMinutes = sh * 60 + sm;
+    const slotEndMinutes = eh * 60 + em;
 
-      startAt: "2026-09-26T17:00:00+03:30",
-      endAt: "2026-09-26T17:30:00+03:30",
+    // 1-minute early grace period for buffer
+    if (currentMinutes < slotStartMinutes - 1) {
+      const waitMins = slotStartMinutes - currentMinutes;
+      const waitStr =
+        waitMins >= 60
+          ? `${Math.floor(waitMins / 60)} ساعت و ${waitMins % 60} دقیقه دیگر`
+          : `${waitMins} دقیقه دیگر`;
+      return {
+        status: "upcoming",
+        canEnter: false,
+        slotStart: exam.studentSlotStart,
+        slotEnd: exam.studentSlotEnd,
+        waitStr,
+        message: `نوبت حضور شما هنوز فرا نرسیده است (${waitStr} - ساعت ${toPersianDigits(exam.studentSlotStart)} تا ${toPersianDigits(exam.studentSlotEnd)}). امکان ورود قبل از نوبت وجود ندارد. لطفاً در ساعت مقرر مراجعه فرمایید یا در صورت تمایل نوبت خود را تغییر دهید.`,
+      };
+    }
 
-      duration: 30,
-    },
+    let windowEndMinutes = 14 * 60;
+    if (exam.windowEnd && String(exam.windowEnd).includes(":")) {
+      const [wh, wm] = String(exam.windowEnd).split(":").map(Number);
+      windowEndMinutes = wh * 60 + wm;
+    }
 
-    {
-      id: 3,
-      title: "آزمون فصل سوم",
-      course: "سیستم عامل",
-      topic: "مدیریت حافظه",
-      date: "1405/07/20",
+    if (currentMinutes > slotEndMinutes) {
+      if (currentMinutes <= windowEndMinutes) {
+        return {
+          status: "current",
+          canEnter: true,
+          slotStart: exam.studentSlotStart,
+          slotEnd: exam.studentSlotEnd,
+          message: "بازه آزمون فعال است. ورود به آزمون در نوبت جاری...",
+        };
+      }
+      return {
+        status: "passed",
+        canEnter: false,
+        slotStart: exam.studentSlotStart,
+        slotEnd: exam.studentSlotEnd,
+        message: `زمان برگزاری این آزمون به پایان رسیده است (ساعت ${toPersianDigits(exam.studentSlotEnd)}).`,
+      };
+    }
 
-      startAt: "2026-09-26T12:00:00+03:30",
-      endAt: "2026-09-26T12:25:00+03:30",
+    return {
+      status: "current",
+      canEnter: true,
+      message: "هم‌اکنون نوبت شماست!",
+    };
+  };
 
-      duration: 25,
-    },
-  ]);
+  const handleSlotChanged = (updated) => {
+    setExams((prev) =>
+      prev.map((ex) => {
+        if (
+          ex.assignment_id === updated.assignment_id ||
+          ex.id === updated.assignment_id
+        ) {
+          return {
+            ...ex,
+            studentSlotStart: updated.start_time,
+            studentSlotEnd: updated.end_time,
+          };
+        }
+        return ex;
+      })
+    );
+  };
 
-  /*
-   * این state فقط برای اینکه countdown هر ثانیه آپدیت شود.
-   */
-  const [now, setNow] = useState(Date.now());
-
+  // Fetch real assigned exams from backend
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
+    let isMounted = true;
+    setLoading(true);
 
-    return () => clearInterval(timer);
+    examsApi
+      .getMyStudentExams()
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          const seenIds = new Set();
+          const seenTitles = new Set();
+          const mapped = [];
+
+          for (const item of data) {
+            const key = String(item.id || item.assignment_id);
+            const titleKey = (item.title || "").trim().toLowerCase();
+            if (seenIds.has(key) || (titleKey && seenTitles.has(titleKey))) continue;
+            seenIds.add(key);
+            if (titleKey) seenTitles.add(titleKey);
+
+            const topic = (Array.isArray(item.goals) && item.goals.length > 0)
+              ? item.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
+              : (item.topic || item.description || item.title);
+
+            mapped.push({
+              id: key,
+              assignment_id: item.assignment_id || key,
+              session_id: item.session_id,
+              title: item.title,
+              course: item.course || "سیستم عامل",
+              topic: topic || "مباحث آزمون",
+              date: item.date || item.exam_date || "1405/07/20",
+              startAt: item.start_at,
+              endAt: item.end_at,
+              duration: item.duration || item.duration_minutes || 20,
+              status: item.status || "assigned",
+              score: item.score,
+              passed: item.passed,
+              windowStart: item.window_start || item.start_at || "10:00",
+              windowEnd: item.window_end || item.end_at || "14:00",
+              studentSlotStart: item.student_slot_start,
+              studentSlotEnd: item.student_slot_end,
+              gapMinutes: item.gap_minutes || 5,
+            });
+          }
+          setExams(mapped);
+        } else {
+          // Fallback to course quizzes if empty
+          examsApi.getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
+            .then((quizzes) => {
+              if (!isMounted || !Array.isArray(quizzes) || quizzes.length === 0) return;
+              const mapped = quizzes.map((q) => {
+                const topic = (Array.isArray(q.goals) && q.goals.length > 0)
+                  ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
+                  : (q.description || "مباحث آزمون");
+
+                return {
+                  id: q.quiz_id || q.id,
+                  assignment_id: q.quiz_id || q.id,
+                  session_id: null,
+                  title: q.title,
+                  course: "سیستم عامل",
+                  topic: topic || "مباحث آزمون",
+                  date: q.exam_date || "1405/07/20",
+                  duration: q.duration_minutes || 20,
+                  status: "assigned",
+                  score: null,
+                  passed: null,
+                };
+              });
+              setExams(mapped);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load student exams:", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  /*
-   * وضعیت هر آزمون:
-   *
-   * waiting  => هنوز شروع نشده
-   * active   => الان دانشجو می‌تواند وارد آزمون شود
-   * expired  => زمان آزمون تمام شده
-   */
   const getExamStatus = (exam) => {
-    const start = new Date(exam.startAt).getTime();
-    const end = new Date(exam.endAt).getTime();
-
-    if (now < start) {
-      return "waiting";
-    }
-
-    if (now >= start && now < end) {
-      return "active";
-    }
-
-    return "expired";
-  };
-
-  /*
-   * تبدیل میلی‌ثانیه به:
-   * 00:12:35
-   */
-  const formatCountdown = (milliseconds) => {
-    if (milliseconds <= 0) {
-      return "00:00:00";
-    }
-
-    const totalSeconds = Math.floor(milliseconds / 1000);
-
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    return [
-      String(hours).padStart(2, "0"),
-      String(minutes).padStart(2, "0"),
-      String(seconds).padStart(2, "0"),
-    ].join(":");
-  };
-
-  /*
-   * ساعت را از startAt / endAt می‌گیرد.
-   */
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-
-    return date.toLocaleTimeString(isRTL ? "fa-IR" : "en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    if (exam.status === "completed") return "completed";
+    if (exam.status === "started" || exam.status === "active") return "active";
+    return "assigned";
   };
 
   const handleStartExam = (exam) => {
-    if (getExamStatus(exam) !== "active") return;
+    const targetId = exam.assignment_id || exam.id;
+    if (exam.status === "completed") {
+      navigate(`/StudentExamResult/${targetId}`, { state: { exam } });
+      return;
+    }
 
-    /*
-     * مسیر صفحه آزمونت را اینجا قرار بده.
-     */
-    navigate(`/StudentExam/${exam.id}`);
+    const isActive = exam.status === "started" || exam.status === "active";
+    if (!isActive) {
+      const timing = checkSlotTiming(exam);
+      if (!timing.canEnter) {
+        setTurnWarning(timing.message);
+        return;
+      }
+    }
+
+    navigate(`/StudentExam/${targetId}`, { state: { exam } });
   };
 
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="
-        bg-[#f1f0f0]
-        dark:bg-neutral-scale1400
-        w-full
-        md:w-[360px]
-        h-dvh
-        mx-auto
-        flex
-        flex-col
-        overflow-hidden
-      "
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden select-text"
     >
       {/* Header */}
       <header className="w-full h-[65px] flex shrink-0">
-        <div
-          className="
-            w-full
-            h-[65px]
-            relative
-            flex
-            items-center
-            px-4
-            bg-primery-700
-            dark:bg-neutral-scale1300
-            border-b
-            dark:border-neutral-scale1000
-          "
-        >
+        <div className="w-full h-[65px] relative flex items-center px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
           <button
             onClick={() => navigate(-1)}
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
-            className="
-              text-white
-              w-8
-              h-8
-              flex
-              items-center
-              justify-center
-              cursor-pointer
-              shrink-0
-            "
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-neutral-scale70 cursor-pointer"
           >
-            <ArrowLeft
-              className={`!w-6 !h-6 text-neutral-scale70 ${
-                isRTL ? "rotate-180" : ""
-              }`}
-            />
+            <ArrowLeft className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
           </button>
 
-          <h1
-            className={`
-              flex-1
-              mx-2
-              text-neutral-scale70
-              ${
-                isRTL
-                  ? "fa-title-1 font-vazir text-right"
-                  : "en-title-1 font-inter text-left"
-              }
-              truncate
-              whitespace-nowrap
-            `}
-          >
-            {isRTL ? "آزمون‌های من" : "My Exams"}
+          <h1 className="flex-1 text-center font-vazir font-semibold text-lg text-neutral-scale70">
+            {isRTL ? "آزمون‌ها" : "Exams"}
           </h1>
+          <div className="w-10" />
         </div>
       </header>
 
       {/* Content */}
       <section className="w-full flex-1 min-h-0">
-        <div
-          className="
-            w-full
-            h-full
-            px-3.5
-            overflow-y-auto
-            overflow-x-hidden
-            pb-[80px]
-          "
-        >
-          <div
-            className="
-              mt-[5px]
-              w-full
-              bg-neutral-scale70
-              dark:bg-neutral-scale1300
-              border
-              border-neutral-scale100
-              dark:border-neutral-scale1100
-              rounded-[13px]
-              py-[20px]
-            "
-          >
+        <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[105px]">
+          <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             {/* Section Header */}
-            <div className="px-4">
+            <div className="px-4 flex items-center justify-between gap-2">
               <p
-                className={`
-                  text-primery-800
-                  dark:text-neutral-scale70
-                  ${
-                    isRTL
-                      ? "fa-body-medium font-vazir text-right"
-                      : "en-body-medium font-inter text-left"
-                  }
-                `}
+                className={`text-primery-800 dark:text-neutral-scale70 ${
+                  isRTL
+                    ? "fa-body-medium font-vazir text-right"
+                    : "en-body-medium font-inter text-left"
+                }`}
               >
                 {isRTL ? "آزمون‌های من" : "My Exams"}
               </p>
 
-              <p
-                className={`
-                  mt-[4px]
-                  text-neutral-scale900
-                  dark:text-neutral-scale400
-                  ${
-                    isRTL
-                      ? "fa-caption-1 font-vazir text-right"
-                      : "en-caption-1 font-inter text-left"
-                  }
-                `}
-              >
-                {isRTL
-                  ? "آزمون‌هایی که برای شما تعریف شده‌اند"
-                  : "Exams assigned to you"}
-              </p>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 font-medium font-vazir">
+                {exams.length} {isRTL ? "آزمون" : "Exams"}
+              </span>
             </div>
 
-            {/* Exams */}
+            {/* Exams List */}
             <div className="flex flex-col w-full gap-[12px] mt-[16px] px-3.5">
-              {exams.map((exam) => {
-                const status = getExamStatus(exam);
+              {loading ? (
+                <div className="w-full py-12 flex flex-col items-center justify-center gap-2">
+                  <div className="w-6 h-6 border-2 border-primery-700 border-t-transparent rounded-full animate-spin" />
+                  <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale300">
+                    {isRTL ? "در حال بارگذاری آزمون‌ها..." : "Loading exams..."}
+                  </span>
+                </div>
+              ) : exams.length === 0 ? (
+                <div className="w-full py-10 flex flex-col items-center justify-center text-center p-4 bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1000">
+                  <BookOpen className="w-8 h-8 text-neutral-scale500 mb-2" />
+                  <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale300">
+                    {isRTL
+                      ? "در حال حاضر هیچ آزمونی برای شما تعریف نشده است."
+                      : "No exams currently assigned to you."}
+                  </p>
+                </div>
+              ) : (
+                exams.map((exam) => {
+                  const status = getExamStatus(exam);
+                  const isCompleted = status === "completed";
+                  const isActive = status === "active";
+                  const isScheduled = status === "assigned";
 
-                const startTime = new Date(exam.startAt).getTime();
-                const endTime = new Date(exam.endAt).getTime();
-
-                const remainingUntilStart = startTime - now;
-                const remainingUntilEnd = endTime - now;
-
-                const isWaiting = status === "waiting";
-                const isActive = status === "active";
-                const isExpired = status === "expired";
-
-                return (
-                  <div
-                    key={exam.id}
-                    className={`
-                      w-full
-                      rounded-[12px]
-                      border
-                      p-3
-                      transition-colors
-                      ${
-                        isActive
-                          ? `
-                            border-success-500
-                            dark:border-success-600
-                            bg-green-50
-                            dark:bg-green-950/30
-                          `
-                          : isWaiting
-                          ? `
-                            border-primery-500
-                            dark:border-primery-800
-                            bg-blue-100
-                            dark:bg-blue-950/30
-                          `
-                          : `
-                            border-neutral-scale600
-                            dark:border-neutral-scale1500
-                            bg-neutral-scale90
-                            dark:bg-neutral-scale900
-                            opacity-80
-                          `
-                      }
-                    `}
-                  >
-                    {/* Top */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-[10px] min-w-0 flex-1">
-                        {/* Icon */}
-                        <div
-                          className={`
-                            w-[42px]
-                            h-[42px]
-                            rounded-[10px]
-                            flex
-                            items-center
-                            justify-center
-                            shrink-0
-                            ${
-                              isActive
-                                ? "bg-success-100 dark:bg-success-1000"
-                                : isWaiting
-                                ? "bg-primery-100 dark:bg-primery-1000"
-                                : "bg-neutral-scale300 dark:bg-neutral-scale1200"
-                            }
-                          `}
-                        >
-                          {isWaiting ? (
-                            <Hourglass
-                              className={`
-                                !w-[20px]
-                                !h-[20px]
-                                text-primery-1000
-                                dark:text-primery-90
-                              `}
-                            />
-                          ) : (
-                            <CalendarDays
-                              className={`
-                                !w-[20px]
-                                !h-[20px]
-                                ${
-                                  isActive
-                                    ? "text-success-1000 dark:text-success-100"
-                                    : "text-neutral-scale700 dark:text-neutral-scale400"
-                                }
-                              `}
-                            />
-                          )}
-                        </div>
-
-                        {/* Title */}
-                        <div className="flex flex-col min-w-0 flex-1 gap-[2px]">
-                          <span
-                            dir="rtl"
-                            className={`
-                              fa-body-medium
-                              font-vazir
-                              font-semibold
-                              truncate
-                              ${
-                                isExpired
-                                  ? "text-neutral-scale900 dark:text-neutral-scale500"
-                                  : "text-neutral-scale1800 dark:text-neutral-scale70"
-                              }
-                              ${
-                                isRTL
-                                  ? "text-right"
-                                  : "text-left [direction:rtl]"
-                              }
-                            `}
-                          >
-                            {exam.title}
-                          </span>
-
-                          <span
-                            dir="rtl"
-                            className={`
-                              fa-caption-1
-                              font-vazir
-                              truncate
-                              ${
-                                isExpired
-                                  ? "text-neutral-scale700 dark:text-neutral-scale500"
-                                  : "text-neutral-scale1000 dark:text-neutral-scale300"
-                              }
-                              ${
-                                isRTL
-                                  ? "text-right"
-                                  : "text-left [direction:rtl]"
-                              }
-                            `}
-                          >
-                            {exam.course}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Status */}
-                      <div
-                        className="
-                          flex
-                          flex-col
-                          items-end
-                          gap-[6px]
-                          shrink-0
-                        "
-                      >
-                        <div
-                          className={`
-                            flex
-                            items-center
-                            gap-[5px]
-                            px-[8px]
-                            py-[4px]
-                            rounded-full
-                            ${
-                              isActive
-                                ? "bg-success-100 dark:bg-success-1000"
-                                : isWaiting
-                                ? "bg-primery-100 dark:bg-primery-1000"
-                                : "bg-neutral-scale200 dark:bg-neutral-scale1100"
-                            }
-                          `}
-                        >
-                          <span
-                            className={`
-                              w-[6px]
-                              h-[6px]
-                              rounded-full
-                              ${
-                                isActive
-                                  ? "bg-success-900 dark:bg-success-100"
-                                  : isWaiting
-                                  ? "bg-primery-900 dark:bg-primery-90"
-                                  : "bg-neutral-scale700"
-                              }
-                            `}
-                          />
-
-                          <span
-                            className={`
-                              ${
-                                isRTL
-                                  ? "fa-caption-1 font-vazir"
-                                  : "en-caption-1 font-inter"
-                              }
-                              ${
-                                isActive
-                                  ? "text-success-1000 dark:text-success-100"
-                                  : isWaiting
-                                  ? "text-primery-1000 dark:text-primery-90"
-                                  : "text-neutral-scale900 dark:text-neutral-scale400"
-                              }
-                            `}
-                          >
-                            {isRTL
-                              ? isActive
-                                ? "آماده شروع"
-                                : isWaiting
-                                ? "در انتظار"
-                                : "پایان یافته"
-                              : isActive
-                              ? "Ready"
-                              : isWaiting
-                              ? "Waiting"
-                              : "Expired"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Divider */}
+                  return (
                     <div
+                      key={exam.id}
                       className={`
                         w-full
-                        h-[1px]
-                        my-[11px]
-                        ${
-                          isActive
-                            ? "bg-success-500 dark:bg-success-600"
-                            : isWaiting
-                            ? "bg-primery-500 dark:bg-primery-800"
-                            : "bg-neutral-scale300 dark:bg-neutral-scale1200"
-                        }
-                      `}
-                    />
-
-                    {/* Topic */}
-                    <div className="flex items-start gap-[3px]">
-                      <span
-                        className={`
-                          shrink-0
-                          ${
-                            isActive || isWaiting
-                              ? "text-neutral-scale1800 dark:text-neutral-scale70"
-                              : "text-neutral-scale900 dark:text-neutral-scale500"
-                          }
-                          ${
-                            isRTL
-                              ? "fa-caption-1 font-vazir text-right"
-                              : "en-caption-1 font-inter text-left"
-                          }
-                        `}
-                      >
-                        {isRTL ? "مبحث آزمون :" : "Exam Topic :"}
-                      </span>
-
-                      <span
-                        dir="rtl"
-                        className={`
-                          min-w-0
-                          ${
-                            isActive || isWaiting
-                              ? "text-neutral-scale1800 dark:text-neutral-scale70"
-                              : "text-neutral-scale900 dark:text-neutral-scale500"
-                          }
-                          ${
-                            isRTL
-                              ? "fa-caption-1 text-right"
-                              : "en-caption-1 text-left"
-                          }
-                        `}
-                      >
-                        {exam.topic}
-                      </span>
-                    </div>
-
-                    {/* Student Time */}
-                    <div className="flex items-center gap-[12px] mt-[11px]">
-                      {/* Date */}
-                      <div className="flex items-center gap-[5px] min-w-0">
-                        <CalendarDays
-                          className={`
-                            !w-[15px]
-                            !h-[15px]
-                            shrink-0
-                            ${
-                              isActive || isWaiting
-                                ? "text-neutral-scale900 dark:text-neutral-scale400"
-                                : "text-neutral-scale700 dark:text-neutral-scale500"
-                            }
-                          `}
-                        />
-
-                        <span
-                          className={`
-                            truncate
-                            ${
-                              isActive || isWaiting
-                                ? "text-neutral-scale1200 dark:text-neutral-scale300"
-                                : "text-neutral-scale800 dark:text-neutral-scale500"
-                            }
-                            ${
-                              isRTL
-                                ? "fa-caption-1 font-vazir"
-                                : "en-caption-1 font-inter"
-                            }
-                          `}
-                        >
-                          {exam.date}
-                        </span>
-                      </div>
-
-                      {/* Student Time */}
-                      <div className="flex items-center gap-[5px] min-w-0">
-                        <Clock3
-                          className={`
-                            !w-[15px]
-                            !h-[15px]
-                            shrink-0
-                            ${
-                              isActive || isWaiting
-                                ? "text-neutral-scale900 dark:text-neutral-scale400"
-                                : "text-neutral-scale700 dark:text-neutral-scale500"
-                            }
-                          `}
-                        />
-
-                        <span
-                          className={`
-                            truncate
-                            ${
-                              isActive || isWaiting
-                                ? "text-neutral-scale1200 dark:text-neutral-scale300"
-                                : "text-neutral-scale800 dark:text-neutral-scale500"
-                            }
-                            ${
-                              isRTL
-                                ? "fa-caption-1 font-vazir"
-                                : "en-caption-1 font-inter"
-                            }
-                          `}
-                        >
-                          {formatTime(exam.startAt)} - {formatTime(exam.endAt)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Countdown / Remaining */}
-                    {isWaiting && (
-                      <div
-                        className="
-                          mt-[10px]
-                          w-full
-                          rounded-[8px]
-                          bg-primery-50
-                          dark:bg-primery-1100
-                          border
-                          border-primery-200
-                          dark:border-primery-900
-                          px-[10px]
-                          py-[7px]
-                          flex
-                          items-center
-                          justify-between
-                          gap-2
-                        "
-                      >
-                        <span
-                          className={`
-                            text-primery-1000
-                            dark:text-primery-100
-                            ${
-                              isRTL
-                                ? "fa-caption-1 font-vazir"
-                                : "en-caption-1 font-inter"
-                            }
-                          `}
-                        >
-                          {isRTL
-                            ? "زمان باقی‌مانده تا شروع"
-                            : "Starts in"}
-                        </span>
-
-                        <span
-                          dir="ltr"
-                          className="
-                            text-primery-1000
-                            dark:text-primery-100
-                            font-inter
-                            text-[12px]
-                            font-semibold
-                            tabular-nums
-                          "
-                        >
-                          {formatCountdown(remainingUntilStart)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Active remaining time */}
-                    {isActive && (
-                      <div
-                        className="
-                          mt-[10px]
-                          w-full
-                          rounded-[8px]
-                          bg-success-50
-                          dark:bg-success-1100
-                          border
-                          border-success-200
-                          dark:border-success-900
-                          px-[10px]
-                          py-[7px]
-                          flex
-                          items-center
-                          justify-between
-                          gap-2
-                        "
-                      >
-                        <span
-                          className={`
-                            text-success-1000
-                            dark:text-success-100
-                            ${
-                              isRTL
-                                ? "fa-caption-1 font-vazir"
-                                : "en-caption-1 font-inter"
-                            }
-                          `}
-                        >
-                          {isRTL
-                            ? "زمان باقی‌مانده آزمون"
-                            : "Time remaining"}
-                        </span>
-
-                        <span
-                          dir="ltr"
-                          className="
-                            text-success-1000
-                            dark:text-success-100
-                            font-inter
-                            text-[12px]
-                            font-semibold
-                            tabular-nums
-                          "
-                        >
-                          {formatCountdown(remainingUntilEnd)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Start Button */}
-                    <button
-                      type="button"
-                      disabled={!isActive}
-                      onClick={() => handleStartExam(exam)}
-                      className={`
-                        w-full
-                        flex
-                        items-center
-                        justify-center
-                        gap-[5px]
-                        h-[34px]
-                        mt-[12px]
-                        px-[10px]
-                        rounded-[8px]
+                        rounded-[12px]
                         border
-                        transition-all
+                        p-3
+                        transition-colors
                         ${
-                          isActive
+                          isCompleted
                             ? `
-                              border-success-700
-                              bg-success-500
-                              hover:bg-success-600
-                              text-white
-                              cursor-pointer
-                              active:scale-[0.98]
+                              border-emerald-600/40
+                              dark:border-emerald-600/40
+                              bg-emerald-500/5
+                              dark:bg-emerald-950/20
                             `
-                            : isWaiting
+                            : isActive
+                            ? `
+                              border-success-500
+                              dark:border-success-600
+                              bg-green-50
+                              dark:bg-green-950/30
+                            `
+                            : isScheduled
                             ? `
                               border-primery-500
                               dark:border-primery-800
-                              bg-primery-100
-                              dark:bg-primery-1000
-                              text-primery-1000
-                              dark:text-primery-90
-                              cursor-not-allowed
+                              bg-blue-100
+                              dark:bg-blue-950/30
                             `
                             : `
-                              border-neutral-scale500
-                              dark:border-neutral-scale1200
-                              bg-neutral-scale200
-                              dark:bg-neutral-scale1100
-                              text-neutral-scale700
-                              dark:text-neutral-scale500
-                              cursor-not-allowed
+                              border-neutral-scale600
+                              dark:border-neutral-scale1500
+                              bg-neutral-scale90
+                              dark:bg-neutral-scale900
+                              opacity-80
                             `
                         }
                       `}
                     >
-                      {isActive ? (
-                        <Play className="!w-[14px] !h-[14px]" />
-                      ) : isWaiting ? (
-                        <Hourglass className="!w-[14px] !h-[14px]" />
-                      ) : (
-                        <CheckCircle2 className="!w-[14px] !h-[14px]" />
+                      {/* Top */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-[10px] min-w-0 flex-1">
+                          {/* Exam Icon */}
+                          <div
+                            className={`
+                              w-[42px]
+                              h-[42px]
+                              rounded-[10px]
+                              flex
+                              items-center
+                              justify-center
+                              shrink-0
+                              ${
+                                isCompleted
+                                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300"
+                                  : isActive
+                                  ? "bg-success-100 dark:bg-success-1000 text-success-1000 dark:text-success-100"
+                                  : isScheduled
+                                  ? "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90"
+                                  : "bg-neutral-scale300 dark:bg-neutral-scale1200 text-neutral-scale700 dark:text-neutral-scale400"
+                              }
+                            `}
+                          >
+                            {isCompleted ? (
+                              <Award className="!w-[20px] !h-[20px]" />
+                            ) : (
+                              <CalendarDays className="!w-[20px] !h-[20px]" />
+                            )}
+                          </div>
+
+                          {/* Title & Course */}
+                          <div className="flex flex-col min-w-0 flex-1 gap-[2px]">
+                            <span
+                              dir="rtl"
+                              className="fa-body-medium font-vazir font-semibold truncate text-neutral-scale1800 dark:text-neutral-scale70 text-right"
+                            >
+                              {exam.title}
+                            </span>
+                            <span
+                              dir="rtl"
+                              className="fa-caption-1 font-vazir truncate text-neutral-scale1000 dark:text-neutral-scale300 text-right"
+                            >
+                              {exam.course || "سیستم عامل"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Status Pill */}
+                        <div className="flex flex-col items-end gap-[6px] shrink-0">
+                          <div
+                            className={`
+                              flex
+                              items-center
+                              gap-[5px]
+                              px-[8px]
+                              py-[3px]
+                              rounded-full
+                              ${
+                                isCompleted
+                                  ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                                  : isActive
+                                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-500/30"
+                                  : isScheduled
+                                  ? "bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 border border-primery-500/30"
+                                  : "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale400"
+                              }
+                            `}
+                          >
+                            <span
+                              className={`
+                                w-[6px]
+                                h-[6px]
+                                rounded-full
+                                ${
+                                  isCompleted
+                                    ? "bg-emerald-600"
+                                    : isActive
+                                    ? "bg-amber-500 animate-ping"
+                                    : isScheduled
+                                    ? "bg-primery-600"
+                                    : "bg-neutral-scale600"
+                                }
+                              `}
+                            />
+                            <span className="fa-caption-1 font-vazir text-[11px] font-medium">
+                              {isCompleted
+                                ? (exam.score != null ? `تکمیل شده (${Math.round(exam.score * 100)}%)` : "تکمیل شده")
+                                : isActive
+                                ? "در حال برگزاری"
+                                : isScheduled
+                                ? (checkSlotTiming(exam).status === "current" ? "آماده شروع" : checkSlotTiming(exam).status === "upcoming" ? "در انتظار نوبت" : "تعریف شده")
+                                : "پایان یافته"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div
+                        className={`
+                          w-full
+                          h-[1px]
+                          my-[10px]
+                          ${
+                            isCompleted
+                              ? "bg-emerald-500/20"
+                              : isActive
+                              ? "bg-success-500/20"
+                              : isScheduled
+                              ? "bg-primery-500/20"
+                              : "bg-neutral-scale300 dark:bg-neutral-scale1200"
+                          }
+                        `}
+                      />
+
+                      {/* Topic */}
+                      <div className="flex items-start gap-[5px] text-xs font-vazir">
+                        <span className="shrink-0 text-neutral-scale1200 dark:text-neutral-scale400 font-medium">
+                          {isRTL ? "مباحث آزمون:" : "Topics:"}
+                        </span>
+                        <span
+                          dir="rtl"
+                          className="min-w-0 text-neutral-scale1600 dark:text-neutral-scale200 truncate"
+                        >
+                          {exam.topic || exam.title}
+                        </span>
+                      </div>
+
+                      {/* Date & Duration */}
+                      <div className="flex items-center justify-between mt-[10px] text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale400">
+                        <div className="flex items-center gap-[5px]">
+                          <CalendarDays className="!w-[14px] !h-[14px] shrink-0 text-primery-600 dark:text-primery-400" />
+                          <span>{exam.date}</span>
+                        </div>
+
+                        <div className="flex items-center gap-[5px]">
+                          <Clock3 className="!w-[14px] !h-[14px] shrink-0 text-primery-600 dark:text-primery-400" />
+                          <span>{exam.duration ? `${exam.duration} دقیقه` : "۲۰ دقیقه"}</span>
+                        </div>
+                      </div>
+
+                      {/* Exam Window & Student Scheduled Slot Card */}
+                      <div className="mt-2.5 p-2 rounded-lg bg-neutral-scale50 dark:bg-neutral-scale1200/80 border border-neutral-scale200 dark:border-neutral-scale1000 flex flex-col gap-1.5 text-[11px] font-vazir">
+                        {/* Overall window */}
+                        <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400">
+                          <span className="flex items-center gap-1 font-medium">
+                            <Clock3 className="w-3 h-3 text-[#2481cc]" />
+                            <span>{isRTL ? "بازه کلی آزمون:" : "Overall Window:"}</span>
+                          </span>
+                          <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                            {toPersianDigits(exam.windowStart || "10:00")} تا {toPersianDigits(exam.windowEnd || "14:00")}
+                          </span>
+                        </div>
+
+                        {/* Student Assigned Slot */}
+                        <div className="flex items-center justify-between pt-1 border-t border-neutral-200/50 dark:border-neutral-800">
+                          <span className="flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>{isActive ? (isRTL ? "وضعیت جلسه:" : "Session Status:") : (isRTL ? "نوبت حضور شما:" : "Your Slot:")}</span>
+                          </span>
+                          <span className="font-bold text-xs text-emerald-800 dark:text-emerald-300">
+                            {isActive ? (
+                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                                {isRTL ? "در حال برگزاری (پاسخ به سوالات)" : "In Progress"}
+                              </span>
+                            ) : exam.studentSlotStart && exam.studentSlotEnd ? (
+                              `${toPersianDigits(exam.studentSlotStart)} تا ${toPersianDigits(exam.studentSlotEnd)}`
+                            ) : (
+                              <span>{toPersianDigits(exam.windowStart || "10:00")}</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Button: Time Schedule Reschedule (Strictly only if assigned and not yet started or completed) */}
+                      {exam.status === "assigned" && (
+                        <button
+                          type="button"
+                          onClick={() => setSchedulingExam(exam)}
+                          className="w-full mt-2 h-7 rounded-lg border border-[#2481cc]/40 dark:border-[#52a2f6]/40 bg-[#edf5fd]/70 dark:bg-[#182533]/70 hover:bg-[#e1eefc] dark:hover:bg-[#203244] text-[#2481cc] dark:text-[#52a2f6] text-[11px] font-bold font-vazir flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Clock3 className="w-3.5 h-3.5" />
+                          <span>{isRTL ? "زمان‌بندی و تغییر نوبت حضور" : "Change Time Slot"}</span>
+                        </button>
                       )}
 
-                      <span
-                        className={
-                          isRTL
-                            ? "fa-caption-1 font-vazir"
-                            : "en-caption-1 font-inter"
-                        }
-                      >
-                        {isRTL
-                          ? isActive
-                            ? "شروع آزمون"
-                            : isWaiting
-                            ? `شروع آزمون در ${formatCountdown(
-                                remainingUntilStart
-                              )}`
-                            : "آزمون به پایان رسیده"
-                          : isActive
-                          ? "Start Exam"
-                          : isWaiting
-                          ? `Starts in ${formatCountdown(
-                              remainingUntilStart
-                            )}`
-                          : "Exam Ended"}
-                      </span>
-                    </button>
-                  </div>
-                );
-              })}
+                      {/* Action Button */}
+                      {(() => {
+                        const timing = checkSlotTiming(exam);
+                        const isUpcoming = timing.status === "upcoming";
+                        const isPassed = timing.status === "passed";
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleStartExam(exam)}
+                            className={`
+                              w-full
+                              flex
+                              items-center
+                              justify-center
+                              gap-[6px]
+                              h-[36px]
+                              mt-[10px]
+                              px-[10px]
+                              rounded-[9px]
+                              font-vazir
+                              text-xs
+                              font-semibold
+                              transition-all
+                              active:scale-[0.98]
+                              cursor-pointer
+                              shadow-xs
+                              ${
+                                isCompleted
+                                  ? "bg-emerald-700 hover:bg-emerald-800 text-white"
+                                  : isActive
+                                  ? "bg-amber-600 hover:bg-amber-700 text-white animate-pulse"
+                                  : isUpcoming
+                                  ? "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale1000 dark:text-neutral-scale300 hover:bg-neutral-scale300 dark:hover:bg-neutral-scale1000 border border-neutral-scale300 dark:border-neutral-scale1000"
+                                  : isPassed
+                                  ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30"
+                                  : "bg-primery-700 hover:bg-primery-800 text-white shadow-primery-700/20 shadow-md"
+                              }
+                            `}
+                          >
+                            {isCompleted ? (
+                              <>
+                                <BarChart3 className="!w-[14px] !h-[14px]" />
+                                <span>{isRTL ? "مشاهده کارنامه و نتیجه" : "View Result & Report"}</span>
+                              </>
+                            ) : isActive ? (
+                              <>
+                                <Play className="!w-[14px] !h-[14px]" />
+                                <span>{isRTL ? "ادامه آزمون (در حال برگزاری)" : "Resume Exam"}</span>
+                              </>
+                            ) : isUpcoming ? (
+                              <>
+                                <Clock3 className="!w-[14px] !h-[14px] text-amber-500" />
+                                <span>
+                                  {isRTL
+                                    ? `در انتظار نوبت (${toPersianDigits(exam.studentSlotStart || "10:00")})`
+                                    : `Upcoming Slot (${exam.studentSlotStart})`}
+                                </span>
+                              </>
+                            ) : isPassed ? (
+                              <>
+                                <AlertCircle className="!w-[14px] !h-[14px]" />
+                                <span>{isRTL ? "زمان نوبت شما به پایان رسیده" : "Slot Expired"}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="!w-[14px] !h-[14px]" />
+                                <span>{isRTL ? "شروع آزمون شفاهی (نوبت شما)" : "Start Oral Exam"}</span>
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Turn Timing Modal / Alert */}
+      {turnWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-[340px] bg-white dark:bg-neutral-scale1300 rounded-2xl p-5 border border-neutral-scale200 dark:border-neutral-scale1100 shadow-2xl flex flex-col gap-3 font-vazir text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
+              <Clock3 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
+              {isRTL ? "نوبت حضور در آزمون" : "Exam Slot Notice"}
+            </h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed px-1">
+              {turnWarning}
+            </p>
+            <button
+              type="button"
+              onClick={() => setTurnWarning("")}
+              className="w-full py-2.5 mt-2 rounded-xl bg-primery-700 hover:bg-primery-800 text-white text-xs font-semibold cursor-pointer transition-colors shadow-md shadow-primery-700/25"
+            >
+              {isRTL ? "متوجه شدم" : "Got it"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Exam Schedule Modal */}
+      {schedulingExam && (
+        <ExamScheduleModal
+          isOpen={!!schedulingExam}
+          onClose={() => setSchedulingExam(null)}
+          exam={schedulingExam}
+          onSlotChanged={handleSlotChanged}
+        />
+      )}
+
+      {/* Footer Navigation Bar */}
+      <FooterGlass>
+        <StudentNavigationBar />
+      </FooterGlass>
     </main>
   );
 };

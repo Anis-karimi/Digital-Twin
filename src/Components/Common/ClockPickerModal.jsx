@@ -9,7 +9,10 @@ import { toPersianDigits } from "@/utils/dateUtils";
  */
 export const parseTimeString = (timeStr) => {
   if (!timeStr || typeof timeStr !== "string" || !timeStr.includes(":")) {
-    return { hours: 10, minutes: 0, total: 600 };
+    const now = new Date();
+    const curH = now.getHours();
+    const curM = now.getMinutes();
+    return { hours: curH, minutes: curM, total: curH * 60 + curM };
   }
   const [h, m] = timeStr.split(":").map((v) => parseInt(v, 10) || 0);
   const validH = Math.max(0, Math.min(23, h));
@@ -31,7 +34,7 @@ export const formatTimeString = (hours, minutes) => {
  * Supports dragging the clock hand, direct typing, AM/PM, and minTime restrictions.
  */
 export const AnalogClockDialView = ({
-  value = "10:00",
+  value = null,
   minTime = null,
   onChange,
   onConfirm,

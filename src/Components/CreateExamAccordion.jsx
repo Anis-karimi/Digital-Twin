@@ -17,6 +17,9 @@ import {
   ArrowRight,
   ArrowLeft,
   Calendar as CalendarIcon,
+  Paperclip,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -32,6 +35,21 @@ import {
   toPersianDigits,
   getTodayIsoDate,
 } from "@/utils/dateUtils";
+
+export const BLOOM_LEVELS = [
+  { level: 1, name: "یادآوری", desc: "بازشناسی و یادآوری تعاریف، کلیدواژه‌ها و اصول پایه", key: "remember" },
+  { level: 2, name: "درک مفاهیم", desc: "تفسیر، تشریح و توضیح عمیق موضوعات به بیان خود دانشجو", key: "understand" },
+  { level: 3, name: "به‌کارگیری", desc: "استفاده عملی از مفاهیم در حل سناریوها و مسائل عینی", key: "apply" },
+  { level: 4, name: "تحلیل", desc: "کالبدشکافی ساختار، کشف ارتباط اجزا، مقایسه و عیب‌یابی", key: "analyze" },
+  { level: 5, name: "ارزیابی", desc: "نقد فنی، داوری بر اساس معیارها و استدلال نقادانه", key: "evaluate" },
+  { level: 6, name: "آفرینش", desc: "طراحی معماری، خلق راه‌حل نوآورانه و ترکیب مفاهیم", key: "create" },
+];
+
+export const GOAL_TYPES = [
+  { id: "theoretical", label: "تئوری و مفهومی" },
+  { id: "practical", label: "کاربردی و عملی" },
+  { id: "analytical", label: "تحلیلی و حل مسئله" },
+];
 
 // Utility helpers for time and minute math
 const calculateTotalMinutes = (studentCount, durationMinutes, gapMinutes = 5) => {
@@ -75,17 +93,39 @@ export const CreateExamAccordion = ({
   // Accordion Expand States
   const [isStudentsOpen, setIsStudentsOpen] = useState(false);
   const [isGoalsOpen, setIsGoalsOpen] = useState(true);
+  const [isFilesOpen, setIsFilesOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(true);
 
   // Duration & Goals
   const [durationPerStudent, setDurationPerStudent] = useState(10);
   const [goalCount, setGoalCount] = useState(2);
-  const [goals, setGoals] = useState(["", ""]);
+  const [goals, setGoals] = useState([
+    { title: "", goal_type: "theoretical", bloom_level: 2 },
+    { title: "", goal_type: "practical", bloom_level: 3 },
+  ]);
+  const [attachedFiles, setAttachedFiles] = useState([]);
 
-  // Date & Time Scheduling
-  const [examDate, setExamDate] = useState("1405/07/20");
-  const [startTime, setStartTime] = useState("10:00");
-  const [endTime, setEndTime] = useState("10:25");
+  // Date & Time Scheduling - Defaults to current local moment
+  const [examDate, setExamDate] = useState(() => {
+    const todayIso = getTodayIsoDate();
+    const p = parseIsoDate(todayIso);
+    if (p) {
+      const { jy, jm, jd } = gregorianToJalali(p.gy, p.gm, p.gd);
+      return `${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`;
+    }
+    return "1405/07/06";
+  });
+
+  const [startTime, setStartTime] = useState(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  });
+
+  const [endTime, setEndTime] = useState(() => {
+    const now = new Date();
+    const curStart = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    return addMinutesToTime(curStart, 60);
+  });
   const [timeError, setTimeError] = useState("");
 
   // Modals for Date & Clock Pickers
@@ -142,7 +182,13 @@ export const CreateExamAccordion = ({
     setGoalCount(validCount);
     setGoals((prev) => {
       const next = [...prev];
-      while (next.length < validCount) next.push("");
+      while (next.length < validCount) {
+        next.push({
+          title: "",
+          goal_type: "theoretical",
+          bloom_level: 2,
+        });
+      }
       return next.slice(0, validCount);
     });
     if (validCount > 0) {
@@ -150,12 +196,21 @@ export const CreateExamAccordion = ({
     }
   };
 
-  const handleGoalTextChange = (index, value) => {
+  const handleGoalFieldChange = (index, field, value) => {
     setGoals((prev) => {
       const next = [...prev];
-      next[index] = value;
+      const cur =
+        typeof next[index] === "object" && next[index] !== null
+          ? { ...next[index] }
+          : { title: String(next[index] || ""), goal_type: "theoretical", bloom_level: 2 };
+      cur[field] = value;
+      next[index] = cur;
       return next;
     });
+  };
+
+  const handleGoalTextChange = (index, value) => {
+    handleGoalFieldChange(index, "title", value);
   };
 
   // Student toggle handlers
@@ -256,33 +311,72 @@ export const CreateExamAccordion = ({
 
     setIsSubmitting(true);
     try {
+      const validGoals = goals
+        .map((g) => {
+          if (typeof g === "object" && g !== null) {
+            const bKey =
+              BLOOM_LEVELS.find((b) => b.level === (g.bloom_level || 2))?.key || "understand";
+            return {
+              title: (g.title || "").trim(),
+              goal_type: g.goal_type || "theoretical",
+              bloom_level: bKey,
+              difficulty: (g.bloom_level || 2) <= 2 ? 0.3 : (g.bloom_level <= 4 ? 0.6 : 0.9),
+            };
+          }
+          return { title: String(g).trim(), goal_type: "theoretical", bloom_level: "understand" };
+        })
+        .filter((g) => g.title.length > 0);
+
+      let isoStart = null;
+      let isoEnd = null;
+      try {
+        const [sh, sm] = (startTime || "10:00").split(":").map(Number);
+        const [eh, em] = (endTime || "12:00").split(":").map(Number);
+        const baseDate = selectedIsoDate ? new Date(selectedIsoDate) : new Date();
+        const dStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), sh, sm, 0, 0);
+        const dEnd = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), eh, em, 0, 0);
+        isoStart = dStart.toISOString();
+        isoEnd = dEnd.toISOString();
+      } catch (e) {
+        console.error("Error creating ISO dates:", e);
+      }
+
       const payload = {
         title: examTitle.trim(),
-        description: `آزمون درس ${courseTitle} با ${goals.filter(Boolean).length} هدف آموزشی`,
+        description: `آزمون درس ${courseTitle} با ${validGoals.length} هدف آموزشی`,
         duration_minutes: durationPerStudent,
-        goals: goals.filter((g) => g.trim().length > 0),
+        goals: validGoals.length > 0 ? validGoals : [examTitle.trim()],
         student_ids: selectedStudentIds,
         gap_minutes: 5,
         exam_date: examDate,
+        start_at: isoStart || startTime,
+        end_at: isoEnd || endTime,
+        starts_at: isoStart || startTime,
+        ends_at: isoEnd || endTime,
+        window_start: startTime,
+        window_end: endTime,
         mode: "quiz",
         pass_score: 70,
         is_active: true,
+        materials: attachedFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),
       };
 
       const result = await examsApi.createLessonQuiz(courseId, payload);
 
+      const topicTitles = validGoals.map((g) => g.title).filter(Boolean);
       const createdItem = {
         id: result?.quiz_id || Date.now(),
         title: examTitle.trim(),
         course: courseTitle,
-        topic: goals.filter(Boolean).join("، ") || "مباحث آزمون",
+        topic: topicTitles.join("، ") || "مباحث آزمون",
         date: examDate,
         time: `${startTime} - ${endTime}`,
         duration: `${durationPerStudent} دقیقه هر دانشجو`,
         active: true,
         scheduled: true,
         studentCount: selectedStudentIds.length,
-        goals: goals.filter(Boolean),
+        goals: validGoals,
+        materials: attachedFiles,
       };
 
       onExamCreated?.(createdItem);
@@ -676,41 +770,278 @@ export const CreateExamAccordion = ({
           </div>
         </div>
 
-        {/* Extended Goals Box: Opens to enter descriptions for each goal */}
+        {/* Extended Goals Box: Opens to enter descriptions, types, and Bloom levels for each goal */}
         {isGoalsOpen && goalCount > 0 && (
-          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-2.5 animate-in fade-in duration-200">
-            <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6]  pt-1">
+          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
+            <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] pt-1">
               {isRTL
-                ? `تعریف و توضیحات ${goalCount} هدف آزمون:`
-                : `Define details for ${goalCount} goals:`}
+                ? `تعریف و تنظیمات ${toPersianDigits(goalCount)} هدف آزمون (سطح تسلط بلوم و نوع ارزیابی):`
+                : `Define details for ${goalCount} goals (Bloom depth & goal type):`}
             </span>
 
-            {Array.from({ length: goalCount }).map((_, idx) => (
-              <div key={idx} className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[9px]  font-bold">
-                    {idx + 1}
-                  </span>
-                  <span>
-                    {isRTL
-                      ? `هدف شماره ${idx + 1} (Goal ${idx + 1}):`
-                      : `Goal ${idx + 1}:`}
-                  </span>
-                </label>
+            {Array.from({ length: goalCount }).map((_, idx) => {
+              const currentGoal = typeof goals[idx] === "object" && goals[idx] !== null
+                ? goals[idx]
+                : { title: String(goals[idx] || ""), goal_type: "theoretical", bloom_level: 2 };
+              const currentBloomLevel = currentGoal.bloom_level || 2;
+              const currentBloomObj = BLOOM_LEVELS.find((b) => b.level === currentBloomLevel) || BLOOM_LEVELS[1];
 
-                <textarea
-                  rows={2}
-                  value={goals[idx] || ""}
-                  onChange={(e) => handleGoalTextChange(idx, e.target.value)}
-                  placeholder={
-                    isRTL
-                      ? `سرفصل یا سوالات مربوط به هدف ${idx + 1} را بنویسید...`
-                      : `Enter details or topics for goal ${idx + 1}...`
-                  }
-                  className="w-full resize-none p-2 text-xs rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]  leading-relaxed"
-                />
+              return (
+                <div
+                  key={idx}
+                  className="p-3 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs"
+                >
+                  {/* Goal Header & Title Input */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[10px] font-bold">
+                          {toPersianDigits(idx + 1)}
+                        </span>
+                        <span>
+                          {isRTL
+                            ? `عنوان هدف شماره ${toPersianDigits(idx + 1)}:`
+                            : `Goal ${idx + 1} Title:`}
+                        </span>
+                      </label>
+
+                      {goalCount > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = goals.filter((_, i) => i !== idx);
+                            setGoals(next);
+                            setGoalCount(next.length);
+                          }}
+                          className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                          title={isRTL ? "حذف این هدف" : "Remove goal"}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      value={currentGoal.title || ""}
+                      onChange={(e) => handleGoalFieldChange(idx, "title", e.target.value)}
+                      placeholder={
+                        isRTL
+                          ? `مثال: مفاهیم چندنخی (Multithreading) و همگام‌سازی پروسس‌ها...`
+                          : `e.g. Multithreading concepts and process synchronization...`
+                      }
+                      className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-scale50 dark:bg-neutral-scale1200/50 border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]"
+                    />
+                  </div>
+
+                  {/* Goal Type Selector */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
+                      {isRTL ? "نوع هدف (Goal Type):" : "Goal Type:"}
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {GOAL_TYPES.map((gt) => {
+                        const isSelected = (currentGoal.goal_type || "theoretical") === gt.id;
+                        return (
+                          <button
+                            key={gt.id}
+                            type="button"
+                            onClick={() => handleGoalFieldChange(idx, "goal_type", gt.id)}
+                            className={`py-1.5 px-2 text-[10.5px] font-semibold rounded-lg border transition-all text-center cursor-pointer ${
+                              isSelected
+                                ? "bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border-[#2481cc]/50 shadow-2xs"
+                                : "bg-neutral-50 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
+                            }`}
+                          >
+                            {gt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Bloom Learning Level Stepped Slider */}
+                  <div className="flex flex-col gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/60">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
+                        {isRTL ? "سطح یادگیری مورد انتظار (تاکسونومی بلوم):" : "Expected Learning Depth (Bloom):"}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2481cc]/10 dark:bg-[#52a2f6]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25">
+                        {isRTL ? `سطح ${toPersianDigits(currentBloomLevel)}: ${currentBloomObj.name}` : `Level ${currentBloomLevel}: ${currentBloomObj.name}`}
+                      </span>
+                    </div>
+
+                    {/* Stepped Range Control */}
+                    <div className="flex flex-col gap-1 px-1">
+                      <input
+                        type="range"
+                        min="1"
+                        max="6"
+                        step="1"
+                        value={currentBloomLevel}
+                        onChange={(e) => handleGoalFieldChange(idx, "bloom_level", parseInt(e.target.value, 10))}
+                        className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-[#2481cc]"
+                      />
+
+                      {/* Step Labels */}
+                      <div className="flex justify-between items-center mt-1 px-0.5">
+                        {BLOOM_LEVELS.map((bl) => {
+                          const isActive = bl.level <= currentBloomLevel;
+                          const isCurrent = bl.level === currentBloomLevel;
+                          return (
+                            <div
+                              key={bl.level}
+                              onClick={() => handleGoalFieldChange(idx, "bloom_level", bl.level)}
+                              className="flex flex-col items-center gap-0.5 cursor-pointer group"
+                            >
+                              <div
+                                className={`w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold transition-all ${
+                                  isCurrent
+                                    ? "bg-[#2481cc] text-white scale-110 shadow-xs"
+                                    : isActive
+                                      ? "bg-[#2481cc]/60 text-white"
+                                      : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500"
+                                }`}
+                              >
+                                {toPersianDigits(bl.level)}
+                              </div>
+                              <span
+                                className={`text-[8.5px] font-medium transition-colors hidden sm:block ${
+                                  isCurrent
+                                    ? "text-[#2481cc] dark:text-[#52a2f6] font-bold"
+                                    : "text-neutral-400 group-hover:text-neutral-600"
+                                }`}
+                              >
+                                {bl.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Level Description Info Box */}
+                      <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] dark:bg-[#15202b] border border-neutral-scale200 dark:border-neutral-scale1100 text-[10px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                        <span className="font-bold text-[#2481cc] dark:text-[#52a2f6] ml-1">
+                          {isRTL ? "شاخص سنجش:" : "Criteria:"}
+                        </span>
+                        {currentBloomObj.desc}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================
+          ITEM 4: پیوست فایل‌ها و منابع مرجع آزمون (ACCORDION)
+          ========================================================= */}
+      <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
+        <div
+          onClick={() => setIsFilesOpen(!isFilesOpen)}
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-neutral-scale100/40 dark:hover:bg-neutral-scale1200/40 transition-colors select-none"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
+              <Paperclip className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
+                {isRTL ? "پیوست فایل‌ها و منابع مرجع آزمون" : "Exam Reference Files"}
+              </span>
+              <span className="text-[10px] text-neutral-400">
+                {attachedFiles.length > 0
+                  ? isRTL
+                    ? `${toPersianDigits(attachedFiles.length)} فایل پیوست شده برای منبع سوالات`
+                    : `${attachedFiles.length} file(s) attached as reference`
+                  : isRTL
+                    ? "اسلایدهای کلاسی، جزوه، کتب مرجع (اختیاری)"
+                    : "Course slides, notes, or reference docs (optional)"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {attachedFiles.length > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#2481cc]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/30">
+                {toPersianDigits(attachedFiles.length)}
+              </span>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-neutral-400 transition-transform duration-250 ${
+                isFilesOpen ? "rotate-180 text-[#2481cc]" : ""
+              }`}
+            />
+          </div>
+        </div>
+
+        {isFilesOpen && (
+          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
+            {/* Upload Dropzone */}
+            <label className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#2481cc]/30 dark:border-[#52a2f6]/30 hover:border-[#2481cc] dark:hover:border-[#52a2f6] bg-[#edf5fd]/40 dark:bg-[#182533]/40 transition-colors cursor-pointer text-center">
+              <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                  {isRTL ? "انتخاب یا کشیدن فایل‌های مرجع آزمون" : "Select or drop reference files"}
+                </span>
+                <span className="text-[10px] text-neutral-400">
+                  {isRTL
+                    ? "پشتیبانی از فرمت‌های PDF، DOCX، PPTX، TXT (حداکثر ۲۰ مگابایت)"
+                    : "Supports PDF, DOCX, PPTX, TXT (up to 20MB)"}
+                </span>
               </div>
-            ))}
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc,.pptx,.ppt,.txt"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    setAttachedFiles((prev) => [
+                      ...prev,
+                      ...files.map((f) => ({
+                        name: f.name,
+                        size: (f.size / (1024 * 1024)).toFixed(2) + " MB",
+                        type: f.type || "document",
+                      })),
+                    ]);
+                  }
+                }}
+                className="hidden"
+              />
+            </label>
+
+            {/* Attached Files List */}
+            {attachedFiles.length > 0 && (
+              <div className="space-y-1.5">
+                {attachedFiles.map((file, fIdx) => (
+                  <div
+                    key={fIdx}
+                    className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-[#2481cc] shrink-0" />
+                      <span className="font-medium text-neutral-800 dark:text-neutral-100 truncate">
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 shrink-0">
+                        ({file.size})
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== fIdx))}
+                      className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                      title={isRTL ? "حذف فایل" : "Remove file"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

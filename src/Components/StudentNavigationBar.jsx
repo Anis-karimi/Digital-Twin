@@ -49,7 +49,6 @@ export const StudentNavigationBar = () => {
       icon: Exam,
       iconActive: ExamFilled,
       iconClassName: "w-[15px] h-[15px]",
-      disabled: true,
     },
     {
       id: "settings",
@@ -69,6 +68,11 @@ export const StudentNavigationBar = () => {
   const getActiveId = () => {
     if (isHomePage) return "chats";
     if (location.pathname === "/StudentSettings") return "settings";
+    if (
+      location.pathname.toLowerCase() === "/studentexams" ||
+      location.pathname.toLowerCase().startsWith("/studentexam")
+    )
+      return "exams";
     return null;
   };
 

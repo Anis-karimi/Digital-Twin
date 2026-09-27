@@ -100,7 +100,7 @@ export async function requestWithFallback(endpoint, options = {}, fallbackData =
     return await httpRequest(url, { ...options, headers });
   } catch (err) {
     console.warn(`[NewBackend] ${endpoint} request failed. Using local fallback:`, err.message);
-    return typeof fallbackData === "function" ? fallbackData() : fallbackData;
+    return typeof fallbackData === "function" ? fallbackData(err) : fallbackData;
   }
 }
 

@@ -19,6 +19,8 @@ import { TeacherContacts } from "@/Pages/Teacher/TeacherContacts";
 import { StudentHome } from "@/Pages/Student/StudentHome";
 import { StudentSettings } from "@/Pages/Student/StudentSettings";
 import { StudentExams } from "@/Pages/Student/StudentExamsPage";
+import { StudentExamPage } from "@/Pages/Student/StudentExamPage";
+import { StudentExamResultPage } from "@/Pages/Student/StudentExamResultPage";
 
 import { QuizFirstPage } from "@/Pages/QuizFirstPage";
 import { QuizQuestionsPage } from "@/Pages/QuizQuestionsPage";
@@ -106,6 +108,15 @@ function App() {
 
             <Route path="/StudentSettings" element={<StudentSettings />} />
             <Route path="/StudentExams" element={<StudentExams />} />
+            <Route path="/studentexams" element={<Navigate to="/StudentExams" replace />} />
+            <Route path="/StudentExam" element={<Navigate to="/StudentExams" replace />} />
+            <Route path="/studentexam" element={<Navigate to="/StudentExams" replace />} />
+            <Route path="/StudentExam/:id" element={<StudentExamPage />} />
+            <Route path="/studentexam/:id" element={<StudentExamPage />} />
+            <Route path="/StudentExamResult/:id" element={<StudentExamResultPage />} />
+            <Route path="/studentexamresult/:id" element={<StudentExamResultPage />} />
+            <Route path="/ExamResult/:id" element={<StudentExamResultPage />} />
+            <Route path="/examresult/:id" element={<StudentExamResultPage />} />
 
             {/* =================== Quiz Pages =================== */}
 
