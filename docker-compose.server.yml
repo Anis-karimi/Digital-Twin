@@ -1,5 +1,5 @@
 services:
-  # Local Development service with Hot Module Replacement (HMR)
+  # Server Development service with direct container networking
   dev:
     build:
       context: .
@@ -13,10 +13,13 @@ services:
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-}
       - VITE_DGTW_URL=${VITE_DGTW_URL:-https://dgtw.um.ac.ir}
       - VITE_NEW_BACKEND_URL=${VITE_NEW_BACKEND_URL:-}
-      - BACKEND_PROXY_URL=${BACKEND_PROXY_URL:-http://host.docker.internal:7000}
+      - BACKEND_PROXY_URL=${BACKEND_PROXY_URL:-http://bot_svc:7000}
       - LEGACY_BACKEND_PROXY_URL=${LEGACY_BACKEND_PROXY_URL:-http://172.20.13.39:8506}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - fum_net
     volumes:
       - ./src:/app/src
       - ./public:/app/public
@@ -40,9 +43,19 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
+    networks:
+      - default
+      - fum_net
     profiles:
       - prod
 
 networks:
   default:
     name: digital-twin_net
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.210.0/24
+  fum_net:
+    name: fum_net
+    external: true

@@ -8,8 +8,12 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "docker:dev": "docker compose up --build dev",
+    "docker:dev": "docker compose up -d dev",
     "docker:dev:down": "docker compose down",
+    "docker:local": "docker compose -f docker-compose.local.yml up -d dev",
+    "docker:local:down": "docker compose -f docker-compose.local.yml down",
+    "docker:server": "docker compose -f docker-compose.server.yml up -d dev",
+    "docker:server:down": "docker compose -f docker-compose.server.yml down",
     "docker:prod": "docker compose --profile prod up --build prod",
     "docker:prod:down": "docker compose --profile prod down",
     "docker:sync-modules": "docker cp digital-twin-dev:/app/node_modules/. ./node_modules/"

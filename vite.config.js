@@ -25,7 +25,7 @@ export default defineConfig({
     },
     proxy: {
       "/api/v1": {
-        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://localhost:7000",
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on("error", (err, req) => {
@@ -34,7 +34,7 @@ export default defineConfig({
         },
       },
       "/bot/v1": {
-        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://localhost:7000",
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on("error", (err, req) => {
@@ -43,7 +43,7 @@ export default defineConfig({
         },
       },
       "/uploads": {
-        target: process.env.BACKEND_PROXY_URL || "http://bot_svc:7000",
+        target: process.env.BACKEND_PROXY_URL || "http://localhost:7000",
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on("error", (err, req) => {
