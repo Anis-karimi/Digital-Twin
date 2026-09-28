@@ -13,12 +13,16 @@ import {
   HelpCircle,
   AlertCircle,
   BookOpen,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { toPersianDigits } from "@/utils/dateUtils";
+import { ExamProctoringCamera } from "@/Components/ExamProctoringCamera";
+import { useExamVoiceSTT } from "@/Hooks/useExamVoiceSTT";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -55,9 +59,27 @@ export const StudentExamPage = () => {
   // Timers - Initialized to real exam duration (default 10 mins = 600s, not 20 mins)
   const [remainingSeconds, setRemainingSeconds] = useState(examDurationMinutes * 60);
 
+  // Speech-to-Text Voice Hook (Using Old Backend STT)
+  const handleTranscript = useCallback((text) => {
+    if (!text) return;
+    setAnswerText((prev) => {
+      const trimmed = prev.trim();
+      if (!trimmed) return text;
+      return `${trimmed} ${text}`;
+    });
+  }, []);
+
+  const {
+    isRecording,
+    error: micError,
+    toggleRecording,
+    stopRecording,
+  } = useExamVoiceSTT({ onTranscript: handleTranscript });
+
   // Centralized finish handler (called on time expiration or completion)
   const handleFinishExam = useCallback(
     async (reason = "completed") => {
+      stopRecording();
       if (isCompleted || isFinishing) return;
       setIsFinishing(true);
       setIsCompleted(true);
@@ -217,6 +239,7 @@ export const StudentExamPage = () => {
 
   const handleSubmitAnswer = async (e) => {
     e?.preventDefault();
+    stopRecording();
     if (!answerText.trim() || isSubmitting || isCompleted) return;
 
     setIsSubmitting(true);
@@ -456,6 +479,9 @@ export const StudentExamPage = () => {
               </div>
             </div>
 
+            {/* Proctoring Camera & Face Verification Preview */}
+            <ExamProctoringCamera sessionId={sessionId} />
+
             {/* Question Card */}
             <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-xl p-4 shadow-sm flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -482,9 +508,17 @@ export const StudentExamPage = () => {
                 <label className="font-vazir text-xs font-semibold text-neutral-scale1600 dark:text-neutral-scale100">
                   {isRTL ? "پاسخ تحلیلی شما:" : "Your Analytical Answer:"}
                 </label>
-                <span className={`text-[11px] text-neutral-scale900 dark:text-neutral-scale400 ${isRTL ? "font-vazir" : "font-inter"}`}>
-                  {isRTL ? toPersianDigits(answerText.length) : answerText.length} {isRTL ? "کاراکتر" : "chars"}
-                </span>
+                <div className="flex items-center gap-2">
+                  {isRecording && (
+                    <span className="flex items-center gap-1 text-[11px] text-red-500 font-vazir animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                      {isRTL ? "در حال ضبط صدا..." : "Recording..."}
+                    </span>
+                  )}
+                  <span className={`text-[11px] text-neutral-scale900 dark:text-neutral-scale400 ${isRTL ? "font-vazir" : "font-inter"}`}>
+                    {isRTL ? toPersianDigits(answerText.length) : answerText.length} {isRTL ? "کاراکتر" : "chars"}
+                  </span>
+                </div>
               </div>
 
               <textarea
@@ -494,35 +528,80 @@ export const StudentExamPage = () => {
                 onChange={(e) => setAnswerText(e.target.value)}
                 placeholder={
                   isRTL
-                    ? "پاسخ کامل و استدلال خود را در اینجا بنویسید..."
-                    : "Type your detailed answer and explanation here..."
+                    ? "پاسخ کامل و استدلال خود را در اینجا بنویسید یا با میکروفون صحبت کنید..."
+                    : "Type your detailed answer or speak using the microphone..."
                 }
                 className="w-full rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 p-3 text-xs font-vazir text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 focus:ring-1 focus:ring-primery-600 resize-none transition-all"
               />
 
-              {/* Submit Button */}
-              <button
-                type="button"
-                disabled={!answerText.trim() || isSubmitting}
-                onClick={handleSubmitAnswer}
-                className={`w-full h-10 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
-                  !answerText.trim() || isSubmitting
-                    ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
-                    : "bg-primery-700 hover:bg-primery-800 text-white"
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{isRTL ? "در حال تحلیل پاسخ توسط مدل..." : "Evaluating answer..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
-                    <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons Row: Mic Button + Submit Button */}
+              <div className="flex items-center gap-2">
+                {/* Voice / Mic Button */}
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  disabled={isSubmitting || isCompleted}
+                  title={
+                    isRecording
+                      ? isRTL ? "توقف ضبط صدا" : "Stop recording"
+                      : isRTL ? "پاسخ صوتی با میکروفون" : "Voice answer"
+                  }
+                  aria-label={isRecording ? "توقف ضبط صدا" : "شروع ضبط صدا با میکروفون"}
+                  className={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs active:scale-95 ${
+                    isRecording
+                      ? "bg-red-500 hover:bg-red-600 text-white animate-pulse ring-2 ring-red-400/50"
+                      : "bg-neutral-scale100 dark:bg-neutral-scale1100 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale300 dark:border-neutral-scale1000"
+                  }`}
+                >
+                  {isRecording ? (
+                    <Mic className="w-5 h-5 animate-bounce" />
+                  ) : (
+                    <Mic className="w-5 h-5 text-primery-700 dark:text-primery-400" />
+                  )}
+                </button>
+
+                {/* Submit Button */}
+                <button
+                  type="button"
+                  disabled={!answerText.trim() || isSubmitting}
+                  onClick={handleSubmitAnswer}
+                  className={`flex-1 h-10 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
+                    !answerText.trim() || isSubmitting
+                      ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
+                      : "bg-primery-700 hover:bg-primery-800 text-white"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{isRTL ? "در حال تحلیل پاسخ توسط مدل..." : "Evaluating answer..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
+                      <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Mic Status & Error Notice */}
+              {isRecording && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-vazir">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
+                  <span>
+                    {isRTL
+                      ? "در حال تبدیل گفتار به متن... هر زمان صحبت‌تان تمام شد دوباره دکمه را لمس کنید."
+                      : "Listening and transcribing speech... Tap again when finished."}
+                  </span>
+                </div>
+              )}
+
+              {micError && (
+                <span className="text-[11px] font-vazir text-red-500 mt-0.5">
+                  {micError}
+                </span>
+              )}
             </div>
           </div>
         )}
