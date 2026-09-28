@@ -104,6 +104,10 @@ export const CreateExamAccordion = ({
     { title: "", goal_type: "practical", bloom_level: 3 },
   ]);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  const [rawFiles, setRawFiles] = useState([]);
+  const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
+  const [goalAiNotice, setGoalAiNotice] = useState({ type: "", message: "" });
+  const [isGoalSuccess, setIsGoalSuccess] = useState(false);
 
   // Date & Time Scheduling - Defaults to current local moment
   const [examDate, setExamDate] = useState(() => {
@@ -211,6 +215,66 @@ export const CreateExamAccordion = ({
 
   const handleGoalTextChange = (index, value) => {
     handleGoalFieldChange(index, "title", value);
+  };
+
+  // Generate Goals using AI from uploaded file
+  const handleGenerateGoalsFromAttachedFile = async () => {
+    setGoalAiNotice({ type: "", message: "" });
+    setIsGoalSuccess(false);
+
+    if (!rawFiles || rawFiles.length === 0) {
+      setGoalAiNotice({
+        type: "warning",
+        message: isRTL
+          ? "لطفاً ابتدا در بخش بالای اهداف (پیوست فایل‌ها و منابع مرجع)، یک فایل جزوه، اسلاید یا سند بارگذاری نمایید."
+          : "Please attach a reference file (PDF, DOCX, PPTX, TXT) in the section above first.",
+      });
+      setIsFilesOpen(true);
+      return;
+    }
+
+    const targetFile = rawFiles[0];
+    setIsGeneratingGoals(true);
+    setIsGoalsOpen(true);
+
+    try {
+      const response = await examsApi.generateGoalsFromFile(targetFile, {
+        courseTitle,
+        examTitle,
+        maxGoals: Math.max(2, goalCount || 3),
+      });
+
+      if (response && response.goals && Array.isArray(response.goals) && response.goals.length > 0) {
+        const formattedGoals = response.goals.map((g) => ({
+          title: g.title || "",
+          goal_type: g.goal_type || "theoretical",
+          bloom_level: typeof g.bloom_level === "number" ? Math.max(1, Math.min(6, g.bloom_level)) : 2,
+        }));
+
+        setGoals(formattedGoals);
+        setGoalCount(formattedGoals.length);
+        setIsGoalSuccess(true);
+        setGoalAiNotice({
+          type: "success",
+          message: isRTL
+            ? `${toPersianDigits(formattedGoals.length)} هدف آموزشی با تحلیل هوشمند فایل «${targetFile.name}» با موفقیت تنظیم شد.`
+            : `Successfully generated ${formattedGoals.length} goals from "${targetFile.name}".`,
+        });
+      } else {
+        throw new Error("No valid goals returned from server");
+      }
+    } catch (err) {
+      console.error("Failed to generate goals from file:", err);
+      setIsGoalSuccess(false);
+      setGoalAiNotice({
+        type: "error",
+        message: isRTL
+          ? "خطا در استخراج هوشمند اهداف از فایل. لطفاً از اتصال اینترنت یا فرمت فایل اطمینان حاصل کرده یا اهداف را دستی وارد نمایید."
+          : "Failed to extract goals using AI. Please check the file or enter goals manually.",
+      });
+    } finally {
+      setIsGeneratingGoals(false);
+    }
   };
 
   // Student toggle handlers
@@ -650,9 +714,126 @@ export const CreateExamAccordion = ({
       </div>
 
       {/* =========================================================
-          ITEM 3: زمان آزمون و تعداد هدف‌ها goal (EXTENDABLE)
+          ITEM 3: پیوست فایل‌ها و منابع مرجع آزمون (ACCORDION)
+          قرارگیری قبل از اهداف برای امکان تولید هوشمند اهداف از فایل
+          ========================================================= */}
+      <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
+        <div
+          onClick={() => setIsFilesOpen(!isFilesOpen)}
+          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-neutral-scale100/40 dark:hover:bg-neutral-scale1200/40 transition-colors select-none"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
+              <Paperclip className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
+                {isRTL ? "پیوست فایل‌ها و منابع مرجع آزمون" : "Exam Reference Files"}
+              </span>
+              <span className="text-[10px] text-neutral-400">
+                {attachedFiles.length > 0
+                  ? isRTL
+                    ? `${toPersianDigits(attachedFiles.length)} فایل پیوست شده (آماده استخراج هوشمند اهداف)`
+                    : `${attachedFiles.length} file(s) attached (ready for AI goal extraction)`
+                  : isRTL
+                    ? "اسلایدهای کلاسی، جزوه، کتب مرجع جهت تولید خودکار اهداف و سوالات (اختیاری)"
+                    : "Course slides, notes, or reference docs for auto-generating goals (optional)"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {attachedFiles.length > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#2481cc]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/30">
+                {toPersianDigits(attachedFiles.length)}
+              </span>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-neutral-400 transition-transform duration-250 ${
+                isFilesOpen ? "rotate-180 text-[#2481cc]" : ""
+              }`}
+            />
+          </div>
+        </div>
+
+        {isFilesOpen && (
+          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
+            {/* Upload Dropzone */}
+            <label className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#2481cc]/30 dark:border-[#52a2f6]/30 hover:border-[#2481cc] dark:hover:border-[#52a2f6] bg-[#edf5fd]/40 dark:bg-[#182533]/40 transition-colors cursor-pointer text-center">
+              <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                  {isRTL ? "انتخاب یا کشیدن فایل‌های مرجع آزمون" : "Select or drop reference files"}
+                </span>
+                <span className="text-[10px] text-neutral-400">
+                  {isRTL
+                    ? "پشتیبانی از فرمت‌های PDF، DOCX، PPTX، TXT (حداکثر ۲۰ مگابایت)"
+                    : "Supports PDF, DOCX, PPTX, TXT (up to 20MB)"}
+                </span>
+              </div>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc,.pptx,.ppt,.txt"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    setRawFiles((prev) => [...prev, ...files]);
+                    setAttachedFiles((prev) => [
+                      ...prev,
+                      ...files.map((f) => ({
+                        name: f.name,
+                        size: (f.size / (1024 * 1024)).toFixed(2) + " MB",
+                        type: f.type || "document",
+                      })),
+                    ]);
+                    setGoalAiNotice({ type: "", message: "" });
+                  }
+                }}
+                className="hidden"
+              />
+            </label>
+
+            {/* Attached Files List */}
+            {attachedFiles.length > 0 && (
+              <div className="space-y-1.5">
+                {attachedFiles.map((file, fIdx) => (
+                  <div
+                    key={fIdx}
+                    className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-[#2481cc] shrink-0" />
+                      <span className="font-medium text-neutral-800 dark:text-neutral-100 truncate">
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 shrink-0">
+                        ({file.size})
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachedFiles((prev) => prev.filter((_, i) => i !== fIdx));
+                        setRawFiles((prev) => prev.filter((_, i) => i !== fIdx));
+                      }}
+                      className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                      title={isRTL ? "حذف فایل" : "Remove file"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================
+          ITEM 4: زمان آزمون و تعداد هدف‌ها goal (EXTENDABLE)
           بیرونی: فیلد زمان هر نفر و تعداد گل
-          اکستند: باکس‌های نوشتن توضیحات goal 1, goal 2, ...
+          اکستند: تولید خودکار با هوش مصنوعی از فایل، اسکلت لودینگ، تنظیمات بلوم
           ========================================================= */}
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
         {/* Outer Fields (Always Visible) */}
@@ -667,17 +848,19 @@ export const CreateExamAccordion = ({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsGoalsOpen(!isGoalsOpen)}
-              className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 cursor-pointer"
-            >
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-250 ${
-                  isGoalsOpen ? "rotate-180 text-[#2481cc]" : ""
-                }`}
-              />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsGoalsOpen(!isGoalsOpen)}
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 cursor-pointer"
+              >
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-250 ${
+                    isGoalsOpen ? "rotate-180 text-[#2481cc]" : ""
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Two Outer Controls in a Row */}
@@ -771,283 +954,327 @@ export const CreateExamAccordion = ({
         </div>
 
         {/* Extended Goals Box: Opens to enter descriptions, types, and Bloom levels for each goal */}
-        {isGoalsOpen && goalCount > 0 && (
+        {isGoalsOpen && (
           <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
-            <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] pt-1">
-              {isRTL
-                ? `تعریف و تنظیمات ${toPersianDigits(goalCount)} هدف آزمون (سطح تسلط بلوم و نوع ارزیابی):`
-                : `Define details for ${goalCount} goals (Bloom depth & goal type):`}
-            </span>
+            {/* AI Generator Circular Button Section */}
+            <div className="py-3 px-4 rounded-xl bg-neutral-50/60 dark:bg-neutral-800/25 border border-neutral-200/50 dark:border-neutral-800/50 flex flex-col items-center justify-center gap-1.5 transition-all">
+              <div className="relative inline-flex items-center justify-center p-1">
+                {/* Spinning border ring when loading */}
+                {isGeneratingGoals && (
+                  <span className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#2481cc] border-r-[#2481cc] animate-spin pointer-events-none" />
+                )}
 
-            {Array.from({ length: goalCount }).map((_, idx) => {
-              const currentGoal = typeof goals[idx] === "object" && goals[idx] !== null
-                ? goals[idx]
-                : { title: String(goals[idx] || ""), goal_type: "theoretical", bloom_level: 2 };
-              const currentBloomLevel = currentGoal.bloom_level || 2;
-              const currentBloomObj = BLOOM_LEVELS.find((b) => b.level === currentBloomLevel) || BLOOM_LEVELS[1];
-
-              return (
-                <div
-                  key={idx}
-                  className="p-3 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs"
-                >
-                  {/* Goal Header & Title Input */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[10px] font-bold">
-                          {toPersianDigits(idx + 1)}
-                        </span>
-                        <span>
-                          {isRTL
-                            ? `عنوان هدف شماره ${toPersianDigits(idx + 1)}:`
-                            : `Goal ${idx + 1} Title:`}
-                        </span>
-                      </label>
-
-                      {goalCount > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = goals.filter((_, i) => i !== idx);
-                            setGoals(next);
-                            setGoalCount(next.length);
-                          }}
-                          className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                          title={isRTL ? "حذف این هدف" : "Remove goal"}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      value={currentGoal.title || ""}
-                      onChange={(e) => handleGoalFieldChange(idx, "title", e.target.value)}
-                      placeholder={
-                        isRTL
-                          ? `مثال: مفاهیم چندنخی (Multithreading) و همگام‌سازی پروسس‌ها...`
-                          : `e.g. Multithreading concepts and process synchronization...`
-                      }
-                      className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-scale50 dark:bg-neutral-scale1200/50 border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]"
-                    />
-                  </div>
-
-                  {/* Goal Type Selector */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
-                      {isRTL ? "نوع هدف (Goal Type):" : "Goal Type:"}
-                    </span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {GOAL_TYPES.map((gt) => {
-                        const isSelected = (currentGoal.goal_type || "theoretical") === gt.id;
-                        return (
-                          <button
-                            key={gt.id}
-                            type="button"
-                            onClick={() => handleGoalFieldChange(idx, "goal_type", gt.id)}
-                            className={`py-1.5 px-2 text-[10.5px] font-semibold rounded-lg border transition-all text-center cursor-pointer ${
-                              isSelected
-                                ? "bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border-[#2481cc]/50 shadow-2xs"
-                                : "bg-neutral-50 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
-                            }`}
-                          >
-                            {gt.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Bloom Learning Level Stepped Slider */}
-                  <div className="flex flex-col gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/60">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
-                        {isRTL ? "سطح یادگیری مورد انتظار (تاکسونومی بلوم):" : "Expected Learning Depth (Bloom):"}
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2481cc]/10 dark:bg-[#52a2f6]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25">
-                        {isRTL ? `سطح ${toPersianDigits(currentBloomLevel)}: ${currentBloomObj.name}` : `Level ${currentBloomLevel}: ${currentBloomObj.name}`}
-                      </span>
-                    </div>
-
-                    {/* Stepped Range Control */}
-                    <div className="flex flex-col gap-1 px-1">
-                      <input
-                        type="range"
-                        min="1"
-                        max="6"
-                        step="1"
-                        value={currentBloomLevel}
-                        onChange={(e) => handleGoalFieldChange(idx, "bloom_level", parseInt(e.target.value, 10))}
-                        className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-[#2481cc]"
-                      />
-
-                      {/* Step Labels */}
-                      <div className="flex justify-between items-center mt-1 px-0.5">
-                        {BLOOM_LEVELS.map((bl) => {
-                          const isActive = bl.level <= currentBloomLevel;
-                          const isCurrent = bl.level === currentBloomLevel;
-                          return (
-                            <div
-                              key={bl.level}
-                              onClick={() => handleGoalFieldChange(idx, "bloom_level", bl.level)}
-                              className="flex flex-col items-center gap-0.5 cursor-pointer group"
-                            >
-                              <div
-                                className={`w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold transition-all ${
-                                  isCurrent
-                                    ? "bg-[#2481cc] text-white scale-110 shadow-xs"
-                                    : isActive
-                                      ? "bg-[#2481cc]/60 text-white"
-                                      : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500"
-                                }`}
-                              >
-                                {toPersianDigits(bl.level)}
-                              </div>
-                              <span
-                                className={`text-[8.5px] font-medium transition-colors hidden sm:block ${
-                                  isCurrent
-                                    ? "text-[#2481cc] dark:text-[#52a2f6] font-bold"
-                                    : "text-neutral-400 group-hover:text-neutral-600"
-                                }`}
-                              >
-                                {bl.name}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Level Description Info Box */}
-                      <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] dark:bg-[#15202b] border border-neutral-scale200 dark:border-neutral-scale1100 text-[10px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                        <span className="font-bold text-[#2481cc] dark:text-[#52a2f6] ml-1">
-                          {isRTL ? "شاخص سنجش:" : "Criteria:"}
-                        </span>
-                        {currentBloomObj.desc}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* =========================================================
-          ITEM 4: پیوست فایل‌ها و منابع مرجع آزمون (ACCORDION)
-          ========================================================= */}
-      <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
-        <div
-          onClick={() => setIsFilesOpen(!isFilesOpen)}
-          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-neutral-scale100/40 dark:hover:bg-neutral-scale1200/40 transition-colors select-none"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
-              <Paperclip className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
-                {isRTL ? "پیوست فایل‌ها و منابع مرجع آزمون" : "Exam Reference Files"}
-              </span>
-              <span className="text-[10px] text-neutral-400">
-                {attachedFiles.length > 0
-                  ? isRTL
-                    ? `${toPersianDigits(attachedFiles.length)} فایل پیوست شده برای منبع سوالات`
-                    : `${attachedFiles.length} file(s) attached as reference`
-                  : isRTL
-                    ? "اسلایدهای کلاسی، جزوه، کتب مرجع (اختیاری)"
-                    : "Course slides, notes, or reference docs (optional)"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {attachedFiles.length > 0 && (
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#2481cc]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/30">
-                {toPersianDigits(attachedFiles.length)}
-              </span>
-            )}
-            <ChevronDown
-              className={`w-4 h-4 text-neutral-400 transition-transform duration-250 ${
-                isFilesOpen ? "rotate-180 text-[#2481cc]" : ""
-              }`}
-            />
-          </div>
-        </div>
-
-        {isFilesOpen && (
-          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
-            {/* Upload Dropzone */}
-            <label className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#2481cc]/30 dark:border-[#52a2f6]/30 hover:border-[#2481cc] dark:hover:border-[#52a2f6] bg-[#edf5fd]/40 dark:bg-[#182533]/40 transition-colors cursor-pointer text-center">
-              <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                  {isRTL ? "انتخاب یا کشیدن فایل‌های مرجع آزمون" : "Select or drop reference files"}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {isRTL
-                    ? "پشتیبانی از فرمت‌های PDF، DOCX، PPTX، TXT (حداکثر ۲۰ مگابایت)"
-                    : "Supports PDF, DOCX, PPTX, TXT (up to 20MB)"}
-                </span>
-              </div>
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.docx,.doc,.pptx,.ppt,.txt"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  if (files.length > 0) {
-                    setAttachedFiles((prev) => [
-                      ...prev,
-                      ...files.map((f) => ({
-                        name: f.name,
-                        size: (f.size / (1024 * 1024)).toFixed(2) + " MB",
-                        type: f.type || "document",
-                      })),
-                    ]);
+                <button
+                  type="button"
+                  onClick={handleGenerateGoalsFromAttachedFile}
+                  disabled={isGeneratingGoals}
+                  title={
+                    isGoalSuccess
+                      ? (isRTL ? "اهداف با موفقیت استخراج شد (کلیک برای استخراج مجدد)" : "Goals generated (click to regenerate)")
+                      : (isRTL ? "استخراج هوشمند اهداف با هوش مصنوعی" : "Generate goals via AI")
                   }
-                }}
-                className="hidden"
-              />
-            </label>
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+                    isGoalSuccess
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25"
+                      : isGeneratingGoals
+                        ? "bg-[#2481cc] text-white opacity-90 shadow-[#2481cc]/25"
+                        : "bg-[#2481cc] hover:bg-[#1f72b5] text-white shadow-[#2481cc]/30 hover:scale-105 active:scale-95"
+                  }`}
+                >
+                  {isGoalSuccess ? (
+                    <Check className="w-5 h-5 text-white stroke-[2.5] animate-in zoom-in duration-200" />
+                  ) : (
+                    <Sparkles
+                      className={`w-5 h-5 text-white ${
+                        isGeneratingGoals ? "animate-pulse" : ""
+                      }`}
+                    />
+                  )}
+                </button>
+              </div>
 
-            {/* Attached Files List */}
-            {attachedFiles.length > 0 && (
-              <div className="space-y-1.5">
-                {attachedFiles.map((file, fIdx) => (
+              {/* Faint, non-bold text underneath */}
+              <div className="flex flex-col items-center gap-0.5 text-center select-none">
+                <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 leading-tight">
+                  {isGeneratingGoals
+                    ? (isRTL ? "در حال استخراج هوشمند اهداف با هوش مصنوعی..." : "Extracting goals with AI...")
+                    : isGoalSuccess
+                      ? (isRTL ? "اهداف آزمون با موفقیت بر اساس فایل تنظیم شد" : "Goals extracted successfully from file")
+                      : (isRTL ? "تولید هوشمند اهداف از فایل مرجع با هوش مصنوعی" : "Auto-generate goals from reference file via AI")}
+                </span>
+                {rawFiles.length > 0 && !isGeneratingGoals && (
+                  <span className="text-[10px] font-normal text-neutral-400 dark:text-neutral-500 max-w-xs truncate">
+                    {rawFiles[0].name}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Error or Warning Notice Alert (only if not success) */}
+            {goalAiNotice.message && goalAiNotice.type !== "success" && (
+              <div
+                className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 animate-in fade-in ${
+                  goalAiNotice.type === "error"
+                    ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300"
+                    : "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                }`}
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{goalAiNotice.message}</span>
+              </div>
+            )}
+
+            {/* ========================================================
+                LOADING SKELETON: Displayed during AI Goal Extraction
+                ======================================================== */}
+            {isGeneratingGoals ? (
+              <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-[#2481cc]/25 text-xs text-[#2481cc] dark:text-[#52a2f6]">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#2481cc]" />
+                  <span className="font-semibold">
+                    {isRTL
+                      ? "هوش مصنوعی در حال تحلیل عمیق محتوا و تدوین اهداف یادگیری بلوم است..."
+                      : "AI is analyzing document contents and formulating Bloom learning goals..."}
+                  </span>
+                </div>
+
+                {Array.from({ length: Math.min(3, Math.max(2, goalCount)) }).map((_, sIdx) => (
                   <div
-                    key={fIdx}
-                    className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-xs"
+                    key={`skeleton-goal-${sIdx}`}
+                    className="p-3.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs animate-pulse"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-4 h-4 text-[#2481cc] shrink-0" />
-                      <span className="font-medium text-neutral-800 dark:text-neutral-100 truncate">
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 shrink-0">
-                        ({file.size})
-                      </span>
+                    {/* Header + Title input skeleton */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-800" />
+                          <div className="h-3 w-28 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                        </div>
+                        <div className="h-3 w-12 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                      </div>
+                      <div className="h-9 w-full bg-neutral-100 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-800" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== fIdx))}
-                      className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                      title={isRTL ? "حذف فایل" : "Remove file"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    {/* Goal Type buttons skeleton */}
+                    <div className="flex flex-col gap-2">
+                      <div className="h-3 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                      </div>
+                    </div>
+
+                    {/* Bloom Taxonomy slider skeleton */}
+                    <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/60">
+                      <div className="flex items-center justify-between">
+                        <div className="h-3 w-36 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                        <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
+                      </div>
+                      <div className="h-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-lg my-1" />
+                      <div className="flex justify-between items-center px-1">
+                        {Array.from({ length: 6 }).map((_, bIdx) => (
+                          <div
+                            key={bIdx}
+                            className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-neutral-800"
+                          />
+                        ))}
+                      </div>
+                      <div className="h-8 w-full bg-neutral-100 dark:bg-neutral-800/40 rounded-lg mt-1" />
+                    </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              /* ========================================================
+                 ACTUAL GOAL CARDS
+                 ======================================================== */
+              <>
+                <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] pt-1">
+                  {isRTL
+                    ? `تعریف و تنظیمات ${toPersianDigits(goalCount)} هدف آزمون (سطح تسلط بلوم و نوع ارزیابی):`
+                    : `Define details for ${goalCount} goals (Bloom depth & goal type):`}
+                </span>
+
+                {Array.from({ length: goalCount }).map((_, idx) => {
+                  const currentGoal =
+                    typeof goals[idx] === "object" && goals[idx] !== null
+                      ? goals[idx]
+                      : { title: String(goals[idx] || ""), goal_type: "theoretical", bloom_level: 2 };
+                  const currentBloomLevel = currentGoal.bloom_level || 2;
+                  const currentBloomObj =
+                    BLOOM_LEVELS.find((b) => b.level === currentBloomLevel) || BLOOM_LEVELS[1];
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs"
+                    >
+                      {/* Goal Header & Title Input */}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-[#2481cc] text-white flex items-center justify-center text-[10px] font-bold">
+                              {toPersianDigits(idx + 1)}
+                            </span>
+                            <span>
+                              {isRTL
+                                ? `عنوان هدف شماره ${toPersianDigits(idx + 1)}:`
+                                : `Goal ${idx + 1} Title:`}
+                            </span>
+                          </label>
+
+                          {goalCount > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = goals.filter((_, i) => i !== idx);
+                                setGoals(next);
+                                setGoalCount(next.length);
+                              }}
+                              className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                              title={isRTL ? "حذف این هدف" : "Remove goal"}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        <input
+                          type="text"
+                          value={currentGoal.title || ""}
+                          onChange={(e) =>
+                            handleGoalFieldChange(idx, "title", e.target.value)
+                          }
+                          placeholder={
+                            isRTL
+                              ? `مثال: مفاهیم چندنخی (Multithreading) و همگام‌سازی پروسس‌ها...`
+                              : `e.g. Multithreading concepts and process synchronization...`
+                          }
+                          className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-scale50 dark:bg-neutral-scale1200/50 border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]"
+                        />
+                      </div>
+
+                      {/* Goal Type Selector */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
+                          {isRTL ? "نوع هدف (Goal Type):" : "Goal Type:"}
+                        </span>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {GOAL_TYPES.map((gt) => {
+                            const isSelected =
+                              (currentGoal.goal_type || "theoretical") === gt.id;
+                            return (
+                              <button
+                                key={gt.id}
+                                type="button"
+                                onClick={() =>
+                                  handleGoalFieldChange(idx, "goal_type", gt.id)
+                                }
+                                className={`py-1.5 px-2 text-[10.5px] font-semibold rounded-lg border transition-all text-center cursor-pointer ${
+                                  isSelected
+                                    ? "bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border-[#2481cc]/50 shadow-2xs"
+                                    : "bg-neutral-50 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
+                                }`}
+                              >
+                                {gt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Bloom Learning Level Stepped Slider */}
+                      <div className="flex flex-col gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
+                            {isRTL
+                              ? "سطح یادگیری مورد انتظار (تاکسونومی بلوم):"
+                              : "Expected Learning Depth (Bloom):"}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2481cc]/10 dark:bg-[#52a2f6]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25">
+                            {isRTL
+                              ? `سطح ${toPersianDigits(currentBloomLevel)}: ${currentBloomObj.name}`
+                              : `Level ${currentBloomLevel}: ${currentBloomObj.name}`}
+                          </span>
+                        </div>
+
+                        {/* Stepped Range Control */}
+                        <div className="flex flex-col gap-1 px-1">
+                          <input
+                            type="range"
+                            min="1"
+                            max="6"
+                            step="1"
+                            value={currentBloomLevel}
+                            onChange={(e) =>
+                              handleGoalFieldChange(
+                                idx,
+                                "bloom_level",
+                                parseInt(e.target.value, 10),
+                              )
+                            }
+                            className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-[#2481cc]"
+                          />
+
+                          {/* Step Labels */}
+                          <div className="flex justify-between items-center mt-1 px-0.5">
+                            {BLOOM_LEVELS.map((bl) => {
+                              const isActive = bl.level <= currentBloomLevel;
+                              const isCurrent = bl.level === currentBloomLevel;
+                              return (
+                                <div
+                                  key={bl.level}
+                                  onClick={() =>
+                                    handleGoalFieldChange(idx, "bloom_level", bl.level)
+                                  }
+                                  className="flex flex-col items-center gap-0.5 cursor-pointer group"
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold transition-all ${
+                                      isCurrent
+                                        ? "bg-[#2481cc] text-white scale-110 shadow-xs"
+                                        : isActive
+                                          ? "bg-[#2481cc]/60 text-white"
+                                          : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500"
+                                    }`}
+                                  >
+                                    {toPersianDigits(bl.level)}
+                                  </div>
+                                  <span
+                                    className={`text-[8.5px] font-medium transition-colors hidden sm:block ${
+                                      isCurrent
+                                        ? "text-[#2481cc] dark:text-[#52a2f6] font-bold"
+                                        : "text-neutral-400 group-hover:text-neutral-600"
+                                    }`}
+                                  >
+                                    {bl.name}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Level Description Info Box */}
+                          <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] dark:bg-[#15202b] border border-neutral-scale200 dark:border-neutral-scale1100 text-[10px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                            <span className="font-bold text-[#2481cc] dark:text-[#52a2f6] ml-1">
+                              {isRTL ? "شاخص سنجش:" : "Criteria:"}
+                            </span>
+                            {currentBloomObj.desc}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         )}
       </div>
 
       {/* =========================================================
-          ITEM 4: تاریخ، زمان شروع و پایان هوشمند با گپ ۵ دقیقه‌ای (EXTENDABLE)
+          ITEM 5: تاریخ، زمان شروع و پایان هوشمند با گپ ۵ دقیقه‌ای (EXTENDABLE)
           محاسبه خودکار حداقل زمان پایان بر اساس فرمول:
           Total = N * Duration + (N - 1) * 5
           کاربر نمی‌تواند پایان را کمتر از این حداقل ثبت کند
