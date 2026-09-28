@@ -22,7 +22,8 @@ import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { ExamProctoringCamera } from "@/Components/ExamProctoringCamera";
-import { useExamVoiceSTT } from "@/Hooks/useExamVoiceSTT";
+import Microphon from "@/assets/icons/Microphon.svg?react";
+import { voiceApi } from "@/api";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -59,22 +60,141 @@ export const StudentExamPage = () => {
   // Timers - Initialized to real exam duration (default 10 mins = 600s, not 20 mins)
   const [remainingSeconds, setRemainingSeconds] = useState(examDurationMinutes * 60);
 
-  // Speech-to-Text Voice Hook (Using Old Backend STT)
-  const handleTranscript = useCallback((text) => {
-    if (!text) return;
-    setAnswerText((prev) => {
-      const trimmed = prev.trim();
-      if (!trimmed) return text;
-      return `${trimmed} ${text}`;
-    });
-  }, []);
+  // Microphone and Recording state (Matching ChatArea.jsx)
+  const [recording, setRecording] = useState(false);
+  const recordingRef = useRef(false);
+  const baseTextRef = useRef("");
+  const ws = useRef(null);
+  const streamRef = useRef(null);
+  const audioCtx = useRef(null);
+  const processor = useRef(null);
 
-  const {
-    isRecording,
-    error: micError,
-    toggleRecording,
-    stopRecording,
-  } = useExamVoiceSTT({ onTranscript: handleTranscript });
+  // ⚡ Downsample function to 16kHz (Matching ChatArea.jsx)
+  function downsample(buffer, inputRate, outputRate) {
+    if (outputRate === inputRate) return buffer;
+    const ratio = inputRate / outputRate;
+    const newLen = Math.round(buffer.length / ratio);
+    const result = new Float32Array(newLen);
+    let offset = 0;
+    for (let i = 0; i < newLen; i++) {
+      const next = Math.round((i + 1) * ratio);
+      let sum = 0,
+        count = 0;
+      for (let j = offset; j < next && j < buffer.length; j++) {
+        sum += buffer[j];
+        count++;
+      }
+      result[i] = count > 0 ? sum / count : 0;
+      offset = next;
+    }
+    return result;
+  }
+
+  const startRecording = async () => {
+    if (recordingRef.current) return;
+
+    console.log("🎙 Starting recording...");
+
+    setRecording(true);
+    recordingRef.current = true;
+    baseTextRef.current = answerText;
+
+    ws.current = voiceApi.createSTTWebSocket({
+      onOpen: () => console.log("[WS] Connected"),
+      onTranscript: (msg) => {
+        if (msg) {
+          const base = baseTextRef.current ? baseTextRef.current.trim() + " " : "";
+          setAnswerText(base + msg);
+        }
+        console.log("[WS]", msg);
+      },
+      onError: (e) => console.error("[WS] Error:", e),
+      onClose: () => console.log("[WS] Closed"),
+    });
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      streamRef.current = stream;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx.current = new AudioContextClass();
+
+      const source = audioCtx.current.createMediaStreamSource(stream);
+
+      const proc = audioCtx.current.createScriptProcessor(4096, 1, 1);
+
+      processor.current = proc;
+
+      source.connect(proc);
+
+      const silent = audioCtx.current.createGain();
+
+      silent.gain.value = 0;
+
+      proc.connect(silent);
+      silent.connect(audioCtx.current.destination);
+
+      proc.onaudioprocess = (e) => {
+        if (!recordingRef.current) return;
+        if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+
+        let input = e.inputBuffer.getChannelData(0);
+
+        input = downsample(
+          input,
+          audioCtx.current.sampleRate,
+          16000
+        );
+
+        const buf = new Int16Array(input.length);
+
+        for (let i = 0; i < input.length; i++) {
+          buf[i] =
+            Math.max(-1, Math.min(1, input[i])) *
+            32767;
+        }
+
+        ws.current.send(buf.buffer);
+      };
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      recordingRef.current = false;
+      setRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (!recordingRef.current) return;
+
+    console.log("🛑 Stopping recording...");
+
+    recordingRef.current = false;
+    setRecording(false);
+
+    processor.current?.disconnect();
+    audioCtx.current?.close();
+    audioCtx.current = null;
+    processor.current = null;
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "stop" }));
+      ws.current.close();
+    }
+    ws.current = null;
+  };
+
+  // Teardown recording on unmount
+  useEffect(() => {
+    return () => {
+      stopRecording();
+    };
+  }, []);
 
   // Centralized finish handler (called on time expiration or completion)
   const handleFinishExam = useCallback(
@@ -509,7 +629,7 @@ export const StudentExamPage = () => {
                   {isRTL ? "پاسخ تحلیلی شما:" : "Your Analytical Answer:"}
                 </label>
                 <div className="flex items-center gap-2">
-                  {isRecording && (
+                  {recording && (
                     <span className="flex items-center gap-1 text-[11px] text-red-500 font-vazir animate-pulse">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
                       {isRTL ? "در حال ضبط صدا..." : "Recording..."}
@@ -536,27 +656,33 @@ export const StudentExamPage = () => {
 
               {/* Action Buttons Row: Mic Button + Submit Button */}
               <div className="flex items-center gap-2">
-                {/* Voice / Mic Button */}
+                {/* Voice / Mic Button (Matching ChatArea) */}
                 <button
                   type="button"
-                  onClick={toggleRecording}
+                  onClick={() => {
+                    if (recording) {
+                      stopRecording();
+                      return;
+                    }
+                    startRecording();
+                  }}
                   disabled={isSubmitting || isCompleted}
                   title={
-                    isRecording
+                    recording
                       ? isRTL ? "توقف ضبط صدا" : "Stop recording"
                       : isRTL ? "پاسخ صوتی با میکروفون" : "Voice answer"
                   }
-                  aria-label={isRecording ? "توقف ضبط صدا" : "شروع ضبط صدا با میکروفون"}
+                  aria-label={recording ? "توقف ضبط صدا" : "شروع ضبط صدا با میکروفون"}
                   className={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs active:scale-95 ${
-                    isRecording
-                      ? "bg-red-500 hover:bg-red-600 text-white animate-pulse ring-2 ring-red-400/50"
+                    recording
+                      ? "bg-red-500/10 border border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
                       : "bg-neutral-scale100 dark:bg-neutral-scale1100 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale300 dark:border-neutral-scale1000"
                   }`}
                 >
-                  {isRecording ? (
-                    <Mic className="w-5 h-5 animate-bounce" />
+                  {recording ? (
+                    <Microphon className="text-red-500 !w-[28px] !h-[28px] animate-pulse scale-110" />
                   ) : (
-                    <Mic className="w-5 h-5 text-primery-700 dark:text-primery-400" />
+                    <Microphon className="!w-[28px] !h-[28px] text-primery-500 transition-all duration-300" />
                   )}
                 </button>
 
@@ -585,8 +711,8 @@ export const StudentExamPage = () => {
                 </button>
               </div>
 
-              {/* Mic Status & Error Notice */}
-              {isRecording && (
+              {/* Mic Status Banner */}
+              {recording && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-vazir">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
                   <span>
@@ -595,12 +721,6 @@ export const StudentExamPage = () => {
                       : "Listening and transcribing speech... Tap again when finished."}
                   </span>
                 </div>
-              )}
-
-              {micError && (
-                <span className="text-[11px] font-vazir text-red-500 mt-0.5">
-                  {micError}
-                </span>
               )}
             </div>
           </div>
