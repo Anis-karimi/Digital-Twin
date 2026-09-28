@@ -41,6 +41,11 @@ services:
     image: digital-twin-prod:latest
     container_name: digital-twin-prod
     restart: unless-stopped
+    environment:
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
     networks:
       - fum_net
     labels:
