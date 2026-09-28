@@ -10,15 +10,16 @@ const isBrowser = typeof window !== "undefined";
 
 // When accessed directly via Vite dev server (:5173) or reverse proxy,
 // relative /api/v1 routes through Vite/Traefik proxy cleanly without CORS or firewall port issues.
-const defaultNewBackendUrl =
-  isBrowser && window.location.port === "5173"
-    ? "/api/v1"
-    : isBrowser &&
-        window.location.hostname &&
-        window.location.hostname !== "localhost" &&
-        window.location.hostname !== "127.0.0.1"
-      ? `${window.location.protocol}//${window.location.hostname}:8080/api/v1`
-      : "/api/v1";
+const defaultNewBackendUrl = (() => {
+  if (!isBrowser) return "/api/v1";
+  const { port, hostname, protocol } = window.location;
+  if (port === "5173") return "/api/v1";
+  if (port === "8080" || port === "80" || port === "443" || !port) return "/api/v1";
+  if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+    return `${protocol}//${hostname}:8080/api/v1`;
+  }
+  return "/api/v1";
+})();
 
 const defaultBackendUrl =
   isBrowser &&
@@ -50,8 +51,8 @@ export const API_CONFIG = {
   /** Flag to toggle live requests to the new backend */
   USE_NEW_BACKEND: import.meta.env.VITE_USE_NEW_BACKEND !== "false",
 
-  /** Standard timeout in milliseconds */
-  REQUEST_TIMEOUT_MS: 15000,
+  /** Standard timeout in milliseconds (60s for AI inference / file analysis) */
+  REQUEST_TIMEOUT_MS: 60000,
 };
 
 export default API_CONFIG;

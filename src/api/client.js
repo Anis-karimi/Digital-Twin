@@ -38,12 +38,14 @@ export function handleApiError(service, action, error) {
  * @param {'json'|'blob'|'text'|'raw'} [responseType='json'] Expected return format
  */
 export async function httpRequest(url, options = {}, responseType = "json") {
+  const timeoutMs = Number(options.timeout) || API_CONFIG.REQUEST_TIMEOUT_MS || 60000;
+  const { timeout: _customTimeout, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
     });
 
@@ -70,7 +72,7 @@ export async function httpRequest(url, options = {}, responseType = "json") {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === "AbortError") {
-      throw new Error(`Request timed out after ${API_CONFIG.REQUEST_TIMEOUT_MS}ms`);
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
     }
     throw error;
   }

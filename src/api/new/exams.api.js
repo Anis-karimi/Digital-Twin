@@ -406,6 +406,7 @@ export async function generateGoalsFromFile(file, meta = {}) {
     {
       method: "POST",
       body: formData,
+      timeout: 90000,
     },
     null
   );
