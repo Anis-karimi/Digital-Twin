@@ -386,6 +386,32 @@ export async function updateExam(assignmentId, payload) {
   );
 }
 
+/**
+ * Uploads an exam reference file (PDF, DOCX, TXT, etc.) and generates
+ * structured assessment goals using LLM or fallback engine.
+ * @endpoint POST /exams/goals/generate-from-file
+ * @param {File} file
+ * @param {Object} [meta={}]
+ * @returns {Promise<Object>}
+ */
+export async function generateGoalsFromFile(file, meta = {}) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (meta.courseTitle) formData.append("course_title", meta.courseTitle);
+  if (meta.examTitle) formData.append("exam_title", meta.examTitle);
+  if (meta.maxGoals) formData.append("max_goals", String(meta.maxGoals));
+
+  return requestWithFallback(
+    "/exams/goals/generate-from-file",
+    {
+      method: "POST",
+      body: formData,
+      timeout: 90000,
+    },
+    null
+  );
+}
+
 export const examsApi = {
   getLessonQuizzes,
   createLessonQuiz,
@@ -403,6 +429,7 @@ export const examsApi = {
   getExamResults,
   getSessionDetail,
   updateExam,
+  generateGoalsFromFile,
 };
 
 export default examsApi;

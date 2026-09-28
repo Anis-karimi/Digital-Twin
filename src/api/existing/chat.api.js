@@ -29,11 +29,12 @@ export async function askAI({
     formData.append("query", query);
     formData.append("contexts", contexts);
     formData.append("language", language);
-    formData.append("llm_model", llmModel);
+    formData.append("llm_model", llmModel || "gemma4");
     formData.append("courseName", courseName);
     formData.append("teacherName", teacherName);
 
-    const response = await axios.post(`${API_CONFIG.BACKEND_URL}/api/ask`, formData);
+    const baseUrl = (API_CONFIG.BACKEND_URL || "").replace(/\/+$/, "");
+    const response = await axios.post(`${baseUrl}/api/ask`, formData);
     const data = response.data;
 
     return (

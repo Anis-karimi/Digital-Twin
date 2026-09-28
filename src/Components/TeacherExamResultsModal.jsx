@@ -196,8 +196,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                       <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 block">
                         {isRTL ? "نمره ارزیابی نهایی" : "Final Score"}
                       </span>
-                      <span className="font-inter font-bold text-lg text-primery-800 dark:text-primery-200">
-                        {sessionDetail.score !== null ? `${toPersianDigits(sessionDetail.score)}٪` : "—"}
+                      <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-lg text-primery-800 dark:text-primery-200`}>
+                        {sessionDetail.score !== null ? (isRTL ? `${toPersianDigits(sessionDetail.score)}٪` : `${sessionDetail.score}%`) : "—"}
                       </span>
                     </div>
 
@@ -291,8 +291,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "کل دانشجویان" : "Total Students"}
                   </span>
-                  <span className="font-inter font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
-                    {toPersianDigits(resultsData?.total_students ?? 0)}
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
+                    {isRTL ? toPersianDigits(resultsData?.total_students ?? 0) : (resultsData?.total_students ?? 0)}
                   </span>
                 </div>
 
@@ -301,8 +301,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "تکمیل کرده‌ها" : "Completed"}
                   </span>
-                  <span className="font-inter font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
-                    {toPersianDigits(resultsData?.completed_students ?? 0)}
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
+                    {isRTL ? toPersianDigits(resultsData?.completed_students ?? 0) : (resultsData?.completed_students ?? 0)}
                   </span>
                 </div>
 
@@ -311,9 +311,9 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "میانگین نمرات" : "Avg Score"}
                   </span>
-                  <span className="font-inter font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {resultsData?.average_score !== null && resultsData?.average_score !== undefined
-                      ? `${toPersianDigits(resultsData.average_score)}٪`
+                      ? isRTL ? `${toPersianDigits(resultsData.average_score)}٪` : `${resultsData.average_score}%`
                       : "—"}
                   </span>
                 </div>
@@ -323,9 +323,9 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "درصد قبولی" : "Pass Rate"}
                   </span>
-                  <span className="font-inter font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {resultsData?.pass_rate !== null && resultsData?.pass_rate !== undefined
-                      ? `${toPersianDigits(resultsData.pass_rate)}٪`
+                      ? isRTL ? `${toPersianDigits(resultsData.pass_rate)}٪` : `${resultsData.pass_rate}%`
                       : "—"}
                   </span>
                 </div>
@@ -400,8 +400,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                         {/* Score & Status */}
                         <div className="flex items-center gap-2 shrink-0">
                           {s.score !== null ? (
-                            <span className="font-inter font-bold text-sm text-primery-800 dark:text-primery-200 bg-primery-100/60 dark:bg-primery-900/40 px-2 py-0.5 rounded-md">
-                              {toPersianDigits(s.score)}٪
+                            <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-primery-800 dark:text-primery-200 bg-primery-100/60 dark:bg-primery-900/40 px-2 py-0.5 rounded-md`}>
+                              {isRTL ? `${toPersianDigits(s.score)}٪` : `${s.score}%`}
                             </span>
                           ) : (
                             <span className="text-[11px] font-vazir text-neutral-scale900 dark:text-neutral-scale400">

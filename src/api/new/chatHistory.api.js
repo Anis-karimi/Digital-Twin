@@ -160,6 +160,52 @@ export async function deleteMessageComment(messageId, commentId) {
   );
 }
 
+export async function markCommentRead(messageId, commentId, studentId = null) {
+  const query = studentId ? `?student_id=${encodeURIComponent(studentId)}` : "";
+  return requestWithFallback(
+    `/messages/${messageId}/comments/${commentId}/read${query}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ student_id: studentId }),
+    },
+    () => ({ success: true, comment: { id: commentId, is_read: true } })
+  );
+}
+
+/**
+ * Bulk marks comments as read.
+ * @endpoint POST /messages/comments/mark-read
+ * @param {Object} payload
+ * @returns {Promise<Object>}
+ */
+export async function bulkMarkCommentsRead(payload = {}) {
+  return requestWithFallback(
+    "/messages/comments/mark-read",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    () => ({ success: true, marked_count: 0 })
+  );
+}
+
+/**
+ * Fetches unread comments summary for a student.
+ * @endpoint GET /students/:studentId/unread-comments-summary
+ * @param {string} studentId
+ * @returns {Promise<Object>}
+ */
+export async function getUnreadCommentsSummary(studentId) {
+  if (!studentId) return { success: true, unread_count: 0, unread_comments: [] };
+  return requestWithFallback(
+    `/students/${studentId}/unread-comments-summary`,
+    {
+      method: "GET",
+    },
+    () => ({ success: true, unread_count: 0, unread_comments: [] })
+  );
+}
+
 /**
  * Backward compatibility alias for saveConversationTurn.
  */
@@ -174,6 +220,9 @@ export const chatHistoryApi = {
   clearChatHistory,
   addMessageComment,
   deleteMessageComment,
+  markCommentRead,
+  bulkMarkCommentsRead,
+  getUnreadCommentsSummary,
 };
 
 export default chatHistoryApi;

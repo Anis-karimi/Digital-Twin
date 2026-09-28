@@ -575,3 +575,34 @@ html {
 .comment-motion-item:not(.is-deleting) {
   animation: comment-item-appear 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Telegram Unread Comment Glow & Highlight */
+.comment-box-card.is-unread {
+  border: 1px solid rgba(36, 129, 204, 0.45);
+  box-shadow: 0 0 10px rgba(36, 129, 204, 0.22);
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.dark .comment-box-card.is-unread {
+  border: 1px solid rgba(82, 162, 246, 0.45);
+  box-shadow: 0 0 12px rgba(82, 162, 246, 0.25);
+}
+
+@keyframes comment-jump-highlight {
+  0% {
+    background-color: rgba(36, 129, 204, 0.32);
+    transform: scale(1.02);
+  }
+  50% {
+    background-color: rgba(36, 129, 204, 0.18);
+    transform: scale(1.01);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.comment-highlight-pulse {
+  animation: comment-jump-highlight 1800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

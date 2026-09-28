@@ -381,7 +381,7 @@ export const StudentExams = () => {
               </p>
 
               <span className="text-xs px-2.5 py-1 rounded-full bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 font-medium font-vazir">
-                {exams.length} {isRTL ? "آزمون" : "Exams"}
+                {isRTL ? toPersianDigits(exams.length) : exams.length} {isRTL ? "آزمون" : "Exams"}
               </span>
             </div>
 
@@ -611,7 +611,7 @@ export const StudentExams = () => {
                         <div className="flex items-center gap-[5px]">
                           <CalendarDays className="!w-[14px] !h-[14px] shrink-0 text-primery-600 dark:text-primery-400" />
 
-                          <span>{exam.date}</span>
+                          <span>{isRTL ? toPersianDigits(exam.date) : exam.date}</span>
                         </div>
 
                         <div className="flex items-center gap-[5px]">
@@ -619,8 +619,12 @@ export const StudentExams = () => {
 
                           <span>
                             {exam.duration
-                              ? `${exam.duration} دقیقه`
-                              : "۲۰ دقیقه"}
+                              ? isRTL
+                                ? `${toPersianDigits(exam.duration)} دقیقه`
+                                : `${exam.duration} min`
+                              : isRTL
+                              ? "۲۰ دقیقه"
+                              : "20 min"}
                           </span>
                         </div>
                       </div>
@@ -798,9 +802,11 @@ export const StudentExams = () => {
 
                             <span
                               dir="ltr"
-                              className="font-inter font-bold tabular-nums"
+                              className={`${isRTL ? "font-vazir" : "font-inter"} font-bold tabular-nums`}
                             >
-                              {formatCountdown(timing.remainingUntilStart)}
+                              {isRTL
+                                ? toPersianDigits(formatCountdown(timing.remainingUntilStart))
+                                : formatCountdown(timing.remainingUntilStart)}
                             </span>
                           </>
                         ) : isReadyToStart ? (

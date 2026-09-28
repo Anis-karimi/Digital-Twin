@@ -1,4 +1,4 @@
-import { useId, useState, useRef, useContext, useEffect } from "react";
+import { useId, useState, useRef, useContext, useEffect, useMemo, useCallback } from "react";
 import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -15,8 +15,10 @@ import Background from "@/assets/images/Background1.png";
 import DarkBackground from "@/assets/images/DarkBackground2.jpg";
 import Quiz from "@/assets/icons/quiz-icon1.svg?react";
 import Send from "@/assets/icons/Send.svg?react";
+import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
+import { TelegramCommentNotification } from "@/Components/TelegramCommentNotification";
 import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
@@ -105,6 +107,82 @@ export const ChatArea = () => {
       ? id || "c0000000-0000-4000-8000-000000000001"
       : null;
 
+    const [highlightCommentId, setHighlightCommentId] = useState(null);
+    const [activeTelegramNotification, setActiveTelegramNotification] = useState(null);
+    const seenCommentIdsRef = useRef(new Set());
+
+    const studentUserId = String(
+      currentUser?.user_id ||
+      (isStudentChat ? id : "ef6125a3-d179-442c-a9be-b4cd82e8ada6")
+    );
+
+    const unreadComments = useMemo(() => {
+      if (isTeacherViewingStudentChat) return [];
+      const list = [];
+      (messages || []).forEach((msg) => {
+        (msg.comments || []).forEach((c) => {
+          const isUnread = !c.is_read && (!c.read_by || !c.read_by.includes(studentUserId));
+          if (isUnread) {
+            list.push({ ...c, message_id: msg.id });
+          }
+        });
+      });
+      return list;
+    }, [messages, isTeacherViewingStudentChat, studentUserId]);
+
+    // Trigger Telegram in-app notification when newly discovered unread comment arrives
+    useEffect(() => {
+      if (isTeacherViewingStudentChat) return;
+      if (unreadComments.length > 0) {
+        const newlyDiscovered = unreadComments.find(
+          (c) => !seenCommentIdsRef.current.has(c.id)
+        );
+        if (newlyDiscovered) {
+          seenCommentIdsRef.current.add(newlyDiscovered.id);
+          setActiveTelegramNotification(newlyDiscovered);
+        }
+      }
+    }, [unreadComments, isTeacherViewingStudentChat]);
+
+    // Auto-mark comments in active chat as read when student spends time in this chat
+    useEffect(() => {
+      if (isTeacherViewingStudentChat || !messages || messages.length === 0) return;
+      const unreadInActiveChat = [];
+      messages.forEach((msg) => {
+        (msg.comments || []).forEach((c) => {
+          const isUnread = !c.is_read && (!c.read_by || !c.read_by.includes(studentUserId));
+          if (isUnread) {
+            unreadInActiveChat.push(c.id);
+          }
+        });
+      });
+
+      if (unreadInActiveChat.length === 0) return;
+
+      const timer = setTimeout(() => {
+        chatHistoryApi.bulkMarkCommentsRead({
+          chat_type: activeChatType,
+          target_id: activeTargetId,
+          student_id: studentUserId,
+          comment_ids: unreadInActiveChat,
+        }).then(() => {
+          window.dispatchEvent(new CustomEvent("comments-read-updated"));
+        }).catch(() => {});
+      }, 1500);
+
+      return () => {
+        clearTimeout(timer);
+        chatHistoryApi.bulkMarkCommentsRead({
+          chat_type: activeChatType,
+          target_id: activeTargetId,
+          student_id: studentUserId,
+          comment_ids: unreadInActiveChat,
+        }).then(() => {
+          window.dispatchEvent(new CustomEvent("comments-read-updated"));
+        }).catch(() => {});
+      };
+    }, [activeChatType, activeTargetId, isTeacherViewingStudentChat, messages, studentUserId]);
+
     const chatPhotoInputRef = useRef(null);
     const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
 
@@ -184,6 +262,7 @@ export const ChatArea = () => {
     const sampleRateRef = useRef(22050);
 
     const [settings, setSettings] = useState(null);
+    const [llmModel, setLlmModel] = useState(() => localStorage.getItem("llm_model") || "gemma4");
     // Real teacher name resolution directly from stored database user / course (NO mock data)
     const [teacherName, setTeacherName] = useState(() => {
       const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
@@ -273,10 +352,10 @@ export const ChatArea = () => {
       otherMessageRow: "flex justify-start w-full",
 
       myBubble:
-        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 min-w-[75px] w-fit max-w-full shadow-effects-drop-shadow-bottom",
 
       otherBubble:
-        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 min-w-[75px] w-fit max-w-full shadow-effects-drop-shadow-bottom",
 
       messageText:
         "text-neutral-scale1800 dark:text-neutral-scale100 text-[14px] leading-[22px] whitespace-pre-wrap break-words",
@@ -334,6 +413,27 @@ export const ChatArea = () => {
             isMounted = false;
         };
     }, [activeChatType, activeTargetId]);
+
+    // Live polling (every 7 seconds) so student receives teacher's comments and updates automatically
+    useEffect(() => {
+        if (!activeTargetId) return;
+        const interval = setInterval(() => {
+            chatHistoryApi.getChatHistory(activeChatType, activeTargetId)
+                .then((history) => {
+                    if (Array.isArray(history)) {
+                        setMessages((prev) => {
+                            const prevStr = JSON.stringify(prev);
+                            const nextStr = JSON.stringify(history);
+                            return prevStr !== nextStr ? history : prev;
+                        });
+                    }
+                })
+                .catch(() => {});
+        }, 7000);
+
+        return () => clearInterval(interval);
+    }, [activeChatType, activeTargetId]);
+
 
     const currentStudent = isStudentChat ? chatEntity : null;
     const currentCourse = !isStudentChat ? chatEntity : null;
@@ -601,6 +701,54 @@ export const ChatArea = () => {
       }
     };
 
+    const handleMarkCommentRead = useCallback(async (messageId, commentId) => {
+      // Optimistically update comment state in messages
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (String(msg.id) === String(messageId)) {
+            const prevComments = Array.isArray(msg.comments) ? msg.comments : [];
+            const updatedComments = prevComments.map((c) => {
+              if (String(c.id) === String(commentId)) {
+                const readBy = Array.isArray(c.read_by) ? [...c.read_by] : [];
+                if (!readBy.includes(studentUserId)) readBy.push(studentUserId);
+                return {
+                  ...c,
+                  is_read: true,
+                  read_by: readBy,
+                };
+              }
+              return c;
+            });
+            return {
+              ...msg,
+              comments: updatedComments,
+            };
+          }
+          return msg;
+        })
+      );
+
+      try {
+        await chatHistoryApi.markCommentRead(messageId, commentId, studentUserId);
+        window.dispatchEvent(new CustomEvent("comments-read-updated"));
+      } catch (err) {
+        console.warn("Failed to mark comment as read on backend:", err);
+      }
+    }, [studentUserId]);
+
+    const handleJumpToComment = useCallback((comment) => {
+      if (!comment) return;
+      const targetCommentId = comment.id || comment.comment_id;
+      const targetMessageId = comment.message_id;
+      setHighlightCommentId(targetCommentId);
+      if (targetMessageId && targetCommentId) {
+        handleMarkCommentRead(targetMessageId, targetCommentId);
+      }
+      setTimeout(() => {
+        setHighlightCommentId(null);
+      }, 3000);
+    }, [handleMarkCommentRead]);
+
     const sendMessage = async () => {
         if (!message.trim() || isLoading) return;
 
@@ -640,7 +788,7 @@ export const ChatArea = () => {
                 query: userMessageText,
                 contexts: "",
                 language,
-                llmModel,
+                llmModel: llmModel || "gemma4",
                 courseName: chatTitle,
                 teacherName,
             });
@@ -1009,6 +1157,16 @@ export const ChatArea = () => {
           </div>
         )}
 
+        {/* Telegram Top In-App Notification Banner */}
+        {activeTelegramNotification && (
+          <TelegramCommentNotification
+            comment={activeTelegramNotification}
+            onView={handleJumpToComment}
+            onClose={() => setActiveTelegramNotification(null)}
+            isRTL={isRTL}
+          />
+        )}
+
         {/* Messages */}
         <ChatMessages
           messages={messages}
@@ -1020,7 +1178,37 @@ export const ChatArea = () => {
           onDeleteComment={handleDeleteComment}
           teacherName={teacherName}
           readOnlyFeedback={isTeacherViewingStudentChat}
+          isStudentViewer={!isTeacherViewingStudentChat}
+          currentUserId={studentUserId}
+          highlightCommentId={highlightCommentId}
+          onMarkCommentRead={handleMarkCommentRead}
         />
+
+        {/* Telegram Floating Scroll-To-Comment Button with Badge */}
+        {!isTeacherViewingStudentChat && unreadComments.length > 0 && (
+          <div
+            className={`absolute ${
+              isRTL ? "left-4" : "right-4"
+            } ${
+              isQuizOpen && isQuizMinimized ? "bottom-[105px]" : "bottom-[70px]"
+            } z-50 animate-in fade-in zoom-in-95 duration-200 select-none`}
+          >
+            <button
+              type="button"
+              onClick={() => handleJumpToComment(unreadComments[0])}
+              className="relative flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#2481cc] hover:bg-[#1c72b8] text-white shadow-lg shadow-[#2481cc]/30 cursor-pointer active:scale-95 transition-all group font-vazir"
+              title={isRTL ? "رفتن به نظر استاد" : "Jump to teacher comment"}
+            >
+              <QuoteSvg className="w-3.5 h-3.5 text-white shrink-0 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold leading-none">
+                {isRTL ? "نظر جدید استاد" : "New Comment"}
+              </span>
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[#2481cc] font-mono text-[11px] font-extrabold flex items-center justify-center leading-none">
+                {unreadComments.length}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Input / Review Mode Bar */}
         {isTeacherViewingStudentChat ? (
@@ -1040,7 +1228,7 @@ export const ChatArea = () => {
               className={`absolute left-1/2 -translate-x-1/2 ${
                 isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
               } w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100 transition-all duration-300`}
-              dir={isRTL ? "rtl" : "ltr"}
+              dir="ltr"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendMessage();
@@ -1071,11 +1259,7 @@ export const ChatArea = () => {
                     value={message}
                     placeholder={t("writeMessage")}
                     rows={1}
-                    className={`absolute bottom-0 w-full ${
-                      isRTL
-                        ? "right-0 pr-[18px] pl-[84px]"
-                        : "left-0 pl-[18px] pr-[84px]"
-                    } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
+                    className={`absolute bottom-0 left-0 w-full pl-[18px] pr-[84px] pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
                     style={{
                       minHeight: "37px",
                       resize: "none",
@@ -1110,12 +1294,10 @@ export const ChatArea = () => {
                 );
               })()}
 
-              {/* Send / Mic button */}
+              {/* Send / Mic button - Always on right */}
               <button
                 type="button"
-                className={`absolute bottom-[1px] ${
-                  isRTL ? "left-[1px]" : "right-[1px]"
-                } w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
+                className={`absolute bottom-[1px] right-[1px] w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
                   recording ? "animate-pulse" : ""
                 }`}
                 onClick={() => {
@@ -1135,23 +1317,19 @@ export const ChatArea = () => {
                 {recording ? (
                   <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
                 ) : isTyping ? (
-                  <Send
-                    className={`!w-[35px] !h-[35px] ${isRTL ? "scale-x-[-1]" : ""}`}
-                  />
+                  <Send className="!w-[35px] !h-[35px]" />
                 ) : (
                   <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
                 )}
               </button>
 
-              {/* Quiz button */}
+              {/* Quiz button - Always on right (to the left of mic/send button) */}
               <button
                 type="button"
                 onClick={handleOpenQuiz}
                 aria-label={quizBarTitle}
                 title={quizBarTitle}
-                className={`absolute bottom-[6.5px] ${
-                  isRTL ? "left-12" : "right-12"
-                } w-7 h-7 flex items-center justify-center cursor-pointer`}
+                className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer"
               >
                 <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
               </button>

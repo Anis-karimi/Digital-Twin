@@ -186,8 +186,8 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 mb-0.5">
                     {isRTL ? "نمره ارزیابی" : "Evaluation Score"}
                   </span>
-                  <span className="font-inter text-2xl font-black text-primery-800 dark:text-primery-200">
-                    {toPersianDigits(scoreVal)}٪
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-black text-primery-800 dark:text-primery-200`}>
+                    {isRTL ? `${toPersianDigits(scoreVal)}٪` : `${scoreVal}%`}
                   </span>
                 </div>
 
@@ -228,10 +228,10 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "تسلط مفاهیم" : "Mastery"}
                   </span>
-                  <span className="font-inter font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {report?.overall_mastery !== null && report?.overall_mastery !== undefined
-                      ? `${toPersianDigits(Math.round(report.overall_mastery * 100))}٪`
-                      : `${toPersianDigits(scoreVal)}٪`}
+                      ? isRTL ? `${toPersianDigits(Math.round(report.overall_mastery * 100))}٪` : `${Math.round(report.overall_mastery * 100)}%`
+                      : isRTL ? `${toPersianDigits(scoreVal)}٪` : `${scoreVal}%`}
                   </span>
                 </div>
 
@@ -239,10 +239,10 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "پوشش سرفصل‌ها" : "Coverage"}
                   </span>
-                  <span className="font-inter font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {report?.overall_coverage !== null && report?.overall_coverage !== undefined
-                      ? `${toPersianDigits(Math.round(report.overall_coverage * 100))}٪`
-                      : "۱۰۰٪"}
+                      ? isRTL ? `${toPersianDigits(Math.round(report.overall_coverage * 100))}٪` : `${Math.round(report.overall_coverage * 100)}%`
+                      : isRTL ? "۱۰۰٪" : "100%"}
                   </span>
                 </div>
 
@@ -250,8 +250,8 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "مدت آزمون" : "Duration"}
                   </span>
-                  <span className="font-inter font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5">
-                    {toPersianDigits(durationMins)} {isRTL ? "دقیقه" : "min"}
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
+                    {isRTL ? toPersianDigits(durationMins) : durationMins} {isRTL ? "دقیقه" : "min"}
                   </span>
                 </div>
               </div>
@@ -323,8 +323,10 @@ export const StudentExamResultPage = () => {
                         <span className="text-neutral-scale1800 dark:text-neutral-scale80 truncate max-w-[200px]">
                           {g.title}
                         </span>
-                        <span className="font-inter font-bold text-primery-700 dark:text-primery-300">
-                          {toPersianDigits(Math.round(g.mastery || g.score || 0))}٪
+                        <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-primery-700 dark:text-primery-300`}>
+                          {isRTL
+                            ? `${toPersianDigits(Math.round(g.mastery || g.score || 0))}٪`
+                            : `${Math.round(g.mastery || g.score || 0)}%`}
                         </span>
                       </div>
                       <div className="w-full h-2 bg-neutral-scale200 dark:bg-neutral-scale1100 rounded-full overflow-hidden">
@@ -348,7 +350,7 @@ export const StudentExamResultPage = () => {
                 </div>
                 <span className="text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 font-normal">
                   {Array.isArray(report?.turns)
-                    ? `${toPersianDigits(report.turns.length)} ${isRTL ? "پرسش و پاسخ" : "Turns"}`
+                    ? `${isRTL ? toPersianDigits(report.turns.length) : report.turns.length} ${isRTL ? "پرسش و پاسخ" : "Turns"}`
                     : ""}
                 </span>
               </div>
@@ -369,8 +371,8 @@ export const StudentExamResultPage = () => {
                           className="w-full p-2.5 flex items-center justify-between gap-2 hover:bg-neutral-scale50 dark:hover:bg-neutral-scale1100 transition-colors text-right cursor-pointer"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="w-5 h-5 rounded-full bg-primery-100 dark:bg-primery-900 text-primery-800 dark:text-primery-200 text-[10px] font-bold flex items-center justify-center shrink-0">
-                              {toPersianDigits(idx + 1)}
+                            <span className={`w-5 h-5 rounded-full bg-primery-100 dark:bg-primery-900 text-primery-800 dark:text-primery-200 text-[10px] font-bold flex items-center justify-center shrink-0 ${isRTL ? "font-vazir" : "font-inter"}`}>
+                              {isRTL ? toPersianDigits(idx + 1) : idx + 1}
                             </span>
                             <span className="text-neutral-scale1800 dark:text-neutral-scale80 font-medium truncate text-[11px]">
                               {turn.question}

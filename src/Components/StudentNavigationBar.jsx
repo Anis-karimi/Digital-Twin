@@ -12,9 +12,10 @@ import Settings from "@/assets/icons/Settings.svg?react";
 import ChatFilled from "@/assets/icons/ChatFull.svg?react";
 import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
+import { chatHistoryApi } from "@/api";
 
 export const StudentNavigationBar = () => {
-  const { t, isRTL } = useContext(AppContext);
+  const { t, isRTL, currentUser } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -23,6 +24,34 @@ export const StudentNavigationBar = () => {
     width: 0,
     left: 0,
   });
+  const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
+
+  const studentId = currentUser?.user_id || "ef6125a3-d179-442c-a9be-b4cd82e8ada6";
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUnread = () => {
+      chatHistoryApi.getUnreadCommentsSummary(studentId)
+        .then((res) => {
+          if (isMounted && res && typeof res.unread_count === "number") {
+            setUnreadCommentsCount(res.unread_count);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchUnread();
+    window.addEventListener("focus", fetchUnread);
+    window.addEventListener("comments-read-updated", fetchUnread);
+    const interval = setInterval(fetchUnread, 12000);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", fetchUnread);
+      window.removeEventListener("comments-read-updated", fetchUnread);
+      clearInterval(interval);
+    };
+  }, [studentId]);
 
   const navItems = [
     {
@@ -177,7 +206,7 @@ export const StudentNavigationBar = () => {
               aria-current={isActive ? "page" : undefined}
             >
               {/* Icon */}
-              <div className="h-[25px] flex items-center justify-center">
+              <div className="relative h-[25px] flex items-center justify-center">
                 <Icon
                   className={`
     ${item.iconClassName || "w-[20px] h-[20px]"}
@@ -189,6 +218,11 @@ export const StudentNavigationBar = () => {
   `}
                   strokeWidth={item.strokeWidth}
                 />
+                {item.id === "chats" && unreadCommentsCount > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[15px] h-[15px] px-0.5 rounded-full bg-[#2481cc] dark:bg-[#52a2f6] text-white font-mono text-[9px] font-bold flex items-center justify-center leading-none shadow-xs">
+                    {unreadCommentsCount > 9 ? "+9" : unreadCommentsCount}
+                  </span>
+                )}
               </div>
 
               {/* Label */}

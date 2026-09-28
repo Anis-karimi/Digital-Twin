@@ -13,12 +13,17 @@ import {
   HelpCircle,
   AlertCircle,
   BookOpen,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { toPersianDigits } from "@/utils/dateUtils";
+import { ExamProctoringCamera } from "@/Components/ExamProctoringCamera";
+import Microphon from "@/assets/icons/Microphon.svg?react";
+import { voiceApi } from "@/api";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -55,9 +60,146 @@ export const StudentExamPage = () => {
   // Timers - Initialized to real exam duration (default 10 mins = 600s, not 20 mins)
   const [remainingSeconds, setRemainingSeconds] = useState(examDurationMinutes * 60);
 
+  // Microphone and Recording state (Matching ChatArea.jsx)
+  const [recording, setRecording] = useState(false);
+  const recordingRef = useRef(false);
+  const baseTextRef = useRef("");
+  const ws = useRef(null);
+  const streamRef = useRef(null);
+  const audioCtx = useRef(null);
+  const processor = useRef(null);
+
+  // ⚡ Downsample function to 16kHz (Matching ChatArea.jsx)
+  function downsample(buffer, inputRate, outputRate) {
+    if (outputRate === inputRate) return buffer;
+    const ratio = inputRate / outputRate;
+    const newLen = Math.round(buffer.length / ratio);
+    const result = new Float32Array(newLen);
+    let offset = 0;
+    for (let i = 0; i < newLen; i++) {
+      const next = Math.round((i + 1) * ratio);
+      let sum = 0,
+        count = 0;
+      for (let j = offset; j < next && j < buffer.length; j++) {
+        sum += buffer[j];
+        count++;
+      }
+      result[i] = count > 0 ? sum / count : 0;
+      offset = next;
+    }
+    return result;
+  }
+
+  const startRecording = async () => {
+    if (recordingRef.current) return;
+
+    console.log("🎙 Starting recording...");
+
+    setRecording(true);
+    recordingRef.current = true;
+    baseTextRef.current = answerText;
+
+    ws.current = voiceApi.createSTTWebSocket({
+      onOpen: () => console.log("[WS] Connected"),
+      onTranscript: (msg) => {
+        if (msg) {
+          const base = baseTextRef.current ? baseTextRef.current.trim() + " " : "";
+          setAnswerText(base + msg);
+        }
+        console.log("[WS]", msg);
+      },
+      onError: (e) => console.error("[WS] Error:", e),
+      onClose: () => console.log("[WS] Closed"),
+    });
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      streamRef.current = stream;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx.current = new AudioContextClass();
+
+      const source = audioCtx.current.createMediaStreamSource(stream);
+
+      const proc = audioCtx.current.createScriptProcessor(4096, 1, 1);
+
+      processor.current = proc;
+
+      source.connect(proc);
+
+      const silent = audioCtx.current.createGain();
+
+      silent.gain.value = 0;
+
+      proc.connect(silent);
+      silent.connect(audioCtx.current.destination);
+
+      proc.onaudioprocess = (e) => {
+        if (!recordingRef.current) return;
+        if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
+
+        let input = e.inputBuffer.getChannelData(0);
+
+        input = downsample(
+          input,
+          audioCtx.current.sampleRate,
+          16000
+        );
+
+        const buf = new Int16Array(input.length);
+
+        for (let i = 0; i < input.length; i++) {
+          buf[i] =
+            Math.max(-1, Math.min(1, input[i])) *
+            32767;
+        }
+
+        ws.current.send(buf.buffer);
+      };
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      recordingRef.current = false;
+      setRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (!recordingRef.current) return;
+
+    console.log("🛑 Stopping recording...");
+
+    recordingRef.current = false;
+    setRecording(false);
+
+    processor.current?.disconnect();
+    audioCtx.current?.close();
+    audioCtx.current = null;
+    processor.current = null;
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "stop" }));
+      ws.current.close();
+    }
+    ws.current = null;
+  };
+
+  // Teardown recording on unmount
+  useEffect(() => {
+    return () => {
+      stopRecording();
+    };
+  }, []);
+
   // Centralized finish handler (called on time expiration or completion)
   const handleFinishExam = useCallback(
     async (reason = "completed") => {
+      stopRecording();
       if (isCompleted || isFinishing) return;
       setIsFinishing(true);
       setIsCompleted(true);
@@ -217,6 +359,7 @@ export const StudentExamPage = () => {
 
   const handleSubmitAnswer = async (e) => {
     e?.preventDefault();
+    stopRecording();
     if (!answerText.trim() || isSubmitting || isCompleted) return;
 
     setIsSubmitting(true);
@@ -272,7 +415,8 @@ export const StudentExamPage = () => {
     const s = Math.max(0, Math.floor(seconds));
     const mins = Math.floor(s / 60);
     const secs = s % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    return isRTL ? toPersianDigits(formatted) : formatted;
   };
 
   return (
@@ -349,8 +493,10 @@ export const StudentExamPage = () => {
                 <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400">
                   {isRTL ? "نمره ارزیابی" : "Score"}
                 </span>
-                <span className="font-inter text-2xl font-bold text-primery-800 dark:text-primery-200">
-                  {finalScore !== null ? `${finalScore}%` : "۸۵%"}
+                <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-primery-800 dark:text-primery-200`}>
+                  {finalScore !== null
+                    ? isRTL ? `${toPersianDigits(finalScore)}٪` : `${finalScore}%`
+                    : isRTL ? "۸۵٪" : "85%"}
                 </span>
               </div>
               <div className="w-[1px] h-8 bg-neutral-scale300 dark:bg-neutral-scale1000" />
@@ -447,11 +593,14 @@ export const StudentExamPage = () => {
               </div>
 
               {/* Global Timer */}
-              <div className="flex items-center gap-1 text-neutral-scale1100 dark:text-neutral-scale200 font-inter font-semibold tabular-nums">
+              <div className={`flex items-center gap-1 text-neutral-scale1100 dark:text-neutral-scale200 ${isRTL ? "font-vazir" : "font-inter"} font-semibold tabular-nums`}>
                 <Clock3 className="w-3.5 h-3.5 text-red-500" />
                 <span>{formatTimer(remainingSeconds)}</span>
               </div>
             </div>
+
+            {/* Proctoring Camera & Face Verification Preview */}
+            <ExamProctoringCamera sessionId={sessionId} />
 
             {/* Question Card */}
             <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-xl p-4 shadow-sm flex flex-col gap-2">
@@ -460,8 +609,8 @@ export const StudentExamPage = () => {
                   <BookOpen className="w-4 h-4 text-primery-600" />
                   {isRTL ? "متن سوال ارزیابی:" : "Question prompt:"}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 font-mono">
-                  Turn #{currentTurnIndex}
+                <span className={`text-[10px] px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 ${isRTL ? "font-vazir" : "font-mono"}`}>
+                  {isRTL ? `نوبت ${toPersianDigits(currentTurnIndex)}` : `Turn #${currentTurnIndex}`}
                 </span>
               </div>
 
@@ -479,9 +628,17 @@ export const StudentExamPage = () => {
                 <label className="font-vazir text-xs font-semibold text-neutral-scale1600 dark:text-neutral-scale100">
                   {isRTL ? "پاسخ تحلیلی شما:" : "Your Analytical Answer:"}
                 </label>
-                <span className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-inter">
-                  {answerText.length} {isRTL ? "کاراکتر" : "chars"}
-                </span>
+                <div className="flex items-center gap-2">
+                  {recording && (
+                    <span className="flex items-center gap-1 text-[11px] text-red-500 font-vazir animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                      {isRTL ? "در حال ضبط صدا..." : "Recording..."}
+                    </span>
+                  )}
+                  <span className={`text-[11px] text-neutral-scale900 dark:text-neutral-scale400 ${isRTL ? "font-vazir" : "font-inter"}`}>
+                    {isRTL ? toPersianDigits(answerText.length) : answerText.length} {isRTL ? "کاراکتر" : "chars"}
+                  </span>
+                </div>
               </div>
 
               <textarea
@@ -491,35 +648,80 @@ export const StudentExamPage = () => {
                 onChange={(e) => setAnswerText(e.target.value)}
                 placeholder={
                   isRTL
-                    ? "پاسخ کامل و استدلال خود را در اینجا بنویسید..."
-                    : "Type your detailed answer and explanation here..."
+                    ? "پاسخ کامل و استدلال خود را در اینجا بنویسید یا با میکروفون صحبت کنید..."
+                    : "Type your detailed answer or speak using the microphone..."
                 }
                 className="w-full rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 p-3 text-xs font-vazir text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 focus:ring-1 focus:ring-primery-600 resize-none transition-all"
               />
 
-              {/* Submit Button */}
-              <button
-                type="button"
-                disabled={!answerText.trim() || isSubmitting}
-                onClick={handleSubmitAnswer}
-                className={`w-full h-10 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
-                  !answerText.trim() || isSubmitting
-                    ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
-                    : "bg-primery-700 hover:bg-primery-800 text-white"
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{isRTL ? "در حال تحلیل پاسخ توسط مدل..." : "Evaluating answer..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
-                    <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons Row: Mic Button + Submit Button */}
+              <div className="flex items-center gap-2">
+                {/* Voice / Mic Button (Matching ChatArea) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (recording) {
+                      stopRecording();
+                      return;
+                    }
+                    startRecording();
+                  }}
+                  disabled={isSubmitting || isCompleted}
+                  title={
+                    recording
+                      ? isRTL ? "توقف ضبط صدا" : "Stop recording"
+                      : isRTL ? "پاسخ صوتی با میکروفون" : "Voice answer"
+                  }
+                  aria-label={recording ? "توقف ضبط صدا" : "شروع ضبط صدا با میکروفون"}
+                  className={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs active:scale-95 ${
+                    recording
+                      ? "bg-red-500/10 border border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
+                      : "bg-neutral-scale100 dark:bg-neutral-scale1100 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale300 dark:border-neutral-scale1000"
+                  }`}
+                >
+                  {recording ? (
+                    <Microphon className="text-red-500 !w-[28px] !h-[28px] animate-pulse scale-110" />
+                  ) : (
+                    <Microphon className="!w-[28px] !h-[28px] text-primery-500 transition-all duration-300" />
+                  )}
+                </button>
+
+                {/* Submit Button */}
+                <button
+                  type="button"
+                  disabled={!answerText.trim() || isSubmitting}
+                  onClick={handleSubmitAnswer}
+                  className={`flex-1 h-10 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
+                    !answerText.trim() || isSubmitting
+                      ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
+                      : "bg-primery-700 hover:bg-primery-800 text-white"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{isRTL ? "در حال تحلیل پاسخ توسط مدل..." : "Evaluating answer..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Mic Status Banner */}
+              {recording && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-vazir">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
+                  <span>
+                    {isRTL
+                      ? "در حال تبدیل گفتار به متن... هر زمان صحبت‌تان تمام شد دوباره دکمه را لمس کنید."
+                      : "Listening and transcribing speech... Tap again when finished."}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
