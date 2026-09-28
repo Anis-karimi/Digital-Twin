@@ -21,7 +21,10 @@ const defaultNewBackendUrl =
       : "/api/v1";
 
 const defaultBackendUrl =
-  isBrowser && window.location.port === "5173"
+  isBrowser &&
+  (window.location.port === "5173" ||
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1")
     ? ""
     : DEFAULT_BACKEND_URL || "http://172.20.13.39:8506";
 

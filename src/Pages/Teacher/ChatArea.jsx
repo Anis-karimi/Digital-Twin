@@ -262,6 +262,7 @@ export const ChatArea = () => {
     const sampleRateRef = useRef(22050);
 
     const [settings, setSettings] = useState(null);
+    const [llmModel, setLlmModel] = useState(() => localStorage.getItem("llm_model") || "gemma4");
     // Real teacher name resolution directly from stored database user / course (NO mock data)
     const [teacherName, setTeacherName] = useState(() => {
       const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
@@ -787,7 +788,7 @@ export const ChatArea = () => {
                 query: userMessageText,
                 contexts: "",
                 language,
-                llmModel,
+                llmModel: llmModel || "gemma4",
                 courseName: chatTitle,
                 teacherName,
             });
