@@ -145,7 +145,7 @@ export const ChatMessages = ({
               }`}
             >
               <div
-                className={`flex flex-col w-fit max-w-[70%] sm:max-w-[68%] ${
+                className={`flex flex-col w-fit max-w-[80%] ${
                   isMine ? "items-end" : "items-start"
                 }`}
               >
@@ -334,7 +334,7 @@ export const ChatMessages = ({
       {isLoading && (
         <div className="flex justify-start w-full px-2 py-1">
           <div
-            className={`bg-neutral-scale80 dark:bg-neutral-scale1300 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 w-fit max-w-[70%] sm:max-w-[68%] opacity-80 ${
+            className={`bg-neutral-scale80 dark:bg-neutral-scale1300 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 w-fit max-w-[80%] opacity-80 ${
               isRTL ? "fa-body" : "en-body"
             }`}
           >
