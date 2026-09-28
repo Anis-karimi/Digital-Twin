@@ -1,4 +1,4 @@
-import { useId, useState, useRef, useContext, useEffect } from "react";
+import { useId, useState, useRef, useContext, useEffect, useMemo, useCallback } from "react";
 import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -15,8 +15,10 @@ import Background from "@/assets/images/Background1.png";
 import DarkBackground from "@/assets/images/DarkBackground2.jpg";
 import Quiz from "@/assets/icons/quiz-icon1.svg?react";
 import Send from "@/assets/icons/Send.svg?react";
+import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 
 import { ChatMessages } from "@/Components/ChatMessages";
+import { TelegramCommentNotification } from "@/Components/TelegramCommentNotification";
 import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
@@ -104,6 +106,82 @@ export const ChatArea = () => {
     const activeCourseId = !isStudentChat
       ? id || "c0000000-0000-4000-8000-000000000001"
       : null;
+
+    const [highlightCommentId, setHighlightCommentId] = useState(null);
+    const [activeTelegramNotification, setActiveTelegramNotification] = useState(null);
+    const seenCommentIdsRef = useRef(new Set());
+
+    const studentUserId = String(
+      currentUser?.user_id ||
+      (isStudentChat ? id : "ef6125a3-d179-442c-a9be-b4cd82e8ada6")
+    );
+
+    const unreadComments = useMemo(() => {
+      if (isTeacherViewingStudentChat) return [];
+      const list = [];
+      (messages || []).forEach((msg) => {
+        (msg.comments || []).forEach((c) => {
+          const isUnread = !c.is_read && (!c.read_by || !c.read_by.includes(studentUserId));
+          if (isUnread) {
+            list.push({ ...c, message_id: msg.id });
+          }
+        });
+      });
+      return list;
+    }, [messages, isTeacherViewingStudentChat, studentUserId]);
+
+    // Trigger Telegram in-app notification when newly discovered unread comment arrives
+    useEffect(() => {
+      if (isTeacherViewingStudentChat) return;
+      if (unreadComments.length > 0) {
+        const newlyDiscovered = unreadComments.find(
+          (c) => !seenCommentIdsRef.current.has(c.id)
+        );
+        if (newlyDiscovered) {
+          seenCommentIdsRef.current.add(newlyDiscovered.id);
+          setActiveTelegramNotification(newlyDiscovered);
+        }
+      }
+    }, [unreadComments, isTeacherViewingStudentChat]);
+
+    // Auto-mark comments in active chat as read when student spends time in this chat
+    useEffect(() => {
+      if (isTeacherViewingStudentChat || !messages || messages.length === 0) return;
+      const unreadInActiveChat = [];
+      messages.forEach((msg) => {
+        (msg.comments || []).forEach((c) => {
+          const isUnread = !c.is_read && (!c.read_by || !c.read_by.includes(studentUserId));
+          if (isUnread) {
+            unreadInActiveChat.push(c.id);
+          }
+        });
+      });
+
+      if (unreadInActiveChat.length === 0) return;
+
+      const timer = setTimeout(() => {
+        chatHistoryApi.bulkMarkCommentsRead({
+          chat_type: activeChatType,
+          target_id: activeTargetId,
+          student_id: studentUserId,
+          comment_ids: unreadInActiveChat,
+        }).then(() => {
+          window.dispatchEvent(new CustomEvent("comments-read-updated"));
+        }).catch(() => {});
+      }, 1500);
+
+      return () => {
+        clearTimeout(timer);
+        chatHistoryApi.bulkMarkCommentsRead({
+          chat_type: activeChatType,
+          target_id: activeTargetId,
+          student_id: studentUserId,
+          comment_ids: unreadInActiveChat,
+        }).then(() => {
+          window.dispatchEvent(new CustomEvent("comments-read-updated"));
+        }).catch(() => {});
+      };
+    }, [activeChatType, activeTargetId, isTeacherViewingStudentChat, messages, studentUserId]);
 
     const chatPhotoInputRef = useRef(null);
     const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
@@ -334,6 +412,27 @@ export const ChatArea = () => {
             isMounted = false;
         };
     }, [activeChatType, activeTargetId]);
+
+    // Live polling (every 7 seconds) so student receives teacher's comments and updates automatically
+    useEffect(() => {
+        if (!activeTargetId) return;
+        const interval = setInterval(() => {
+            chatHistoryApi.getChatHistory(activeChatType, activeTargetId)
+                .then((history) => {
+                    if (Array.isArray(history)) {
+                        setMessages((prev) => {
+                            const prevStr = JSON.stringify(prev);
+                            const nextStr = JSON.stringify(history);
+                            return prevStr !== nextStr ? history : prev;
+                        });
+                    }
+                })
+                .catch(() => {});
+        }, 7000);
+
+        return () => clearInterval(interval);
+    }, [activeChatType, activeTargetId]);
+
 
     const currentStudent = isStudentChat ? chatEntity : null;
     const currentCourse = !isStudentChat ? chatEntity : null;
@@ -600,6 +699,54 @@ export const ChatArea = () => {
         console.warn("Error deleting comment:", err);
       }
     };
+
+    const handleMarkCommentRead = useCallback(async (messageId, commentId) => {
+      // Optimistically update comment state in messages
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (String(msg.id) === String(messageId)) {
+            const prevComments = Array.isArray(msg.comments) ? msg.comments : [];
+            const updatedComments = prevComments.map((c) => {
+              if (String(c.id) === String(commentId)) {
+                const readBy = Array.isArray(c.read_by) ? [...c.read_by] : [];
+                if (!readBy.includes(studentUserId)) readBy.push(studentUserId);
+                return {
+                  ...c,
+                  is_read: true,
+                  read_by: readBy,
+                };
+              }
+              return c;
+            });
+            return {
+              ...msg,
+              comments: updatedComments,
+            };
+          }
+          return msg;
+        })
+      );
+
+      try {
+        await chatHistoryApi.markCommentRead(messageId, commentId, studentUserId);
+        window.dispatchEvent(new CustomEvent("comments-read-updated"));
+      } catch (err) {
+        console.warn("Failed to mark comment as read on backend:", err);
+      }
+    }, [studentUserId]);
+
+    const handleJumpToComment = useCallback((comment) => {
+      if (!comment) return;
+      const targetCommentId = comment.id || comment.comment_id;
+      const targetMessageId = comment.message_id;
+      setHighlightCommentId(targetCommentId);
+      if (targetMessageId && targetCommentId) {
+        handleMarkCommentRead(targetMessageId, targetCommentId);
+      }
+      setTimeout(() => {
+        setHighlightCommentId(null);
+      }, 3000);
+    }, [handleMarkCommentRead]);
 
     const sendMessage = async () => {
         if (!message.trim() || isLoading) return;
@@ -1009,6 +1156,16 @@ export const ChatArea = () => {
           </div>
         )}
 
+        {/* Telegram Top In-App Notification Banner */}
+        {activeTelegramNotification && (
+          <TelegramCommentNotification
+            comment={activeTelegramNotification}
+            onView={handleJumpToComment}
+            onClose={() => setActiveTelegramNotification(null)}
+            isRTL={isRTL}
+          />
+        )}
+
         {/* Messages */}
         <ChatMessages
           messages={messages}
@@ -1020,7 +1177,37 @@ export const ChatArea = () => {
           onDeleteComment={handleDeleteComment}
           teacherName={teacherName}
           readOnlyFeedback={isTeacherViewingStudentChat}
+          isStudentViewer={!isTeacherViewingStudentChat}
+          currentUserId={studentUserId}
+          highlightCommentId={highlightCommentId}
+          onMarkCommentRead={handleMarkCommentRead}
         />
+
+        {/* Telegram Floating Scroll-To-Comment Button with Badge */}
+        {!isTeacherViewingStudentChat && unreadComments.length > 0 && (
+          <div
+            className={`absolute ${
+              isRTL ? "left-4" : "right-4"
+            } ${
+              isQuizOpen && isQuizMinimized ? "bottom-[105px]" : "bottom-[70px]"
+            } z-50 animate-in fade-in zoom-in-95 duration-200 select-none`}
+          >
+            <button
+              type="button"
+              onClick={() => handleJumpToComment(unreadComments[0])}
+              className="relative flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#2481cc] hover:bg-[#1c72b8] text-white shadow-lg shadow-[#2481cc]/30 cursor-pointer active:scale-95 transition-all group font-vazir"
+              title={isRTL ? "رفتن به نظر استاد" : "Jump to teacher comment"}
+            >
+              <QuoteSvg className="w-3.5 h-3.5 text-white shrink-0 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold leading-none">
+                {isRTL ? "نظر جدید استاد" : "New Comment"}
+              </span>
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[#2481cc] font-mono text-[11px] font-extrabold flex items-center justify-center leading-none">
+                {unreadComments.length}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Input / Review Mode Bar */}
         {isTeacherViewingStudentChat ? (

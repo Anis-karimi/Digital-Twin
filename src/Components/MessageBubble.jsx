@@ -5,6 +5,7 @@ import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
 
 export const MessageBubble = ({
+  messageId,
   text,
   time,
   isMine,
@@ -12,6 +13,9 @@ export const MessageBubble = ({
   comments = [],
   onDeleteComment,
   canDeleteComment = false,
+  isStudentViewer = false,
+  currentUserId = null,
+  highlightCommentId = null,
 }) => {
   const { t } = useContext(AppContext);
   const [deletingCommentIds, setDeletingCommentIds] = useState(() => new Set());
@@ -65,9 +69,17 @@ export const MessageBubble = ({
           {comments.map((c, cIdx) => {
             const rawTeacherName = (c.teacher_name || "").trim();
             const teacherDisplayName = rawTeacherName
-              ? (rawTeacherName.startsWith("استاد") ? rawTeacherName : `استاد ${rawTeacherName}`)
+              ? (rawTeacherName.startsWith("استاد") || rawTeacherName.startsWith("دکتر")
+                  ? rawTeacherName
+                  : `استاد ${rawTeacherName}`)
               : "استاد";
             const isDeleting = deletingCommentIds.has(c.id);
+            const isUnread = Boolean(
+              isStudentViewer &&
+              !c.is_read &&
+              (!c.read_by || !currentUserId || !c.read_by.includes(String(currentUserId)))
+            );
+            const isHighlighted = highlightCommentId && String(c.id) === String(highlightCommentId);
 
             return (
               <div
@@ -76,17 +88,30 @@ export const MessageBubble = ({
               >
                 <div className="comment-motion-inner">
                   <div
-                    className="relative rounded-xl bg-[#edf5fd] dark:bg-[#182533] p-2.5 pr-4 pl-3 shadow-2xs select-text overflow-hidden comment-box-card"
+                    id={`comment-${c.id}`}
+                    data-comment-id={c.id}
+                    data-message-id={messageId}
+                    data-is-unread={isUnread ? "true" : "false"}
+                    className={`relative rounded-xl bg-[#edf5fd] dark:bg-[#182533] p-2.5 pr-4 pl-3 shadow-2xs select-text overflow-hidden comment-box-card transition-all duration-300 ${
+                      isUnread ? "is-unread" : ""
+                    } ${isHighlighted ? "comment-highlight-pulse" : ""}`}
                     dir="rtl"
                   >
                     {/* Telegram Vertical Accent Line - Flush to edge & covering 100% height */}
                     <div className="absolute right-0 top-0 bottom-0 w-[4px] bg-[#2481cc] dark:bg-[#52a2f6]" />
 
-                    {/* Top Row: Teacher Name on Right, Quotation Symbol on Left */}
+                    {/* Top Row: Teacher Name + Unread Badge on Right, Quotation Symbol on Left */}
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-bold text-xs text-[#2481cc] dark:text-[#52a2f6] font-vazir truncate">
-                        {teacherDisplayName}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-xs text-[#2481cc] dark:text-[#52a2f6] font-vazir truncate">
+                          {teacherDisplayName}
+                        </span>
+                        {isUnread && (
+                          <span className="text-[9px] leading-tight px-1.5 py-0.5 rounded-full bg-[#2481cc] dark:bg-[#52a2f6] text-white font-vazir font-medium shrink-0 animate-pulse">
+                            خوانده نشده
+                          </span>
+                        )}
+                      </div>
 
                       {/* Authentic Bold Telegram Quotation Mark Symbol from quote-svgrepo-com */}
                       <QuoteSvg className="w-3.5 h-3.5 text-[#2481cc] dark:text-[#52a2f6] shrink-0" />

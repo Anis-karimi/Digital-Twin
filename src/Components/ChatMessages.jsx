@@ -22,8 +22,13 @@ export const ChatMessages = ({
   onDeleteComment,
   teacherName = "",
   readOnlyFeedback = false,
+  isStudentViewer = false,
+  currentUserId = null,
+  highlightCommentId = null,
+  onMarkCommentRead = null,
 }) => {
   const bottomRef = useRef(null);
+  const prevMessagesLengthRef = useRef(0);
   const { isRTL, t } = useContext(AppContext);
   const thinkingDots = useAnimatedText(isLoading, "dots");
 
@@ -31,11 +36,70 @@ export const ChatMessages = ({
   const [commentInputText, setCommentInputText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
+  // Auto-scroll on new incoming message or first load
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages]);
+    if (messages.length > prevMessagesLengthRef.current) {
+      bottomRef.current?.scrollIntoView({
+        behavior: prevMessagesLengthRef.current === 0 ? "auto" : "smooth",
+      });
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length]);
+
+  // Jump to specific comment when requested
+  useEffect(() => {
+    if (highlightCommentId) {
+      const el = document.getElementById(`comment-${highlightCommentId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }, [highlightCommentId]);
+
+  // Auto-mark comments as read when viewed on screen for at least 800ms
+  useEffect(() => {
+    if (!isStudentViewer || !onMarkCommentRead) return;
+
+    const timerMap = new Map();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const target = entry.target;
+          const commentId = target.getAttribute("data-comment-id");
+          const messageId = target.getAttribute("data-message-id");
+          const isUnread = target.getAttribute("data-is-unread") === "true";
+
+          if (!commentId || !messageId || !isUnread) return;
+
+          if (entry.isIntersecting) {
+            if (!timerMap.has(commentId)) {
+              const timer = setTimeout(() => {
+                onMarkCommentRead(messageId, commentId);
+                timerMap.delete(commentId);
+              }, 500);
+              timerMap.set(commentId, timer);
+            }
+          } else {
+            if (timerMap.has(commentId)) {
+              clearTimeout(timerMap.get(commentId));
+              timerMap.delete(commentId);
+            }
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    const unreadEls = document.querySelectorAll('[data-is-unread="true"]');
+    unreadEls.forEach((el) => observer.observe(el));
+
+    return () => {
+      observer.disconnect();
+      timerMap.forEach((t) => clearTimeout(t));
+      timerMap.clear();
+    };
+  }, [messages, isStudentViewer, onMarkCommentRead]);
 
   const handleSaveComment = async (messageId) => {
     if (!commentInputText.trim() || isSubmittingComment) return;
@@ -86,6 +150,7 @@ export const ChatMessages = ({
                 }`}
               >
                 <MessageBubble
+                  messageId={message.id}
                   text={message.text}
                   time={message.time}
                   isMine={isMine}
@@ -93,6 +158,9 @@ export const ChatMessages = ({
                   comments={message.comments || []}
                   onDeleteComment={(commentId) => onDeleteComment?.(message.id, commentId)}
                   canDeleteComment={canComment}
+                  isStudentViewer={isStudentViewer}
+                  currentUserId={currentUserId}
+                  highlightCommentId={highlightCommentId}
                 />
 
                 {/* AI Feedback & Teacher Comment Actions on Bot Messages */}
