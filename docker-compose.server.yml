@@ -40,12 +40,16 @@ services:
         - VITE_DGTW_URL=${VITE_DGTW_URL:-https://dgtw.um.ac.ir}
     image: digital-twin-prod:latest
     container_name: digital-twin-prod
-    ports:
-      - "8080:80"
     restart: unless-stopped
     networks:
       - default
       - fum_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=20"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
     profiles:
       - prod
 
@@ -57,5 +61,5 @@ networks:
       config:
         - subnet: 192.168.210.0/24
   fum_net:
-    name: fum_net
+    name: ${SHARED_NETWORK:-chat-bot-um_fum_net}
     external: true
