@@ -18,48 +18,7 @@ export const TeacherExams = () => {
   const [editingExam, setEditingExam] = useState(null);
   const [resultsExam, setResultsExam] = useState(null);
 
-  const [exams, setExams] = useState([
-    {
-      id: 1,
-      title: "آزمون فصل اول",
-      course: "سیستم عامل",
-      topic: "مفاهیم اولیه سیستم عامل",
-      date: "1405/07/10",
-      time: "10:00 - 11:00",
-      duration: "60 دقیقه",
-      active: true,
-    },
-    {
-      id: 2,
-      title: "آزمون میان‌ترم",
-      course: "سیستم عامل",
-      topic: "مدیریت پردازش‌ها",
-      date: "1405/07/15",
-      time: "12:00 - 13:30",
-      duration: "90 دقیقه",
-      active: true,
-    },
-    {
-      id: 3,
-      title: "آزمون فصل سوم",
-      course: "سیستم عامل",
-      topic: "مدیریت حافظه",
-      date: "1405/06/20",
-      time: "09:00 - 10:00",
-      duration: "60 دقیقه",
-      active: false,
-    },
-    {
-      id: 4,
-      title: "آزمون فصل چهارم",
-      course: "سیستم عامل",
-      topic: "مدیریت فایل‌ها",
-      date: "1405/07/25",
-      time: "11:00 - 12:00",
-      duration: "60 دقیقه",
-      scheduled: true,
-    },
-  ]);
+  const [exams, setExams] = useState([]);
 
   const deduplicateExams = (items) => {
     const seenIds = new Set();

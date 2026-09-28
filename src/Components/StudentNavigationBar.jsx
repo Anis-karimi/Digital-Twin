@@ -36,11 +36,11 @@ export const StudentNavigationBar = () => {
     {
       id: "explore",
       label: t("explor") || (isRTL ? "کاوش" : "Explore"),
-      route: null,
+      route: "/StudentExplore",
       icon: Search,
       iconActive: Search,
       iconClassName: "w-[21px] h-[20px]",
-      disabled: true,
+      strokeWidth: 1.35,
     },
     {
       id: "exams",
@@ -66,15 +66,25 @@ export const StudentNavigationBar = () => {
     location.pathname.toLowerCase() === "/students";
 
   const getActiveId = () => {
-    if (isHomePage) return "chats";
-    if (location.pathname === "/StudentSettings") return "settings";
-    if (
-      location.pathname.toLowerCase() === "/studentexams" ||
-      location.pathname.toLowerCase().startsWith("/studentexam")
-    )
-      return "exams";
-    return null;
-  };
+  if (isHomePage) return "chats";
+
+  if (location.pathname === "/StudentExplore") {
+    return "explore";
+  }
+
+  if (location.pathname === "/StudentSettings") {
+    return "settings";
+  }
+
+  if (
+    location.pathname.toLowerCase() === "/studentexams" ||
+    location.pathname.toLowerCase().startsWith("/studentexam")
+  ) {
+    return "exams";
+  }
+
+  return null;
+};
 
   const activeId = getActiveId();
 
@@ -162,25 +172,22 @@ export const StudentNavigationBar = () => {
               flex-1 
               h-11 
               shrink-0 
-              ${
-                item.disabled
-                  ? "cursor-default opacity-50"
-                  : "cursor-pointer"
-              }
+              ${item.disabled ? "cursor-default opacity-50" : "cursor-pointer"}
             `}
               aria-current={isActive ? "page" : undefined}
             >
               {/* Icon */}
               <div className="h-[25px] flex items-center justify-center">
                 <Icon
-                  className={` 
-            ${item.iconClassName || "w-[20px] h-[20px]"} 
-            ${
-              isActive
-                ? "text-primery-1000"
-                : "text-neutral-scale1800 dark:text-neutral-scale70"
-            } 
-          `}
+                  className={`
+    ${item.iconClassName || "w-[20px] h-[20px]"}
+    ${
+      isActive
+        ? "text-primery-1000"
+        : "text-neutral-scale1800 dark:text-neutral-scale70"
+    }
+  `}
+                  strokeWidth={item.strokeWidth}
                 />
               </div>
 
