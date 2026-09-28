@@ -272,7 +272,8 @@ export const StudentExamPage = () => {
     const s = Math.max(0, Math.floor(seconds));
     const mins = Math.floor(s / 60);
     const secs = s % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    return isRTL ? toPersianDigits(formatted) : formatted;
   };
 
   return (
@@ -349,8 +350,10 @@ export const StudentExamPage = () => {
                 <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400">
                   {isRTL ? "نمره ارزیابی" : "Score"}
                 </span>
-                <span className="font-inter text-2xl font-bold text-primery-800 dark:text-primery-200">
-                  {finalScore !== null ? `${finalScore}%` : "۸۵%"}
+                <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-primery-800 dark:text-primery-200`}>
+                  {finalScore !== null
+                    ? isRTL ? `${toPersianDigits(finalScore)}٪` : `${finalScore}%`
+                    : isRTL ? "۸۵٪" : "85%"}
                 </span>
               </div>
               <div className="w-[1px] h-8 bg-neutral-scale300 dark:bg-neutral-scale1000" />
@@ -447,7 +450,7 @@ export const StudentExamPage = () => {
               </div>
 
               {/* Global Timer */}
-              <div className="flex items-center gap-1 text-neutral-scale1100 dark:text-neutral-scale200 font-inter font-semibold tabular-nums">
+              <div className={`flex items-center gap-1 text-neutral-scale1100 dark:text-neutral-scale200 ${isRTL ? "font-vazir" : "font-inter"} font-semibold tabular-nums`}>
                 <Clock3 className="w-3.5 h-3.5 text-red-500" />
                 <span>{formatTimer(remainingSeconds)}</span>
               </div>
@@ -460,8 +463,8 @@ export const StudentExamPage = () => {
                   <BookOpen className="w-4 h-4 text-primery-600" />
                   {isRTL ? "متن سوال ارزیابی:" : "Question prompt:"}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 font-mono">
-                  Turn #{currentTurnIndex}
+                <span className={`text-[10px] px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 ${isRTL ? "font-vazir" : "font-mono"}`}>
+                  {isRTL ? `نوبت ${toPersianDigits(currentTurnIndex)}` : `Turn #${currentTurnIndex}`}
                 </span>
               </div>
 
@@ -479,8 +482,8 @@ export const StudentExamPage = () => {
                 <label className="font-vazir text-xs font-semibold text-neutral-scale1600 dark:text-neutral-scale100">
                   {isRTL ? "پاسخ تحلیلی شما:" : "Your Analytical Answer:"}
                 </label>
-                <span className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-inter">
-                  {answerText.length} {isRTL ? "کاراکتر" : "chars"}
+                <span className={`text-[11px] text-neutral-scale900 dark:text-neutral-scale400 ${isRTL ? "font-vazir" : "font-inter"}`}>
+                  {isRTL ? toPersianDigits(answerText.length) : answerText.length} {isRTL ? "کاراکتر" : "chars"}
                 </span>
               </div>
 
