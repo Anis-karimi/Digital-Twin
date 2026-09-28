@@ -42,10 +42,10 @@ services:
     container_name: digital-twin-prod
     restart: unless-stopped
     networks:
-      - default
       - fum_net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=chat-bot-um_fum_net"
       - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.routers.frontend.priority=20"
