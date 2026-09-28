@@ -704,7 +704,7 @@ export const StudentExamPage = () => {
                     </>
                   ) : (
                     <>
-                      <Send className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
+                      <Send className="w-4 h-4" />
                       <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
                     </>
                   )}
