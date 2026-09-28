@@ -317,6 +317,72 @@ export const CourseInformation = () => {
             </p>
           </section>
 
+          {/* Instructor */}
+          <section
+            aria-labelledby="student-course-instructor"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="student-course-instructor"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "استاد درس" : "Instructor"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium ${
+                isRTL ? "font-vazir text-right" : "font-inter text-left"
+              }`}
+            >
+              {isRTL ? "دکتر محمد اله بخش" : "Dr. Mohammad Allahbakhsh"}
+            </p>
+          </section>
+
+          {/* Field of Study */}
+          <section
+            aria-labelledby="student-course-field"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="student-course-field"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "رشته تحصیلی" : "Field of Study"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium ${
+                isRTL ? "font-vazir text-right" : "font-inter text-left"
+              }`}
+            >
+              {isRTL ? "مهندسی کامپیوتر" : "Computer Engineering"}
+            </p>
+          </section>
+
+          {/* Academic Level */}
+          <section
+            aria-labelledby="student-course-level"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="student-course-level"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "مقطع تحصیلی" : "Academic Level"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium ${
+                isRTL ? "font-vazir text-right" : "font-inter text-left"
+              }`}
+            >
+              {isRTL ? "کارشناسی" : "Bachelor's"}
+            </p>
+          </section>
+
           {/* Start Date */}
           <section
             aria-labelledby="student-course-start-date"

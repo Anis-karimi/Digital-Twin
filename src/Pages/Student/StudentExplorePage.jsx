@@ -192,7 +192,7 @@ export const StudentExplore = () => {
                     >
                       <div className="flex items-center gap-[12px] min-w-0 flex-1">
                         {/* Course Image */}
-                        <div className="w-[64px] h-[64px] flex-shrink-0 overflow-hidden rounded-[10px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale100 dark:bg-neutral-scale1100 shadow-sm">
+                        <div className="w-[55px] h-[55px] flex-shrink-0 overflow-hidden rounded-[10px] border border-neutral-scale300 dark:border-neutral-scale1000 bg-neutral-scale100 dark:bg-neutral-scale1100 shadow-sm">
                           <img
                             src={
                               resolveMediaUrl(course.photo_url) || courseImage
@@ -211,28 +211,28 @@ export const StudentExplore = () => {
                           {/* Title */}
                           <span
                             dir="rtl"
-                            className={`fa-body-medium font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70 truncate ${
+                            className={`fa-body-medium font-vazir text-neutral-scale1800 dark:text-neutral-scale70 truncate ${
                               isRTL ? "text-right" : "text-left [direction:rtl]"
                             }`}
                           >
                             {course.titleFa || course.title || "سیستم عامل"}
                           </span>
 
-                          {/* Access */}
+                          {/* Instructor */}
                           <span
                             className={`${
                               isRTL
-                                ? "fa-caption-1 font-vazir"
-                                : "en-caption-1 font-inter"
-                            } text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}
+                                ? "fa-caption-2 font-vazir"
+                                : "en-caption-2 font-inter"
+                            } text-neutral-scale1000 dark:text-neutral-scale300 truncate`}
                           >
-                            {isRTL
-                              ? course.accessLevel === "public"
-                                ? "عمومی"
-                                : "خصوصی"
-                              : course.accessLevel === "public"
-                                ? "Public"
-                                : "Private"}
+                            {course.instructorName ||
+                              course.instructor_name ||
+                              course.teacherName ||
+                              course.teacher_name ||
+                              (isRTL
+                                ? "استاد مشخص نشده"
+                                : "Instructor not specified")}
                           </span>
 
                           {/* Description */}
@@ -243,10 +243,10 @@ export const StudentExplore = () => {
                               }
                               className={`${
                                 isDescPersian
-                                  ? "fa-caption-1 font-vazir"
+                                  ? "fa-caption-2 font-vazir"
                                   : isRTL
-                                    ? "fa-caption-1 font-vazir"
-                                    : "en-caption-1 font-inter"
+                                    ? "fa-caption-2 font-vazir"
+                                    : "en-caption-2 font-inter"
                               } text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0`}
                             >
                               {descText}
