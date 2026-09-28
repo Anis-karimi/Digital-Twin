@@ -36,7 +36,7 @@ export const TeacherNavigationBar = () => {
     {
       id: "courses",
       label: t("courses"),
-      route: "/TeacherResource",
+      route: "/TeacherCourses",
       icon: MyCourses,
       iconActive: MyCoursesFilled,
       iconClassName: "w-[21px] h-[20px]",
@@ -65,7 +65,7 @@ export const TeacherNavigationBar = () => {
 
   const getActiveId = () => {
     if (isHomePage) return "chats";
-    if (location.pathname === "/TeacherResource") return "courses";
+    if (location.pathname === "/TeacherCourses") return "courses";
     if (location.pathname === "/TeacherExams") return "exams";
     if (location.pathname === "/TeacherSettings") return "settings";
 

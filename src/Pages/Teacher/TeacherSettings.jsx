@@ -16,7 +16,7 @@ const settingsItems = [
     id: "Courses Information",
     titleKey: "coursesInformation",
     subtitleKey: "uploadResources",
-    path: "/TeacherResource",
+    path: "/TeacherCourses",
     icon: (
       <img
         src={ResourseManagment}
@@ -31,7 +31,11 @@ const settingsItems = [
     subtitleKey: "darkLight",
     path: "/Theme",
     icon: (
-      <img className="w-[23px] h-[23px] object-contain" alt="" src={PaintBrush} />
+      <img
+        className="w-[23px] h-[23px] object-contain"
+        alt=""
+        src={PaintBrush}
+      />
     ),
   },
   {
@@ -39,7 +43,13 @@ const settingsItems = [
     titleKey: "language",
     subtitleKey: "englishPersian",
     path: "/Language",
-    icon: <img className="w-[23px] h-[23px] object-contain" alt="Language" src={Language} />,
+    icon: (
+      <img
+        className="w-[23px] h-[23px] object-contain"
+        alt="Language"
+        src={Language}
+      />
+    ),
   },
 ];
 

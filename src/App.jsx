@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useContext } from "react";
 
-import { TeacherResource } from "@/Pages/Teacher/TeacherResourcesManagement";
+import { TeacherCourses } from "@/Pages/Teacher/TeacherCoursesPage";
 import { Language } from "@/Pages/Language";
 import { Theme } from "@/Pages/Theme";
 import { TeacherCourseDoc } from "@/Pages/Teacher/CourseDocManagment";
@@ -18,6 +18,8 @@ import { StudentSettings } from "@/Pages/Student/StudentSettings";
 import { StudentExams } from "@/Pages/Student/StudentExamsPage";
 import { StudentExamPage } from "@/Pages/Student/StudentExamPage";
 import { StudentExamResultPage } from "@/Pages/Student/StudentExamResultPage";
+import { StudentExplore } from "@/Pages/Student/StudentExplorePage";
+import { CourseInformation } from "@/Pages/Student/StudentCourseInformation";
 
 import { QuizFirstPage } from "@/Pages/QuizFirstPage";
 import { QuizQuestionsPage } from "@/Pages/QuizQuestionsPage";
@@ -42,7 +44,6 @@ function App() {
     <AppProvider>
       <div style={{ textAlign: "center" }}>
         <Router>
-
           <Routes>
             {/* ==================== Auth ==================== */}
             <Route path="/login" element={<Login />} />
@@ -56,7 +57,7 @@ function App() {
 
               <Route path="/Theme" element={<Theme />} />
 
-              <Route path="/TeacherResource" element={<TeacherResource />} />
+              <Route path="/TeacherCourses" element={<TeacherCourses />} />
 
               <Route
                 path="/TeacherCourseDoc/:id"
@@ -96,7 +97,6 @@ function App() {
             {/* ==================== Student ==================== */}
 
             <Route element={<StudentLayout />}>
-
               <Route path="/Student" element={<StudentHome />} />
               <Route path="/student" element={<StudentHome />} />
               <Route path="/StudentHome" element={<StudentHome />} />
@@ -105,16 +105,38 @@ function App() {
 
               <Route path="/StudentSettings" element={<StudentSettings />} />
               <Route path="/StudentExams" element={<StudentExams />} />
-              <Route path="/studentexams" element={<Navigate to="/StudentExams" replace />} />
-              <Route path="/StudentExam" element={<Navigate to="/StudentExams" replace />} />
-              <Route path="/studentexam" element={<Navigate to="/StudentExams" replace />} />
+              <Route
+                path="/studentexams"
+                element={<Navigate to="/StudentExams" replace />}
+              />
+              <Route
+                path="/StudentExam"
+                element={<Navigate to="/StudentExams" replace />}
+              />
+              <Route
+                path="/studentexam"
+                element={<Navigate to="/StudentExams" replace />}
+              />
               <Route path="/StudentExam/:id" element={<StudentExamPage />} />
               <Route path="/studentexam/:id" element={<StudentExamPage />} />
-              <Route path="/StudentExamResult/:id" element={<StudentExamResultPage />} />
-              <Route path="/studentexamresult/:id" element={<StudentExamResultPage />} />
-              <Route path="/ExamResult/:id" element={<StudentExamResultPage />} />
-              <Route path="/examresult/:id" element={<StudentExamResultPage />} />
-
+              <Route
+                path="/StudentExamResult/:id"
+                element={<StudentExamResultPage />}
+              />
+              <Route
+                path="/studentexamresult/:id"
+                element={<StudentExamResultPage />}
+              />
+              <Route
+                path="/ExamResult/:id"
+                element={<StudentExamResultPage />}
+              />
+              <Route
+                path="/examresult/:id"
+                element={<StudentExamResultPage />}
+              />
+              <Route path="/StudentExplore" element={<StudentExplore />} />
+              <Route path="/CourseInformation/:id" element={<CourseInformation/>} />
             </Route>
             {/* =================== Quiz Pages =================== */}
 

@@ -1,6 +1,6 @@
 import { useContext, useState, useEffect } from "react";
 import { ChevronRight, ArrowLeft } from "lucide-react";
-import courseImage from "@/assets/images/course.jpg";
+import courseImage from "@/assets/images/AI.png";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,7 @@ import { AppContext } from "@/Context/AppContext";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
 import { isPersianText } from "@/utils/textUtils";
 
-export const TeacherResource = () => {
+export const TeacherCourses = () => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
   const [courses, setCourses] = useState(defaultCourses);
@@ -49,7 +49,9 @@ export const TeacherResource = () => {
 
           <h1
             className={`flex-1 mx-2 text-neutral-scale70 ${
-              isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
+              isRTL
+                ? "fa-title-1 font-vazir text-right"
+                : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
             {isRTL ? "اطلاعات دروس" : "Courses Information"}
@@ -66,7 +68,9 @@ export const TeacherResource = () => {
             <p
               id="resource-course-selection"
               className={`px-4 ${
-                isRTL ? "fa-body-medium font-vazir text-right" : "en-body-medium font-inter text-left"
+                isRTL
+                  ? "fa-body-medium font-vazir text-right"
+                  : "en-body-medium font-inter text-left"
               } text-primery-800 dark:text-neutral-scale70`}
             >
               {isRTL
@@ -76,7 +80,8 @@ export const TeacherResource = () => {
 
             <div className="flex flex-col w-full gap-[12px] mt-[16px] px-3.5">
               {courses.map((course) => {
-                const descText = course.descriptionFa || course.description || "";
+                const descText =
+                  course.descriptionFa || course.description || "";
                 const isDescPersian = isPersianText(descText);
                 return (
                   <button
@@ -117,23 +122,33 @@ export const TeacherResource = () => {
                         {/* Privacy / Access Level */}
                         <span
                           className={`${
-                            isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                            isRTL
+                              ? "fa-caption-1 font-vazir"
+                              : "en-caption-1 font-inter"
                           } text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}
                         >
                           {isRTL
-                            ? (course.accessLevel === "public" ? "عمومی" : "خصوصی")
-                            : (course.accessLevel === "public" ? "Public" : "Private")}
+                            ? course.accessLevel === "public"
+                              ? "عمومی"
+                              : "خصوصی"
+                            : course.accessLevel === "public"
+                              ? "Public"
+                              : "Private"}
                         </span>
 
                         {/* Description - Auto-detect Persian font */}
                         <span
-                          dir={isDescPersian ? "rtl" : (isRTL ? "rtl" : "ltr")}
+                          dir={isDescPersian ? "rtl" : isRTL ? "rtl" : "ltr"}
                           className={`${
                             isDescPersian
                               ? "fa-caption-1 font-vazir"
-                              : (isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter")
+                              : isRTL
+                                ? "fa-caption-1 font-vazir"
+                                : "en-caption-1 font-inter"
                           } text-neutral-scale1000 dark:text-neutral-scale400 truncate min-w-0 ${
-                            !isRTL && isDescPersian ? "text-left [direction:rtl]" : ""
+                            !isRTL && isDescPersian
+                              ? "text-left [direction:rtl]"
+                              : ""
                           }`}
                         >
                           {descText}
