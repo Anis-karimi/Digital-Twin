@@ -352,10 +352,10 @@ export const ChatArea = () => {
       otherMessageRow: "flex justify-start w-full",
 
       myBubble:
-        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-primery-100 dark:bg-primery-900 text-neutral-scale70 rounded-[18px] rounded-br-[6px] px-3 py-1.5 min-w-[75px] w-fit max-w-full shadow-effects-drop-shadow-bottom",
 
       otherBubble:
-        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 min-w-[75px] max-w-[75%] shadow-effects-drop-shadow-bottom",
+        "bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1400 rounded-[18px] rounded-bl-[6px] px-3 py-1.5 min-w-[75px] w-fit max-w-full shadow-effects-drop-shadow-bottom",
 
       messageText:
         "text-neutral-scale1800 dark:text-neutral-scale100 text-[14px] leading-[22px] whitespace-pre-wrap break-words",
@@ -1228,7 +1228,7 @@ export const ChatArea = () => {
               className={`absolute left-1/2 -translate-x-1/2 ${
                 isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
               } w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100 transition-all duration-300`}
-              dir={isRTL ? "rtl" : "ltr"}
+              dir="ltr"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendMessage();
@@ -1259,11 +1259,7 @@ export const ChatArea = () => {
                     value={message}
                     placeholder={t("writeMessage")}
                     rows={1}
-                    className={`absolute bottom-0 w-full ${
-                      isRTL
-                        ? "right-0 pr-[18px] pl-[84px]"
-                        : "left-0 pl-[18px] pr-[84px]"
-                    } pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
+                    className={`absolute bottom-0 left-0 w-full pl-[18px] pr-[84px] pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
                     style={{
                       minHeight: "37px",
                       resize: "none",
@@ -1298,12 +1294,10 @@ export const ChatArea = () => {
                 );
               })()}
 
-              {/* Send / Mic button */}
+              {/* Send / Mic button - Always on right */}
               <button
                 type="button"
-                className={`absolute bottom-[1px] ${
-                  isRTL ? "left-[1px]" : "right-[1px]"
-                } w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
+                className={`absolute bottom-[1px] right-[1px] w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
                   recording ? "animate-pulse" : ""
                 }`}
                 onClick={() => {
@@ -1323,23 +1317,19 @@ export const ChatArea = () => {
                 {recording ? (
                   <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
                 ) : isTyping ? (
-                  <Send
-                    className={`!w-[35px] !h-[35px] ${isRTL ? "scale-x-[-1]" : ""}`}
-                  />
+                  <Send className="!w-[35px] !h-[35px]" />
                 ) : (
                   <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
                 )}
               </button>
 
-              {/* Quiz button */}
+              {/* Quiz button - Always on right (to the left of mic/send button) */}
               <button
                 type="button"
                 onClick={handleOpenQuiz}
                 aria-label={quizBarTitle}
                 title={quizBarTitle}
-                className={`absolute bottom-[6.5px] ${
-                  isRTL ? "left-12" : "right-12"
-                } w-7 h-7 flex items-center justify-center cursor-pointer`}
+                className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer"
               >
                 <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
               </button>
