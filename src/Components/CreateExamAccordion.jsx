@@ -458,7 +458,7 @@ export const CreateExamAccordion = ({
 
   return (
     <div
-      dir={isRTL ? "rtl " : "ltr font-inter"}
+      dir={isRTL ? "rtl " : "ltr "}
       className="w-full flex flex-col gap-3.5 pb-24 animate-in fade-in slide-in-from-bottom-2 duration-300 select-text"
     >
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs">
@@ -475,7 +475,7 @@ export const CreateExamAccordion = ({
 
         {/* Course Name */}
         <div className="px-3.5 pb-3.5">
-          <div className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 text-xs  text-start">
+          <div className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 text-xs font-vazir text-start">
             {courseTitle}
           </div>
         </div>
@@ -513,125 +513,6 @@ export const CreateExamAccordion = ({
           }
           className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-xs  focus:outline-none focus:ring-2 focus:ring-[#2481cc]/25 focus:border-[#2481cc] transition-all"
         />
-      </div>
-
-      {/* =========================================================
-          ITEM 4: پیوست فایل‌ها و منابع مرجع آزمون (ACCORDION)
-          ========================================================= */}
-      <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
-        <div
-          onClick={() => setIsFilesOpen(!isFilesOpen)}
-          className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-neutral-scale100/40 dark:hover:bg-neutral-scale1200/40 transition-colors select-none"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
-              <Paperclip className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 text-start">
-                {isRTL
-                  ? "پیوست فایل‌ها و منابع مرجع آزمون"
-                  : "Exam Reference Files"}
-              </span>
-              <span className="text-[10px] text-neutral-400">
-                {attachedFiles.length > 0
-                  ? isRTL
-                    ? `${toPersianDigits(attachedFiles.length)} فایل پیوست شده برای منبع سوالات`
-                    : `${attachedFiles.length} file(s) attached as reference`
-                  : isRTL
-                    ? "اسلایدهای کلاسی، جزوه، کتب مرجع (اختیاری)"
-                    : "Course slides, notes, or reference docs (optional)"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {attachedFiles.length > 0 && (
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#2481cc]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/30">
-                {toPersianDigits(attachedFiles.length)}
-              </span>
-            )}
-            <ChevronDown
-              className={`w-4 h-4 text-neutral-400 transition-transform duration-250 ${
-                isFilesOpen ? "rotate-180 text-[#2481cc]" : ""
-              }`}
-            />
-          </div>
-        </div>
-
-        {isFilesOpen && (
-          <div className="px-3.5 pb-3.5 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60 flex flex-col gap-3 animate-in fade-in duration-200">
-            {/* Upload Dropzone */}
-            <label className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#2481cc]/30 dark:border-[#52a2f6]/30 hover:border-[#2481cc] dark:hover:border-[#52a2f6] bg-[#edf5fd]/40 dark:bg-[#182533]/40 transition-colors cursor-pointer text-center">
-              <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                  {isRTL
-                    ? "انتخاب یا کشیدن فایل‌های مرجع آزمون"
-                    : "Select or drop reference files"}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {isRTL
-                    ? "پشتیبانی از فرمت‌های PDF، DOCX، PPTX، TXT (حداکثر ۲۰ مگابایت)"
-                    : "Supports PDF, DOCX, PPTX, TXT (up to 20MB)"}
-                </span>
-              </div>
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.docx,.doc,.pptx,.ppt,.txt"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  if (files.length > 0) {
-                    setAttachedFiles((prev) => [
-                      ...prev,
-                      ...files.map((f) => ({
-                        name: f.name,
-                        size: (f.size / (1024 * 1024)).toFixed(2) + " MB",
-                        type: f.type || "document",
-                      })),
-                    ]);
-                  }
-                }}
-                className="hidden"
-              />
-            </label>
-
-            {/* Attached Files List */}
-            {attachedFiles.length > 0 && (
-              <div className="space-y-1.5">
-                {attachedFiles.map((file, fIdx) => (
-                  <div
-                    key={fIdx}
-                    className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-xs"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-4 h-4 text-[#2481cc] shrink-0" />
-                      <span className="font-medium text-neutral-800 dark:text-neutral-100 truncate">
-                        {file.name}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 shrink-0">
-                        ({file.size})
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setAttachedFiles((prev) =>
-                          prev.filter((_, i) => i !== fIdx),
-                        )
-                      }
-                      className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                      title={isRTL ? "حذف فایل" : "Remove file"}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* =========================================================
@@ -798,7 +679,7 @@ export const CreateExamAccordion = ({
                           )}
                         </div>
 
-                        <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col min-w-0 font-vazir">
                           <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-100  truncate">
                             {st.title || st.name}
                           </span>

@@ -9,6 +9,47 @@ import { examsApi } from "@/api/new/exams.api";
 import { TeacherExamResultsModal } from "@/Components/TeacherExamResultsModal";
 import { TeacherEditExamModal } from "@/Components/TeacherEditExamModal";
 
+// const mockExams = [
+//   // Active
+//   {
+//     id: "exam-active-001",
+//     title: "آزمون فصل اول",
+//     course: "سیستم عامل",
+//     topic: "مفاهیم پایه سیستم عامل، Process و Thread",
+//     date: "1405/07/20",
+//     time: "10:00 - 10:25",
+//     duration: "25 دقیقه هر دانشجو",
+//     active: true,
+//     scheduled: false,
+//   },
+
+//   // Scheduled
+//   {
+//     id: "exam-scheduled-002",
+//     title: "آزمون فصل دوم",
+//     course: "سیستم عامل",
+//     topic: "CPU Scheduling و الگوریتم‌های زمان‌بندی",
+//     date: "1405/08/05",
+//     time: "11:00 - 11:30",
+//     duration: "30 دقیقه هر دانشجو",
+//     active: false,
+//     scheduled: true,
+//   },
+
+//   // Inactive
+//   {
+//     id: "exam-inactive-003",
+//     title: "آزمون میان‌ترم",
+//     course: "سیستم عامل",
+//     topic: "Memory Management و Virtual Memory",
+//     date: "1405/06/15",
+//     time: "09:00 - 09:40",
+//     duration: "40 دقیقه هر دانشجو",
+//     active: false,
+//     scheduled: false,
+//   },
+// ];
+
 export const TeacherExams = () => {
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
@@ -46,8 +87,16 @@ export const TeacherExams = () => {
               if (typeof q.start_at === "string" && q.start_at.includes(":") && !q.start_at.includes("T")) {
                 timeDisplay = `${q.start_at} - ${q.end_at}`;
               } else {
-                const s = new Date(q.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                const e = new Date(q.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const s = new Date(q.start_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                });
+                const e = new Date(q.end_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                });
                 timeDisplay = `${s} - ${e}`;
               }
             } catch {
@@ -299,43 +348,26 @@ export const TeacherExams = () => {
                         <div className="flex flex-col min-w-0 flex-1 gap-[2px]">
                           <span
                             dir="rtl"
-                            className={`
-                              fa-body-medium
-                              font-vazir
-                              font-semibold
-                              truncate
-                              ${
-                                isActive || isScheduled
-                                  ? "text-neutral-scale1800 dark:text-neutral-scale70"
-                                  : "text-neutral-scale900 dark:text-neutral-scale500"
-                              }
-                              ${
-                                isRTL
-                                  ? "text-right"
-                                  : "text-left [direction:rtl]"
-                              }
-                            `}
+                            className={`fa-body-medium font-vazir font-semibold whitespace-normal break-words ${
+                              isActive || isScheduled
+                                ? "text-neutral-scale1800 dark:text-neutral-scale70"
+                                : "text-neutral-scale900 dark:text-neutral-scale500"
+                            } ${
+                              isRTL ? "text-right" : "text-left [direction:rtl]"
+                            }`}
                           >
                             {exam.title}
                           </span>
 
                           <span
                             dir="rtl"
-                            className={`
-                              fa-caption-1
-                              font-vazir
-                              truncate
-                              ${
-                                isActive || isScheduled
-                                  ? "text-neutral-scale1000 dark:text-neutral-scale300"
-                                  : "text-neutral-scale700 dark:text-neutral-scale500"
-                              }
-                              ${
-                                isRTL
-                                  ? "text-right"
-                                  : "text-left [direction:rtl]"
-                              }
-                            `}
+                            className={`fa-caption-1 font-vazir truncate ${
+                              isActive || isScheduled
+                                ? "text-neutral-scale1000 dark:text-neutral-scale300"
+                                : "text-neutral-scale700 dark:text-neutral-scale500"
+                            } ${
+                              isRTL ? "text-right" : "text-left [direction:rtl]"
+                            }`}
                           >
                             {exam.course}
                           </span>
@@ -422,9 +454,10 @@ export const TeacherExams = () => {
                     />
 
                     {/* Topic */}
-                    <div className="flex items-center gap-[3px]">
+                    <div className="flex items-start gap-[3px] w-full min-w-0">
                       <span
                         className={`
+                          shrink-0
                           ${
                             isActive || isScheduled
                               ? "text-neutral-scal1800 dark:text-neutral-scale70"
@@ -437,21 +470,25 @@ export const TeacherExams = () => {
                           }
                         `}
                       >
-                        {isRTL ? "مبحث آزمون :" : "Exam Topic :"}
+                        {isRTL ? "مبحث آزمون:" : "Exam Topic:"}
                       </span>
 
                       <span
                         dir="rtl"
                         className={`
+                          min-w-0
+                          flex-1
+                          whitespace-normal
+                          break-words
                           ${
                             isActive || isScheduled
-                              ? "text-neutral-scale1800 dark:text-neutral-scale70"
+                              ? "text-neutral-scal1800 dark:text-neutral-scale70"
                               : "text-neutral-scale900 dark:text-neutral-scale500"
                           }
                           ${
                             isRTL
-                              ? "fa-caption-1 text-right"
-                              : "en-caption-1 text-left"
+                              ? "fa-caption-1 font-vazir text-right"
+                              : "en-caption-1 font-inter text-left"
                           }
                         `}
                       >
@@ -533,82 +570,88 @@ export const TeacherExams = () => {
                     {/* Action Buttons: Edit and Results */}
                     <div className="flex items-center gap-2 mt-[12px] w-full">
                       {/* Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(exam)}
-                        className="
-                          flex-1
-                          flex
-                          items-center
-                          justify-center
-                          gap-[5px]
-                          h-[32px]
-                          px-[8px]
-                          rounded-[8px]    
-                          border
-                          border-primery-800
-                          text-neutral-scale1800
-                          dark:text-neutral-scale70
-                          bg-primery-100
-                          hover:bg-primery-200
-                          dark:bg-primery-1000
-                          active:scale-[0.98]
-                          transition-all
-                          cursor-pointer
-                        "
-                      >
-                        <Pencil className="!w-[13px] !h-[13px] text-neutral-scale1800 dark:text-neutral-scale70" />
-                        <span
-                          className={
-                            isRTL
-                              ? "fa-caption-1 font-vazir"
-                              : "en-caption-1 font-inter"
-                          }
+                      {isScheduled && (
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(exam)}
+                          className="
+                            flex-1
+                            flex
+                            items-center
+                            justify-center
+                            gap-[5px]
+                            h-[32px]
+                            px-[8px]
+                            rounded-[8px]
+                            border
+                            border-primery-800
+                            text-neutral-scale1800
+                            dark:text-neutral-scale70
+                            bg-primery-100
+                            hover:bg-primery-200
+                            dark:bg-primery-1000
+                            active:scale-[0.98]
+                            transition-all
+                            cursor-pointer
+                          "
                         >
-                          {isRTL ? "ویرایش" : "Edit"}
-                        </span>
-                      </button>
+                          <Pencil className="!w-[13px] !h-[13px] text-neutral-scale1800 dark:text-neutral-scale70" />
+
+                          <span
+                            className={
+                              isRTL
+                                ? "fa-caption-1 font-vazir"
+                                : "en-caption-1 font-inter"
+                            }
+                          >
+                            {isRTL ? "ویرایش" : "Edit"}
+                          </span>
+                        </button>
+                      )}
 
                       {/* Results Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleViewResults(exam)}
-                        className="
-                          flex-1
-                          flex
-                          items-center
-                          justify-center
-                          gap-[5px]
-                          h-[32px]
-                          px-[8px]
-                          rounded-[8px]
-                          border
-                          border-neutral-scale600
-                          dark:border-neutral-scale200
-                          bg-neutral-scale70
-                          dark:bg-neutral-scale1200
-                          text-neutral-scale1800
-                          dark:text-neutral-scale80
-                          hover:bg-neutral-scale100
-                          dark:hover:bg-neutral-scale1100
-                          hover:border-neutral-scale800
-                          dark:hover:border-neutral-scale500
-                          active:scale-[0.98]
-                          transition-all
-                          cursor-pointer
-                        "
-                      >
-                        <BarChart3 className="!w-[14px] !h-[14px] dark:text-neutral-scale80" />
-                        <span
-                          className={
-                            isRTL
-                              ? "fa-caption-1 font-vazir"
-                              : "en-caption-1 font-inter"
-                          }
+                      {!isScheduled && (
+                        <button
+                          type="button"
+                          onClick={() => handleViewResults(exam)}
+                          className="
+                            flex-1
+                            flex
+                            items-center
+                            justify-center
+                            gap-[5px]
+                            h-[32px]
+                            px-[8px]
+                            rounded-[8px]
+                            border
+                            border-neutral-scale600
+                            dark:border-neutral-scale200
+                            bg-neutral-scale70
+                            dark:bg-neutral-scale1200
+                            text-neutral-scale1800
+                            dark:text-neutral-scale80
+                            hover:bg-neutral-scale100
+                            dark:hover:bg-neutral-scale1100
+                            hover:border-neutral-scale800
+                            dark:hover:border-neutral-scale500
+                            active:scale-[0.98]
+                            transition-all
+                            cursor-pointer
+                          "
                         >
-                          {isRTL ? "نتایج" : "Results"}
-                        </span>
-                      </button>
+                          <BarChart3 className="!w-[14px] !h-[14px] dark:text-neutral-scale80" />
+
+                          <span
+                            className={
+                              isRTL
+                                ? "fa-caption-1 font-vazir"
+                                : "en-caption-1 font-inter"
+                            }
+                          >
+                            {isRTL ? "نتایج" : "Results"}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

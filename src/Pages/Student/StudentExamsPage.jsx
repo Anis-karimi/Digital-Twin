@@ -380,7 +380,7 @@ export const StudentExams = () => {
                 {isRTL ? "آزمون‌های من" : "My Exams"}
               </p>
 
-              <span className="text-xs px-2.5 py-1 rounded-full bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 font-medium font-vazir">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-primery-90 dark:bg-primery-900 text-primery-800 dark:text-primery-90 font-medium font-vazir">
                 {isRTL ? toPersianDigits(exams.length) : exams.length} {isRTL ? "آزمون" : "Exams"}
               </span>
             </div>
