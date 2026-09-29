@@ -101,7 +101,11 @@ export const StudentNavigationBar = () => {
     return "explore";
   }
 
-  if (location.pathname === "/StudentSettings") {
+  if (
+    location.pathname === "/StudentSettings" ||
+    location.pathname.toLowerCase() === "/language" ||
+    location.pathname.toLowerCase() === "/theme"
+  ) {
     return "settings";
   }
 

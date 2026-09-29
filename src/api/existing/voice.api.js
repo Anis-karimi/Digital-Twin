@@ -10,7 +10,7 @@ import { httpRequest, handleApiError } from "../client";
  * Initiates TTS streaming from Digital Twin server.
  * Encapsulates FormData creation for text payload.
  * 
- * @endpoint POST /tts_stream (on DGTW_URL)
+ * @endpoint POST /tts_router_stream (on DGTW_URL)
  * @param {string} text Text to synthesize into speech
  * @returns {Promise<Response>} Raw response stream reader
  */
@@ -19,7 +19,10 @@ export async function streamTTS(text) {
     const formData = new FormData();
     formData.append("text", text);
 
-    const response = await fetch(`${API_CONFIG.DGTW_URL}/tts_stream`, {
+    const ttsUrl =
+      API_CONFIG.TTS_STREAM_URL || `${API_CONFIG.DGTW_URL}/tts_router_stream`;
+
+    const response = await fetch(ttsUrl, {
       method: "POST",
       body: formData,
     });

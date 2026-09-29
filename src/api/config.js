@@ -39,6 +39,11 @@ export const API_CONFIG = {
   /** Digital Twin Service URL (Audio TTS streaming and user static media) */
   DGTW_URL: import.meta.env.VITE_DGTW_URL || DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir",
 
+  /** Digital Twin TTS stream endpoint URL */
+  TTS_STREAM_URL:
+    import.meta.env.VITE_TTS_STREAM_URL ||
+    `${import.meta.env.VITE_DGTW_URL || DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir"}/tts_router_stream`,
+
   /** Real-time STT WebSocket server for Persian (fa - Port 8881) */
   STT_WS_URL_FA: import.meta.env.VITE_STT_WS_URL_FA || "wss://172.20.13.39:8881/ws",
 

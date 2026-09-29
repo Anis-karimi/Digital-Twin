@@ -40,7 +40,20 @@ const RadioIndicator = ({ checked }) => (
 export const Language = () => {
   const groupId = useId();
   const navigate = useNavigate();
-  const { language, setLanguage, isRTL, t } = useContext(AppContext);
+  const { language, setLanguage, isRTL, t, role, currentUser } = useContext(AppContext);
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      const isStudent =
+        role === "student" ||
+        currentUser?.user_type === "STUDENT" ||
+        currentUser?.role === "student" ||
+        localStorage.getItem("user_role") === "student";
+      navigate(isStudent ? "/StudentSettings" : "/TeacherSettings");
+    }
+  };
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -52,7 +65,7 @@ export const Language = () => {
       <header className="w-full h-[65px] flex shrink-0">
         <div className="w-full h-[65px] relative flex bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000 items-center px-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             type="button"
             aria-label={t("back")}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0"

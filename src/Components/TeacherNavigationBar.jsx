@@ -67,7 +67,11 @@ export const TeacherNavigationBar = () => {
     if (isHomePage) return "chats";
     if (location.pathname === "/TeacherCourses") return "courses";
     if (location.pathname === "/TeacherExams") return "exams";
-    if (location.pathname === "/TeacherSettings") return "settings";
+    if (
+      location.pathname === "/TeacherSettings" ||
+      location.pathname.toLowerCase() === "/language" ||
+      location.pathname.toLowerCase() === "/theme"
+    ) return "settings";
 
     // Internal sub-routes where no primary nav item should be active
     return null;

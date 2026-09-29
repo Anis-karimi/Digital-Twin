@@ -30,6 +30,7 @@ import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 import { AppProvider, AppContext } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
 import { StudentLayout } from "@/Layouts/StudentLayout";
+import { AdaptiveLayout } from "@/Layouts/AdaptiveLayout";
 import { Login } from "@/Pages/Login";
 
 function StudentsRoute() {
@@ -62,14 +63,18 @@ function App() {
             {/* ==================== Auth ==================== */}
             <Route path="/login" element={<Login />} />
 
+            {/* ==================== Shared Settings ==================== */}
+            <Route element={<AdaptiveLayout />}>
+              <Route path="/Language" element={<Language />} />
+              <Route path="/language" element={<Language />} />
+              <Route path="/Theme" element={<Theme />} />
+              <Route path="/theme" element={<Theme />} />
+            </Route>
+
             {/* ==================== Teacher ==================== */}
 
             <Route element={<TeacherLayout />}>
               <Route path="/" element={<TeacherHome />} />
-
-              <Route path="/Language" element={<Language />} />
-
-              <Route path="/Theme" element={<Theme />} />
 
               <Route path="/TeacherCourses" element={<TeacherCourses />} />
 
