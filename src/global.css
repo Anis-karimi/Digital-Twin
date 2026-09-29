@@ -129,22 +129,22 @@ body {
 --warning-1000: rgba(200, 144, 4, 1);
 
 /* ========== FONT FAMILIES ========== */
---EN-inter-body-body-font-family: "Inter", Helvetica;
---EN-inter-body-body-large-font-family: "Inter", Helvetica;
---EN-inter-body-body-medium-font-family: "Inter", Helvetica;
+--EN-inter-body-body-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-body-body-large-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-body-body-medium-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
 
---EN-inter-caption-1-font-family: "Inter", Helvetica;
---EN-inter-caption-2-font-family: "Inter", Helvetica;
---EN-inter-caption-3-font-family: "Inter", Helvetica;
---EN-inter-caption-4-font-family: "Inter", Helvetica;
---EN-inter-caption-5-font-family: "Inter", Helvetica;
---EN-inter-caption-6-font-family: "Inter", Helvetica;
+--EN-inter-caption-1-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-caption-2-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-caption-3-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-caption-4-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-caption-5-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-caption-6-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
 
---EN-inter-display-font-family: "Inter", Helvetica;
+--EN-inter-display-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
 
---EN-inter-titles-1-font-family: "Inter", Helvetica;
---EN-inter-titles-2-font-family: "Inter", Helvetica;
---EN-inter-titles-3-font-family: "Inter", Helvetica;
+--EN-inter-titles-1-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-titles-2-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
+--EN-inter-titles-3-font-family: "Inter", "Vazirmatn", Helvetica, sans-serif;
 
 --FA-vazirmatn-body-body-font-family: "Vazirmatn", sans-serif;
 --FA-vazirmatn-body-body-large-font-family: "Vazirmatn", sans-serif;

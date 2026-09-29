@@ -659,7 +659,7 @@ export const StudentExamPage = () => {
               />
 
               {/* Action Buttons Row: Mic Button + Submit Button */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {/* Voice / Mic Button with Hold-to-change Language Menu */}
                 <VoiceMicButton
                   recording={recording}
@@ -669,13 +669,14 @@ export const StudentExamPage = () => {
                   onStopRecording={stopRecording}
                   disabled={isSubmitting || isCompleted}
                   isRTL={isRTL}
-                  className="shrink-0"
-                  buttonClassName={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  className="shrink-0 w-12 h-11 relative"
+                  buttonClassName={`w-full h-full rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 ${
                     recording
-                      ? "bg-red-500/10 border border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
-                      : "bg-neutral-scale100 dark:bg-neutral-scale1100 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale300 dark:border-neutral-scale1000"
+                      ? "bg-red-500/15 border-2 border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
+                      : "bg-white dark:bg-[#152331] hover:bg-neutral-50 dark:hover:bg-[#1a2d40] text-primery-600 dark:text-[#52a2f6] border border-neutral-scale300 dark:border-neutral-scale1000"
                   }`}
-                  iconClassName="w-[22px] h-[22px]"
+                  badgeClassName="-top-1.5 -right-1"
+                  iconClassName="!w-6 !h-6"
                 />
 
                 {/* Submit Button */}
@@ -683,7 +684,7 @@ export const StudentExamPage = () => {
                   type="button"
                   disabled={!answerText.trim() || isSubmitting}
                   onClick={handleSubmitAnswer}
-                  className={`flex-1 h-10 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
+                  className={`flex-1 h-11 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
                     !answerText.trim() || isSubmitting
                       ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
                       : "bg-primery-700 hover:bg-primery-800 text-white"

@@ -80,13 +80,21 @@ export const CreateExamAccordion = ({
   courseTitle = "سیستم عامل",
   onExamCreated,
   onCancel,
+  initialExam = null,
+  isEditMode = false,
+  onExamUpdated,
 }) => {
   const { isRTL, t } = useContext(AppContext);
 
   // Form State
-  const [examTitle, setExamTitle] = useState("");
+  const [examTitle, setExamTitle] = useState(() => initialExam?.title || "");
   const [students, setStudents] = useState([]);
-  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(() => {
+    if (Array.isArray(initialExam?.student_ids) && initialExam.student_ids.length > 0) {
+      return initialExam.student_ids.map(String);
+    }
+    return [];
+  });
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [studentSearch, setStudentSearch] = useState("");
 
@@ -96,21 +104,64 @@ export const CreateExamAccordion = ({
   const [isFilesOpen, setIsFilesOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(true);
 
+  // Initial Goals
+  const initialGoalsList = useMemo(() => {
+    if (Array.isArray(initialExam?.goals) && initialExam.goals.length > 0) {
+      return initialExam.goals.map((g) => {
+        if (typeof g === "object" && g !== null) {
+          let bl = 2;
+          if (typeof g.bloom_level === "number") bl = g.bloom_level;
+          else if (typeof g.bloom_level === "string") {
+            const found = BLOOM_LEVELS.find((b) => b.key === g.bloom_level.toLowerCase() || b.name === g.bloom_level);
+            if (found) bl = found.level;
+          }
+          return {
+            title: g.title || g.name || "",
+            goal_type: g.goal_type || "theoretical",
+            bloom_level: bl,
+          };
+        }
+        return { title: String(g), goal_type: "theoretical", bloom_level: 2 };
+      });
+    }
+    if (initialExam?.topic && typeof initialExam.topic === "string") {
+      const parts = initialExam.topic.split("،").map((t) => t.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        return parts.map((t) => ({
+          title: t,
+          goal_type: "theoretical",
+          bloom_level: 2,
+        }));
+      }
+    }
+    return [
+      { title: "", goal_type: "theoretical", bloom_level: 2 },
+      { title: "", goal_type: "practical", bloom_level: 3 },
+    ];
+  }, [initialExam]);
+
   // Duration & Goals
-  const [durationPerStudent, setDurationPerStudent] = useState(10);
-  const [goalCount, setGoalCount] = useState(2);
-  const [goals, setGoals] = useState([
-    { title: "", goal_type: "theoretical", bloom_level: 2 },
-    { title: "", goal_type: "practical", bloom_level: 3 },
-  ]);
+  const [durationPerStudent, setDurationPerStudent] = useState(() => {
+    if (initialExam?.duration_minutes) return initialExam.duration_minutes;
+    if (typeof initialExam?.duration === "string") {
+      const match = initialExam.duration.match(/\d+/);
+      if (match) return parseInt(match[0], 10);
+    }
+    return 10;
+  });
+  const [goalCount, setGoalCount] = useState(() => initialGoalsList.length || 2);
+  const [goals, setGoals] = useState(() => initialGoalsList);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [rawFiles, setRawFiles] = useState([]);
   const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
   const [goalAiNotice, setGoalAiNotice] = useState({ type: "", message: "" });
   const [isGoalSuccess, setIsGoalSuccess] = useState(false);
 
-  // Date & Time Scheduling - Defaults to current local moment
+  // Date & Time Scheduling - Defaults to initialExam or current local moment
   const [examDate, setExamDate] = useState(() => {
+    if (initialExam?.date || initialExam?.exam_date) {
+      return initialExam.date || initialExam.exam_date;
+    }
     const todayIso = getTodayIsoDate();
     const p = parseIsoDate(todayIso);
     if (p) {
@@ -121,11 +172,33 @@ export const CreateExamAccordion = ({
   });
 
   const [startTime, setStartTime] = useState(() => {
+    if (initialExam?.time && typeof initialExam.time === "string" && initialExam.time.includes("-")) {
+      return initialExam.time.split("-")[0].trim();
+    }
+    if (initialExam?.start_at) {
+      try {
+        if (typeof initialExam.start_at === "string" && initialExam.start_at.includes(":") && !initialExam.start_at.includes("T")) {
+          return initialExam.start_at;
+        }
+        return new Date(initialExam.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+      } catch {}
+    }
     const now = new Date();
     return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   });
 
   const [endTime, setEndTime] = useState(() => {
+    if (initialExam?.time && typeof initialExam.time === "string" && initialExam.time.includes("-")) {
+      return initialExam.time.split("-")[1].trim();
+    }
+    if (initialExam?.end_at) {
+      try {
+        if (typeof initialExam.end_at === "string" && initialExam.end_at.includes(":") && !initialExam.end_at.includes("T")) {
+          return initialExam.end_at;
+        }
+        return new Date(initialExam.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+      } catch {}
+    }
     const now = new Date();
     const curStart = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     return addMinutesToTime(curStart, 60);
@@ -165,8 +238,10 @@ export const CreateExamAccordion = ({
         if (!isMounted) return;
         const list = Array.isArray(data) ? data : [];
         setStudents(list);
-        // By default select all students of the course
-        setSelectedStudentIds(list.map((s) => String(s.id)));
+        // By default select all students of the course if not in edit mode with existing students
+        if (!isEditMode || !initialExam?.student_ids || initialExam.student_ids.length === 0) {
+          setSelectedStudentIds(list.map((s) => String(s.id)));
+        }
       })
       .catch((err) => {
         console.error("Failed to load course students:", err);
@@ -178,7 +253,7 @@ export const CreateExamAccordion = ({
     return () => {
       isMounted = false;
     };
-  }, [courseId]);
+  }, [courseId, isEditMode, initialExam]);
 
   // Handle Goal Count changes
   const handleGoalCountChange = (newCount) => {
@@ -238,10 +313,11 @@ export const CreateExamAccordion = ({
     setIsGoalsOpen(true);
 
     try {
+      const requestedCount = Math.max(1, parseInt(goalCount, 10) || 1);
       const response = await examsApi.generateGoalsFromFile(targetFile, {
         courseTitle,
         examTitle,
-        maxGoals: Math.max(2, goalCount || 3),
+        maxGoals: requestedCount,
       });
 
       if (response && response.goals && Array.isArray(response.goals) && response.goals.length > 0) {
@@ -251,14 +327,20 @@ export const CreateExamAccordion = ({
           bloom_level: typeof g.bloom_level === "number" ? Math.max(1, Math.min(6, g.bloom_level)) : 2,
         }));
 
-        setGoals(formattedGoals);
-        setGoalCount(formattedGoals.length);
+        // Strict clamp to teacher's requested count; allow fewer if LLM could not produce more
+        const finalGoalCount = Math.min(requestedCount, formattedGoals.length);
+        const finalGoals = formattedGoals.slice(0, finalGoalCount);
+
+        setGoals(finalGoals);
+        setGoalCount(finalGoals.length);
         setIsGoalSuccess(true);
         setGoalAiNotice({
           type: "success",
           message: isRTL
-            ? `${toPersianDigits(formattedGoals.length)} هدف آموزشی با تحلیل هوشمند فایل «${targetFile.name}» با موفقیت تنظیم شد.`
-            : `Successfully generated ${formattedGoals.length} goals from "${targetFile.name}".`,
+            ? finalGoals.length < requestedCount
+              ? `${toPersianDigits(finalGoals.length)} هدف آموزشی استخراج شد (به دلیل محدودیت محتوای فایل، تعداد به ${toPersianDigits(finalGoals.length)} هدف تنظیم گردید).`
+              : `${toPersianDigits(finalGoals.length)} هدف آموزشی با تحلیل هوشمند فایل «${targetFile.name}» با موفقیت تنظیم شد.`
+            : `Successfully generated ${finalGoals.length} goals from "${targetFile.name}".`,
         });
       } else {
         throw new Error("No valid goals returned from server");
@@ -425,6 +507,31 @@ export const CreateExamAccordion = ({
         materials: attachedFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),
       };
 
+      if (isEditMode && initialExam) {
+        const assignmentId = initialExam.id || initialExam.quiz_id || initialExam.assignment_id;
+        await examsApi.updateExam(assignmentId, payload);
+
+        const topicTitles = validGoals.map((g) => g.title).filter(Boolean);
+        const updatedItem = {
+          ...initialExam,
+          ...payload,
+          id: assignmentId,
+          quiz_id: assignmentId,
+          title: examTitle.trim(),
+          course: courseTitle,
+          topic: topicTitles.join("، ") || "مباحث آزمون",
+          date: examDate,
+          time: `${startTime} - ${endTime}`,
+          duration: `${durationPerStudent} دقیقه هر دانشجو`,
+          goals: validGoals,
+          studentCount: selectedStudentIds.length,
+          materials: attachedFiles,
+        };
+
+        onExamUpdated?.(updatedItem);
+        return;
+      }
+
       const result = await examsApi.createLessonQuiz(courseId, payload);
 
       const topicTitles = validGoals.map((g) => g.title).filter(Boolean);
@@ -445,10 +552,14 @@ export const CreateExamAccordion = ({
 
       onExamCreated?.(createdItem);
     } catch (err) {
-      console.error("Failed to create exam:", err);
+      console.error(isEditMode ? "Failed to update exam:" : "Failed to create exam:", err);
       setFormError(
         isRTL
-          ? "خطا در برقراری ارتباط با سرور. لطفاً مجدداً تلاش فرمایید."
+          ? isEditMode
+            ? "خطا در به‌روزرسانی آزمون. لطفاً مجدداً تلاش فرمایید."
+            : "خطا در برقراری ارتباط با سرور. لطفاً مجدداً تلاش فرمایید."
+          : isEditMode
+          ? "Failed to update exam. Please try again."
           : "Failed to create exam. Please try again."
       );
     } finally {
@@ -458,7 +569,7 @@ export const CreateExamAccordion = ({
 
   return (
     <div
-      dir={isRTL ? "rtl " : "ltr "}
+      dir={isRTL ? "rtl" : "ltr"}
       className="w-full flex flex-col gap-3.5 pb-24 animate-in fade-in slide-in-from-bottom-2 duration-300 select-text"
     >
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs">
@@ -467,15 +578,21 @@ export const CreateExamAccordion = ({
           <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
             <BookOpen className="w-4 h-4" />
           </div>
-
-          <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-xs font-vazir text-neutral-500 dark:text-neutral-400">
+              {isEditMode
+                ? (isRTL ? "ویرایش مشخصات آزمون" : "Edit Exam Specifications")
+                : (isRTL ? "تنظیمات و ساخت آزمون شفاهی" : "Oral Exam Setup")}
+            </span>
+          </div>
+          <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
             {isRTL ? "نام درس" : "Course Name"}
           </span>
         </div>
 
         {/* Course Name */}
         <div className="px-3.5 pb-3.5">
-          <div className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 text-xs font-vazir text-start">
+          <div className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 text-xs font-vazir text-start font-semibold">
             {courseTitle}
           </div>
         </div>
@@ -1491,13 +1608,27 @@ export const CreateExamAccordion = ({
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>
-                {isRTL ? "در حال ایجاد آزمون..." : "Creating exam..."}
+                {isEditMode
+                  ? isRTL
+                    ? "در حال ذخیره تغییرات..."
+                    : "Saving changes..."
+                  : isRTL
+                  ? "در حال ایجاد آزمون..."
+                  : "Creating exam..."}
               </span>
             </>
           ) : (
             <>
               <Check className="w-4 h-4" />
-              <span>{isRTL ? "ثبت و ایجاد آزمون" : "Create Exam"}</span>
+              <span>
+                {isEditMode
+                  ? isRTL
+                    ? "ذخیره تغییرات آزمون"
+                    : "Save Exam Changes"
+                  : isRTL
+                  ? "ثبت و ایجاد آزمون"
+                  : "Create Exam"}
+              </span>
             </>
           )}
         </button>

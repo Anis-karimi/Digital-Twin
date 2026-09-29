@@ -213,11 +213,11 @@ export const VoiceMicButton = ({
           recording ? "animate-pulse" : ""
         } ${buttonClassName}`}
       >
-        {/* Language Badge on Top-Left Corner (Clicks pass through to button via pointer-events-none) */}
+        {/* Language Badge on Corner (Clicks pass through to button via pointer-events-none) */}
         <span
-          className={`pointer-events-none absolute -top-0.5 -left-0.5 z-10 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1e1e1e] text-white font-inter text-[9px] font-bold flex items-center justify-center border border-white/20 shadow-xs select-none ${
+          className={`pointer-events-none absolute z-10 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1e1e1e] text-white font-inter text-[9px] font-bold flex items-center justify-center border border-white/20 shadow-xs select-none ${
             recording ? "ring-1 ring-red-400" : ""
-          } ${badgeClassName}`}
+          } ${badgeClassName || "-top-0.5 -left-0.5"}`}
         >
           {badgeText}
         </span>
