@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatTime } from "@/utils/dateFormatter";
+import { cleanMessageText, isPersianText } from "@/utils/textUtils";
 
 export const MessageBubble = ({
   messageId,
@@ -21,7 +22,8 @@ export const MessageBubble = ({
 }) => {
   const { t, isRTL } = useContext(AppContext);
   const [deletingCommentIds, setDeletingCommentIds] = useState(() => new Set());
-  const isPersian = /[\u0600-\u06FF]/.test(text);
+  const clean = cleanMessageText(text);
+  const isPersian = isPersianText(clean);
 
   const dir = isPersian ? "rtl" : "ltr";
 
@@ -35,25 +37,76 @@ export const MessageBubble = ({
     }, 300);
   };
 
-  // Parse basic Markdown bold syntax and line breaks
-  const formatText = (text) => {
-    // Strip bullet asterisks from lists
-    text = text.replace(/(^|\n)\s*\\?\*\s+/g, "$1");
+  // Parse basic Markdown bold, code, bullet lists, numbered lists, and line breaks
+  const formatText = (contentStr) => {
+    const cleaned = cleanMessageText(contentStr);
+    if (!cleaned) return null;
 
-    const paragraphs = text.split(/\n+/);
+    const paragraphs = cleaned.split(/\n+/);
 
     return paragraphs.map((paragraph, index) => {
-      const parts = paragraph.split(/(\*\*.*?\*\*)/g);
+      const trimmedPara = paragraph.trim();
+      if (!trimmedPara) return null;
+
+      // Check for bullet list item: '- item', '* item', '• item'
+      const isBullet = /^\s*[-*•]\s+/.test(trimmedPara);
+      // Check for numbered list item: '1. item' or '1) item'
+      const numMatch = trimmedPara.match(/^\s*(\d+)[.)]\s+(.*)$/);
+
+      let itemBody = trimmedPara;
+      if (isBullet) {
+        itemBody = trimmedPara.replace(/^\s*[-*•]\s+/, "");
+      } else if (numMatch) {
+        itemBody = numMatch[2];
+      }
+
+      // Split for bold (**bold**) and inline code (`code`)
+      const parts = itemBody.split(/(\*\*.*?\*\*|`[^`]+`)/g);
+
+      const renderedParts = parts.map((part, partIndex) => {
+        if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+          return (
+            <strong key={partIndex} className="font-bold">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        if (part.startsWith("`") && part.endsWith("`") && part.length >= 3) {
+          return (
+            <code
+              key={partIndex}
+              className="px-1.5 py-0.5 mx-0.5 rounded bg-black/5 dark:bg-white/10 font-mono text-[11px] sm:text-xs"
+            >
+              {part.slice(1, -1)}
+            </code>
+          );
+        }
+        return <span key={partIndex}>{part}</span>;
+      });
+
+      if (isBullet) {
+        return (
+          <div key={index} className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed">
+            <span className="text-neutral-400 dark:text-neutral-500 select-none text-sm shrink-0 leading-relaxed">•</span>
+            <div className="flex-1 leading-relaxed">{renderedParts}</div>
+          </div>
+        );
+      }
+
+      if (numMatch) {
+        return (
+          <div key={index} className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed">
+            <span className="font-semibold text-neutral-500 dark:text-neutral-400 select-none text-xs shrink-0 leading-relaxed">
+              {numMatch[1]}.
+            </span>
+            <div className="flex-1 leading-relaxed">{renderedParts}</div>
+          </div>
+        );
+      }
 
       return (
-        <div key={index} className={index > 0 ? "mt-2" : ""}>
-          {parts.map((part, partIndex) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-              return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
-            }
-
-            return <span key={partIndex}>{part}</span>;
-          })}
+        <div key={index} className={index > 0 ? "mt-2 leading-relaxed" : "leading-relaxed"}>
+          {renderedParts}
         </div>
       );
     });
@@ -61,9 +114,9 @@ export const MessageBubble = ({
 
   return (
     <div className={isMine ? classNames.myBubble : classNames.otherBubble}>
-      <p className={`${classNames.messageText} ${textClass}`} dir={dir}>
-        {formatText(text)}
-      </p>
+      <div className={`${classNames.messageText} ${textClass}`} dir={dir}>
+        {formatText(clean)}
+      </div>
 
       {/* Telegram Quoted Messages / Teacher Comments */}
       {comments && comments.length > 0 && (
@@ -121,7 +174,7 @@ export const MessageBubble = ({
 
                     {/* Quoted Comment Text */}
                     <p className="text-xs sm:text-[13px] text-neutral-800 dark:text-neutral-100 font-vazir leading-relaxed text-right whitespace-pre-wrap">
-                      {c.comment || c.text}
+                      {cleanMessageText(c.comment || c.text)}
                     </p>
 
                     {/* Bottom Row: Delete Comment Action in Corner & Timestamp */}

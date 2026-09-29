@@ -7,6 +7,7 @@
 import axios from "axios";
 import { API_CONFIG } from "../config";
 import { httpRequest, handleApiError } from "../client";
+import { cleanMessageText } from "@/utils/textUtils";
 
 /**
  * Sends a prompt query to the LLM agent and returns the text response.
@@ -37,13 +38,14 @@ export async function askAI({
     const response = await axios.post(`${baseUrl}/api/ask`, formData);
     const data = response.data;
 
-    return (
+    const rawAnswer =
       data?.answer ||
       data?.response ||
       data?.message ||
       data?.data ||
-      (typeof data === "string" ? data : "")
-    );
+      (typeof data === "string" ? data : "");
+
+    return cleanMessageText(rawAnswer);
   } catch (error) {
     handleApiError("ChatApi", "askAI", error);
   }

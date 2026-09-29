@@ -22,7 +22,7 @@ import { TelegramCommentNotification } from "@/Components/TelegramCommentNotific
 import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
-import { isPersianText } from "@/utils/textUtils";
+import { isPersianText, cleanMessageText } from "@/utils/textUtils";
 import { formatChatTime } from "@/utils/dateFormatter";
 
 
@@ -820,7 +820,7 @@ export const ChatArea = () => {
                 teacherName,
             });
 
-            aiText = String(answer || t("noServerResponse"));
+            aiText = cleanMessageText(String(answer || t("noServerResponse")));
         } catch (error) {
             console.error("Chat Error:", error);
             isError = true;
