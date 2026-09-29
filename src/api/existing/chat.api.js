@@ -19,7 +19,7 @@ import { httpRequest, handleApiError } from "../client";
 export async function askAI({
   query,
   contexts = "",
-  language = "fa",
+  language = "",//fa
   llmModel = "gemma4",
   courseName = "",
   teacherName = "Teacher",
