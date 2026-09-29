@@ -51,6 +51,26 @@ export async function rejectJoinRequest(requestId) {
 }
 
 /**
+ * Fetches approved membership notifications for the authenticated student.
+ * @endpoint GET /teacher/notifications/student-notifications
+ * @returns {Promise<Array<Object>>}
+ */
+export async function getStudentNotifications() {
+  return requestWithFallback(
+    "/teacher/notifications/student-notifications",
+    { method: "GET" },
+    () => {
+      try {
+        const local = localStorage.getItem("student_approved_notifications");
+        return local ? JSON.parse(local) : [];
+      } catch {
+        return [];
+      }
+    }
+  );
+}
+
+/**
  * Fetches system notifications and administrative announcements.
  * @endpoint GET /teacher/notifications/messages
  * @returns {Promise<Array<Object>>}
@@ -59,11 +79,26 @@ export async function getSystemMessages() {
   return requestWithFallback("/teacher/notifications/messages", { method: "GET" }, () => []);
 }
 
+/**
+ * Fetches the count of unread/pending notifications for teacher/student badge.
+ * @endpoint GET /teacher/notifications/unread-count
+ * @returns {Promise<{count: number}>}
+ */
+export async function getUnreadNotificationsCount() {
+  return requestWithFallback(
+    "/teacher/notifications/unread-count",
+    { method: "GET" },
+    () => ({ count: 0 })
+  );
+}
+
 export const notificationsApi = {
   getJoinRequests,
+  getStudentNotifications,
   acceptJoinRequest,
   rejectJoinRequest,
   getSystemMessages,
+  getUnreadNotificationsCount,
 };
 
 export default notificationsApi;

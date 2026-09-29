@@ -265,6 +265,20 @@ export function formatDisplayDate(isoString, isRTL = true) {
 }
 
 /**
+ * Formats an ISO date string to numeric Jalali (e.g. ۱۴۰۵/۰۱/۲۱).
+ * @param {string} isoString
+ * @returns {string}
+ */
+export function toJalaliNumericString(isoString) {
+  const parsed = parseIsoDate(isoString);
+  if (!parsed) return "";
+  const { jy, jm, jd } = gregorianToJalali(parsed.gy, parsed.gm, parsed.gd);
+  const mm = String(jm).padStart(2, "0");
+  const dd = String(jd).padStart(2, "0");
+  return `${toPersianDigits(jy)}/${toPersianDigits(mm)}/${toPersianDigits(dd)}`;
+}
+
+/**
  * Gets day of week for Jalali (0 = Saturday, 6 = Friday).
  * @param {number} jy
  * @param {number} jm

@@ -91,9 +91,11 @@ export async function requestWithFallback(endpoint, options = {}, fallbackData =
 
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const clientTimezone = (typeof Intl !== "undefined" && Intl.DateTimeFormat().resolvedOptions().timeZone) || "Asia/Tehran";
   const headers = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    "X-Timezone": clientTimezone,
     ...(options.headers || {}),
   };
 

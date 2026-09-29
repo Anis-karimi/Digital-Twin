@@ -14,6 +14,7 @@ import { TeacherContacts } from "@/Pages/Teacher/TeacherContacts";
 import { TeacherExams } from "@/Pages/Teacher/TeacherExamsPage";
 
 import { StudentHome } from "@/Pages/Student/StudentHome";
+import { StudentNotification } from "@/Pages/Student/StudentNotification";
 import { StudentSettings } from "@/Pages/Student/StudentSettings";
 import { StudentExams } from "@/Pages/Student/StudentExamsPage";
 import { StudentExamPage } from "@/Pages/Student/StudentExamPage";
@@ -37,6 +38,19 @@ function StudentsRoute() {
     return <StudentHome />;
   }
   return <Navigate to="/TeacherContacts/os" replace />;
+}
+
+function NotificationDispatcher() {
+  const { role, currentUser } = useContext(AppContext);
+  const isStudent =
+    role === "student" ||
+    currentUser?.user_type === "STUDENT" ||
+    localStorage.getItem("user_role") === "student";
+
+  if (isStudent) {
+    return <Navigate to="/StudentNotification" replace />;
+  }
+  return <TeacherNotification />;
 }
 
 function App() {
@@ -66,7 +80,19 @@ function App() {
 
               <Route
                 path="/TeacherNotification"
-                element={<TeacherNotification />}
+                element={<NotificationDispatcher />}
+              />
+              <Route
+                path="/teachernotification"
+                element={<NotificationDispatcher />}
+              />
+              <Route
+                path="/TeacherNotifications"
+                element={<NotificationDispatcher />}
+              />
+              <Route
+                path="/teachernotifications"
+                element={<NotificationDispatcher />}
               />
 
               <Route path="/TeacherSettings" element={<TeacherSettings />} />
@@ -137,6 +163,10 @@ function App() {
               />
               <Route path="/StudentExplore" element={<StudentExplore />} />
               <Route path="/CourseInformation/:id" element={<CourseInformation/>} />
+              <Route path="/StudentNotification" element={<StudentNotification />} />
+              <Route path="/studentnotification" element={<StudentNotification />} />
+              <Route path="/StudentNotifications" element={<StudentNotification />} />
+              <Route path="/studentnotifications" element={<StudentNotification />} />
             </Route>
             {/* =================== Quiz Pages =================== */}
 

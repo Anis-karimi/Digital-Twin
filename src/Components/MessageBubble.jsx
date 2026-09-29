@@ -3,11 +3,13 @@ import "@/styles/Allpages.css";
 import { Trash2 } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
+import { formatChatTime } from "@/utils/dateFormatter";
 
 export const MessageBubble = ({
   messageId,
   text,
   time,
+  createdAt,
   isMine,
   classNames,
   comments = [],
@@ -17,7 +19,7 @@ export const MessageBubble = ({
   currentUserId = null,
   highlightCommentId = null,
 }) => {
-  const { t } = useContext(AppContext);
+  const { t, isRTL } = useContext(AppContext);
   const [deletingCommentIds, setDeletingCommentIds] = useState(() => new Set());
   const isPersian = /[\u0600-\u06FF]/.test(text);
 
@@ -124,9 +126,9 @@ export const MessageBubble = ({
 
                     {/* Bottom Row: Delete Comment Action in Corner & Timestamp */}
                     <div className="flex items-center justify-between mt-1.5 pt-0.5" dir="rtl">
-                      {c.time ? (
-                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-mono" dir="ltr">
-                          {c.time}
+                      {c.time || c.created_at ? (
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-vazir" dir="ltr">
+                          {formatChatTime(c.created_at || c.time, isRTL)}
                         </span>
                       ) : (
                         <span />
@@ -163,7 +165,9 @@ export const MessageBubble = ({
       )}
 
       <div className="flex justify-end mt-1" dir="ltr">
-        <span className={classNames.messageTime}>{time}</span>
+        <span className={classNames.messageTime}>
+          {formatChatTime(createdAt || time, isRTL)}
+        </span>
       </div>
     </div>
   );

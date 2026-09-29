@@ -4,7 +4,7 @@ import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 
 import { AppContext } from "@/Context/AppContext";
-import { navigationApi } from "@/api";
+import { navigationApi, notificationsApi } from "@/api";
 import { HomeDropdownMenu } from "@/Components/HomeDropdownMenu";
 import { LessonsNavBar } from "@/Components/LessonsNavBar";
 import { HomeChatFeedSection } from "@/Components/HomeChatFeedSection";
@@ -24,6 +24,7 @@ export const TeacherConversationsPage = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [items, setItems] = useState(defaultLessonItems);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   // Viewport measurement
   const viewportRef = useRef(null);
@@ -51,6 +52,15 @@ export const TeacherConversationsPage = () => {
       .catch((err) => {
         console.warn("Failed to load navigation tabs for conversations page:", err);
       });
+
+    notificationsApi
+      .getUnreadNotificationsCount()
+      .then((res) => {
+        if (isMounted && res && typeof res.count === "number") {
+          setUnreadNotificationsCount(res.count);
+        }
+      })
+      .catch(() => {});
 
     return () => {
       isMounted = false;
@@ -365,6 +375,9 @@ export const TeacherConversationsPage = () => {
               className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
             >
               <BellIcon className="w-6 h-6 text-neutral-scale70" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-primery-700 animate-pulse" />
+              )}
             </button>
 
             {/* More Menu */}

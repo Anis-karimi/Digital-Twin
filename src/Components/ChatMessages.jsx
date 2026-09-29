@@ -153,6 +153,7 @@ export const ChatMessages = ({
                   messageId={message.id}
                   text={message.text}
                   time={message.time}
+                  createdAt={message.created_at || message.createdAt}
                   isMine={isMine}
                   classNames={classNames}
                   comments={message.comments || []}

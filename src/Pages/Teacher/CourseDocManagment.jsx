@@ -22,7 +22,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { contextsApi, coursesApi } from "@/api";
 import { AppContext } from "@/Context/AppContext";
 import { DatePickerModal } from "@/Components/Common/DatePickerModal";
-import { formatDisplayDate } from "@/utils/dateUtils";
+import { formatDisplayDate, toPersianDigits } from "@/utils/dateUtils";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
 import AI from "@/assets/images/AI.png";
 import courseImage from "@/assets/images/course.jpg";
@@ -35,6 +35,11 @@ const DEFAULT_COURSE = {
     "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
   accessLevel: "private",
   photo_url: null,
+  degree: "کارشناسی",
+  units: 3,
+  course_code: "۲۱۱۰۰۱۲",
+  department: "مهندسی کامپیوتر",
+  term: "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
 };
 
 const isPersianText = (text) => {
@@ -123,6 +128,11 @@ export const TeacherCourseDoc = () => {
             accessLevel: (data.accessLevel || DEFAULT_COURSE.accessLevel).toLowerCase(),
             isActive: activeStatus,
             photo_url: data.photo_url || null,
+            degree: data.degree || DEFAULT_COURSE.degree,
+            units: data.units || DEFAULT_COURSE.units,
+            course_code: data.course_code || DEFAULT_COURSE.course_code,
+            department: data.department || DEFAULT_COURSE.department,
+            term: data.term || DEFAULT_COURSE.term,
           };
           setCourseDetails(loaded);
           setEditForm(loaded);
@@ -752,6 +762,101 @@ export const TeacherCourseDoc = () => {
               }`}
             >
               {courseDetails.name || "سیستم عامل"}
+            </p>
+          </section>
+
+          {/* Card: Field of Study / Department */}
+          <section
+            aria-labelledby="course-department-label"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="course-department-label"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "رشته تحصیلی / دانشکده" : "Field of Study / Department"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium ${
+                isRTL ? "font-vazir text-right" : "font-inter text-left"
+              }`}
+            >
+              {courseDetails.department || (isRTL ? "مهندسی کامپیوتر" : "Computer Engineering")}
+            </p>
+          </section>
+
+          {/* Card: Academic Level / Degree */}
+          <section
+            aria-labelledby="course-degree-label"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="course-degree-label"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "مقطع تحصیلی" : "Academic Level"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium ${
+                isRTL ? "font-vazir text-right" : "font-inter text-left"
+              }`}
+            >
+              {courseDetails.degree || (isRTL ? "کارشناسی" : "Bachelor's")}
+            </p>
+          </section>
+
+          {/* Card: Units & Course Code */}
+          <section
+            aria-labelledby="course-units-code-label"
+            className="w-full relative flex items-center justify-between px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <div className="flex flex-col gap-1">
+              <h3
+                id="course-units-code-label"
+                className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+              >
+                {isRTL ? "تعداد واحد" : "Course Units"}
+              </h3>
+              <p className="text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium font-vazir">
+                {isRTL ? (courseDetails.units ? `${toPersianDigits(courseDetails.units)} واحد` : "۳ واحد") : `${courseDetails.units || 3} Credits`}
+              </p>
+            </div>
+
+            {courseDetails.course_code && (
+              <div className="flex flex-col items-end gap-1">
+                <span className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}>
+                  {isRTL ? "کد درس" : "Course Code"}
+                </span>
+                <span className="text-xs font-mono text-neutral-scale1800 dark:text-neutral-scale70 font-bold">
+                  {isRTL ? toPersianDigits(courseDetails.course_code) : courseDetails.course_code}
+                </span>
+              </div>
+            )}
+          </section>
+
+          {/* Card: Academic Term / Semester */}
+          <section
+            aria-labelledby="course-term-label"
+            className="w-full relative flex flex-col items-start gap-1.5 px-4 py-3 bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] shrink-0"
+          >
+            <h3
+              id="course-term-label"
+              className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
+            >
+              {isRTL ? "نیم‌سال تحصیلی" : "Semester / Term"}
+            </h3>
+
+            <p
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`w-full text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium font-vazir ${
+                isRTL ? "text-right" : "text-left"
+              }`}
+            >
+              {courseDetails.term || (isRTL ? "نیم‌سال دوم ۱۴۰۴-۱۴۰۵" : "Second Semester 2025-2026")}
             </p>
           </section>
 

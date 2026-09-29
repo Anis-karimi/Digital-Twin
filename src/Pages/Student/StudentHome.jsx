@@ -1,6 +1,6 @@
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { useState, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { HomeDropdownMenu } from "@/Components/HomeDropdownMenu";
 import { HomeChatFeedSection } from "@/Components/HomeChatFeedSection";
@@ -9,6 +9,7 @@ import menu from "@/assets/icons/menuWhite.svg?react";
 import Bell from "@/assets/icons/Bell.svg?react";
 import { FooterGlass } from "@/Components/FooterGlass";
 import { useNavigate } from "react-router-dom";
+import { notificationsApi } from "@/api";
 
 const headerActions = [
   {
@@ -27,8 +28,24 @@ const headerActions = [
 
 export const StudentHome = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const navigate = useNavigate();
   const { isRTL } = useContext(AppContext);
+
+  useEffect(() => {
+    let isMounted = true;
+    notificationsApi
+      .getUnreadNotificationsCount()
+      .then((data) => {
+        if (isMounted && data && typeof data.count === "number") {
+          setUnreadNotifsCount(data.count);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <main
@@ -63,12 +80,15 @@ export const StudentHome = () => {
                   }
 
                   if (id === "notifications") {
-                    navigate("/TeacherNotification");
+                    navigate("/StudentNotification");
                   }
                 }}
                 className="relative flex h-6 w-6 items-center justify-center cursor-pointer"
               >
                 <Icon className="w-6 h-6 text-neutral-scale70" />
+                {id === "notifications" && unreadNotifsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-primery-700 animate-pulse" />
+                )}
               </button>
             ))}
           </div>

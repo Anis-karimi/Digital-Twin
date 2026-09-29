@@ -1,5 +1,5 @@
 import { useId, useState, useRef, useContext, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote } from "lucide-react";
+import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote, AlertCircle } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
@@ -23,6 +23,7 @@ import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
 import { isPersianText } from "@/utils/textUtils";
+import { formatChatTime } from "@/utils/dateFormatter";
 
 
 const avatarColors = [
@@ -440,6 +441,13 @@ export const ChatArea = () => {
     const currentChat = chatEntity;
     const chatTitle = currentChat?.title || currentChat?.name || (isStudentChat ? "گفت‌وگو با دانشجو" : "گفت‌وگو با درس");
 
+    const isCourseInactive = Boolean(
+      !isStudentChat &&
+      chatEntity &&
+      (chatEntity.is_active === false || chatEntity.isActive === false)
+    );
+    const isStudentBlockedFromChatting = isStudentRole && isCourseInactive;
+
     const [isQuizOpen, setIsQuizOpen] = useState(false);
     const [isQuizMinimized, setIsQuizMinimized] = useState(false);
 
@@ -518,6 +526,7 @@ export const ChatArea = () => {
     };
 
     const startRecording = async () => {
+        if (isStudentBlockedFromChatting) return;
         if (recordingRef.current) return;
 
         console.log("🎙 Starting recording...");
@@ -654,12 +663,14 @@ export const ChatArea = () => {
     const handleAddComment = async (messageId, commentText) => {
       try {
         const res = await chatHistoryApi.addMessageComment(messageId, teacherName, commentText);
+        const now = new Date();
         const newComment = res?.comment || {
           id: String(Date.now()),
           teacher_name: teacherName,
           comment: commentText,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
+          created_at: now.toISOString(),
+          time: formatChatTime(now, isRTL),
+          date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
         };
 
         setMessages((prev) =>
@@ -750,19 +761,19 @@ export const ChatArea = () => {
     }, [handleMarkCommentRead]);
 
     const sendMessage = async () => {
+        if (isStudentBlockedFromChatting) return;
         if (!message.trim() || isLoading) return;
 
         const userMessageText = message;
+        const now = new Date();
         const tempId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
         const optimisticMessage = {
             id: tempId,
             text: userMessageText,
             sender: "me",
-            time: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-            }),
-            date: new Date().toLocaleDateString("en-GB", {
+            created_at: now.toISOString(),
+            time: formatChatTime(now, isRTL),
+            date: now.toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "long"
             })
@@ -808,17 +819,16 @@ export const ChatArea = () => {
                 : "مشکلی در ارتباط با سرور به وجود آمد.";
         }
 
+        const aiNow = new Date();
         const aiMsgId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + 1);
         const aiMessage = {
             id: aiMsgId,
             text: aiText,
             sender: "other",
             feedback: null,
-            time: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-            date: new Date().toLocaleDateString("en-GB", {
+            created_at: aiNow.toISOString(),
+            time: formatChatTime(aiNow, isRTL),
+            date: aiNow.toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "long",
             }),
@@ -1210,7 +1220,6 @@ export const ChatArea = () => {
           </div>
         )}
 
-        {/* Input / Review Mode Bar */}
         {isTeacherViewingStudentChat ? (
           <div
             className="absolute left-1/2 -translate-x-1/2 bottom-[15px] w-[calc(100%-24px)] max-w-[390px] h-[44px] z-50 bg-white/95 dark:bg-neutral-scale1400/95 backdrop-blur-md rounded-[20px] border border-primery-300/60 dark:border-sky-500/40 shadow-sm flex items-center justify-center px-4 gap-2 text-primery-700 dark:text-sky-300 select-none animate-in fade-in duration-300"
@@ -1219,6 +1228,20 @@ export const ChatArea = () => {
             <MessageSquareQuote className="w-4 h-4 shrink-0 text-primery-600 dark:text-sky-400" />
             <span className="text-xs font-semibold font-vazir truncate">
               {t("studentChatReviewMode")}
+            </span>
+          </div>
+        ) : isStudentBlockedFromChatting ? (
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 ${
+              isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
+            } w-[calc(100%-24px)] max-w-[390px] min-h-[44px] z-50 bg-amber-50/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-[20px] border border-amber-200 dark:border-amber-800/60 px-4 py-2 flex items-center justify-center gap-2 shadow-xs select-none`}
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-xs font-vazir text-amber-800 dark:text-amber-300 font-medium text-center">
+              {isRTL
+                ? "این درس توسط استاد غیرفعال شده است و امکان ارسال پیام وجود ندارد."
+                : "This course is inactive and sending messages is disabled."}
             </span>
           </div>
         ) : (

@@ -4,6 +4,7 @@
  */
 
 import { requestWithFallback } from "../client";
+import { formatChatTime } from "@/utils/dateFormatter";
 
 /**
  * Retrieves persisted chat history from the backend database.
@@ -97,14 +98,16 @@ export async function saveConversationTurn(chatType, targetId, payload) {
           id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
           text: payload.text,
           sender: "me",
-          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          created_at: now.toISOString(),
+          time: formatChatTime(now, true),
           date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
         },
         aiMessage: {
           id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + 1),
           text: payload.answer || "مشکلی در ارتباط با سرور به وجود آمد.",
           sender: "other",
-          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          created_at: now.toISOString(),
+          time: formatChatTime(now, true),
           date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
         },
       };
@@ -135,7 +138,8 @@ export async function addMessageComment(messageId, teacherName, comment) {
           id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
           teacher_name: teacherName,
           comment,
-          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          created_at: now.toISOString(),
+          time: formatChatTime(now, true),
           date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "long" }),
         },
       };

@@ -56,19 +56,50 @@ export async function getCourseById(courseId) {
  * @returns {Promise<Object>}
  */
 export async function getCourseDetails(courseId) {
-  const fallback = () => ({
-    courseId: courseId || "os",
-    name: "سیستم عامل",
-    nameFa: "سیستم عامل",
-    nameEn: "Operating Systems",
-    startDate: "2026-03-01",
-    endDate: "2026-07-01",
-    description:
-      "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
-    accessLevel: "private",
-    isActive: true,
-    is_active: true,
-  });
+  const fallback = () => {
+    const found = mockCourses.find(
+      (c) => String(c.id) === String(courseId) || (courseId === "os" && c.id === "c0000000-0000-4000-8000-000000000001")
+    );
+    if (found) {
+      return {
+        courseId: found.id,
+        name: found.titleFa || found.title,
+        nameFa: found.titleFa || found.title,
+        nameEn: found.titleEn || found.title,
+        startDate: "2026-04-10",
+        endDate: "2026-08-20",
+        description: found.description || found.descriptionFa || found.preview || "",
+        accessLevel: found.accessLevel || "public",
+        isActive: found.isActive ?? true,
+        is_active: found.is_active ?? true,
+        degree: found.degree || "کارشناسی",
+        units: found.units || 3,
+        course_code: found.course_code || found.courseCode,
+        department: found.department || "مهندسی کامپیوتر",
+        term: found.term || "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
+        instructor_name: found.instructorName || "دکتر محمد اله بخش",
+      };
+    }
+    return {
+      courseId: courseId || "os",
+      name: "سیستم عامل",
+      nameFa: "سیستم عامل",
+      nameEn: "Operating Systems",
+      startDate: "2026-03-01",
+      endDate: "2026-07-01",
+      description:
+        "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی)",
+      accessLevel: "private",
+      isActive: true,
+      is_active: true,
+      degree: "کارشناسی",
+      units: 3,
+      course_code: "۲۱۱۰۰۱۲",
+      department: "مهندسی کامپیوتر",
+      term: "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
+      instructor_name: "دکتر محمد اله بخش",
+    };
+  };
 
   const res = await requestWithFallback(
     `/courses/${courseId}/details`,
@@ -182,6 +213,29 @@ export async function deleteCoursePhoto(courseId) {
   );
 }
 
+/**
+ * Joins a public course or requests membership for a private course.
+ * @endpoint POST /courses/:id/join
+ * @param {string} courseId
+ * @returns {Promise<{success: boolean, status: 'enrolled'|'pending', message: string}>}
+ */
+export async function joinCourse(courseId) {
+  return requestWithFallback(
+    `/courses/${courseId}/join`,
+    {
+      method: "POST",
+    },
+    () => {
+      const stored = JSON.parse(localStorage.getItem("student_pending_requests") || "[]");
+      if (!stored.includes(courseId)) {
+        stored.push(courseId);
+        localStorage.setItem("student_pending_requests", JSON.stringify(stored));
+      }
+      return { success: true, status: "pending", message: "درخواست عضویت برای استاد ارسال شد.", course_id: courseId };
+    }
+  );
+}
+
 export const coursesApi = {
   getCourses,
   getCourseById,
@@ -191,6 +245,7 @@ export const coursesApi = {
   uploadCoursePhoto,
   deleteCoursePhoto,
   getCoursesOverview,
+  joinCourse,
 };
 
 export default coursesApi;

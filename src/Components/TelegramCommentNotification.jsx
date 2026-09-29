@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, ArrowRight, ArrowLeft } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { playTelegramNotificationSound } from "@/utils/telegramSound";
+import { formatChatTime } from "@/utils/dateFormatter";
 
 export const TelegramCommentNotification = ({
   comment,
@@ -92,8 +93,8 @@ export const TelegramCommentNotification = ({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
-              {comment.time || (isRTL ? "اکنون" : "Just now")}
+            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-vazir">
+              {formatChatTime(comment.created_at || comment.time, isRTL) || (isRTL ? "اکنون" : "Just now")}
             </span>
             <button
               type="button"
