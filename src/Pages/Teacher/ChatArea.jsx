@@ -76,6 +76,7 @@ export const ChatArea = () => {
     const [messages, setMessages] = useState([]);
     const [isTyping, setIsTyping] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const isSendingRef = useRef(false);
 
     const [recording, setRecording] = useState(false);
     // const [transcript, setTranscript] = useState("");
@@ -419,13 +420,25 @@ export const ChatArea = () => {
     useEffect(() => {
         if (!activeTargetId) return;
         const interval = setInterval(() => {
+            if (isSendingRef.current || isLoading) return;
+
             chatHistoryApi.getChatHistory(activeChatType, activeTargetId)
                 .then((history) => {
                     if (Array.isArray(history)) {
                         setMessages((prev) => {
+                            if (isSendingRef.current) return prev;
+
+                            // Protect pending optimistic messages from being deleted
+                            const historyIdSet = new Set(history.map((m) => String(m.id)));
+                            const pendingLocal = prev.filter((m) => {
+                                if (historyIdSet.has(String(m.id))) return false;
+                                return m.isOptimistic || (typeof m.id === "string" && !m.id.includes("-"));
+                            });
+
+                            const merged = pendingLocal.length > 0 ? [...history, ...pendingLocal] : history;
                             const prevStr = JSON.stringify(prev);
-                            const nextStr = JSON.stringify(history);
-                            return prevStr !== nextStr ? history : prev;
+                            const nextStr = JSON.stringify(merged);
+                            return prevStr !== nextStr ? merged : prev;
                         });
                     }
                 })
@@ -433,7 +446,7 @@ export const ChatArea = () => {
         }, 7000);
 
         return () => clearInterval(interval);
-    }, [activeChatType, activeTargetId]);
+    }, [activeChatType, activeTargetId, isLoading]);
 
 
     const currentStudent = isStudentChat ? chatEntity : null;
@@ -762,7 +775,10 @@ export const ChatArea = () => {
 
     const sendMessage = async () => {
         if (isStudentBlockedFromChatting) return;
-        if (!message.trim() || isLoading) return;
+        if (!message.trim() || isLoading || isSendingRef.current) return;
+
+        isSendingRef.current = true;
+        setIsLoading(true);
 
         const userMessageText = message;
         const now = new Date();
@@ -771,6 +787,7 @@ export const ChatArea = () => {
             id: tempId,
             text: userMessageText,
             sender: "me",
+            isOptimistic: true,
             created_at: now.toISOString(),
             time: formatChatTime(now, isRTL),
             date: now.toLocaleDateString("en-GB", {
@@ -783,7 +800,6 @@ export const ChatArea = () => {
 
         setMessage("");
         setIsTyping(false);
-        setIsLoading(true);
 
         if (textareaRef.current) {
             textareaRef.current.style.height = "37px";
@@ -826,6 +842,7 @@ export const ChatArea = () => {
             text: aiText,
             sender: "other",
             feedback: null,
+            isOptimistic: true,
             created_at: aiNow.toISOString(),
             time: formatChatTime(aiNow, isRTL),
             date: aiNow.toLocaleDateString("en-GB", {
@@ -834,7 +851,13 @@ export const ChatArea = () => {
             }),
         };
 
-        setMessages((prev) => [...prev, aiMessage]);
+        setMessages((prev) => {
+            const hasUserMsg = prev.some((m) => m.id === tempId || m.text === userMessageText);
+            if (!hasUserMsg) {
+                return [...prev, optimisticMessage, aiMessage];
+            }
+            return [...prev, aiMessage];
+        });
 
         if (!isError && aiEnabled && aiText) {
             playTTSBytes(aiText);
@@ -850,17 +873,36 @@ export const ChatArea = () => {
             });
 
             if (saveRes?.userMessage?.id && saveRes?.aiMessage?.id) {
-                setMessages((prev) =>
-                    prev.map((msg) => {
-                        if (msg.id === tempId) return { ...msg, id: saveRes.userMessage.id };
-                        if (msg.id === aiMsgId) return { ...msg, id: saveRes.aiMessage.id };
+                setMessages((prev) => {
+                    const hasUserMsg = prev.some((m) => m.id === tempId || m.id === saveRes.userMessage.id);
+                    const hasAiMsg = prev.some((m) => m.id === aiMsgId || m.id === saveRes.aiMessage.id);
+
+                    let next = prev.map((msg) => {
+                        if (msg.id === tempId) return { ...msg, ...saveRes.userMessage, isOptimistic: false };
+                        if (msg.id === aiMsgId) return { ...msg, ...saveRes.aiMessage, isOptimistic: false };
                         return msg;
-                    })
-                );
+                    });
+
+                    if (!hasUserMsg) {
+                        const aiIdx = next.findIndex((m) => m.id === saveRes.aiMessage?.id || m.id === aiMsgId);
+                        if (aiIdx !== -1) {
+                            next.splice(aiIdx, 0, { ...saveRes.userMessage, isOptimistic: false });
+                        } else {
+                            next.push({ ...saveRes.userMessage, isOptimistic: false });
+                        }
+                    }
+
+                    if (!hasAiMsg && saveRes.aiMessage) {
+                        next.push({ ...saveRes.aiMessage, isOptimistic: false });
+                    }
+
+                    return next;
+                });
             }
         } catch (saveErr) {
             console.warn("Failed to persist conversation turn to new backend history:", saveErr);
         } finally {
+            isSendingRef.current = false;
             setIsLoading(false);
         }
     };
