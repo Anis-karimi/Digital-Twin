@@ -814,7 +814,7 @@ export const ChatArea = () => {
             const answer = await chatApi.askAI({
                 query: userMessageText,
                 contexts: "",
-                language,
+                language: "",
                 llmModel: llmModel || "gemma4",
                 courseName: chatTitle,
                 teacherName,
