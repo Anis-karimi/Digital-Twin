@@ -22,6 +22,7 @@ import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { ExamProctoringCamera } from "@/Components/ExamProctoringCamera";
+import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import Microphon from "@/assets/icons/Microphon.svg?react";
 import { voiceApi } from "@/api";
 
@@ -62,6 +63,7 @@ export const StudentExamPage = () => {
 
   // Microphone and Recording state (Matching ChatArea.jsx)
   const [recording, setRecording] = useState(false);
+  const [voiceLang, setVoiceLang] = useState(() => localStorage.getItem("voice_lang") || "fa");
   const recordingRef = useRef(false);
   const baseTextRef = useRef("");
   const ws = useRef(null);
@@ -90,17 +92,19 @@ export const StudentExamPage = () => {
     return result;
   }
 
-  const startRecording = async () => {
+  const startRecording = async (selectedLang) => {
     if (recordingRef.current) return;
 
-    console.log("🎙 Starting recording...");
+    const activeLang = selectedLang || voiceLang || "fa";
+    console.log(`🎙 Starting recording (${activeLang})...`);
 
     setRecording(true);
     recordingRef.current = true;
     baseTextRef.current = answerText;
 
     ws.current = voiceApi.createSTTWebSocket({
-      onOpen: () => console.log("[WS] Connected"),
+      lang: activeLang,
+      onOpen: () => console.log(`[WS] Connected (${activeLang})`),
       onTranscript: (msg) => {
         if (msg) {
           const base = baseTextRef.current ? baseTextRef.current.trim() + " " : "";
@@ -656,35 +660,23 @@ export const StudentExamPage = () => {
 
               {/* Action Buttons Row: Mic Button + Submit Button */}
               <div className="flex items-center gap-2">
-                {/* Voice / Mic Button (Matching ChatArea) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (recording) {
-                      stopRecording();
-                      return;
-                    }
-                    startRecording();
-                  }}
+                {/* Voice / Mic Button with Hold-to-change Language Menu */}
+                <VoiceMicButton
+                  recording={recording}
+                  voiceLang={voiceLang}
+                  onLanguageChange={setVoiceLang}
+                  onStartRecording={startRecording}
+                  onStopRecording={stopRecording}
                   disabled={isSubmitting || isCompleted}
-                  title={
-                    recording
-                      ? isRTL ? "توقف ضبط صدا" : "Stop recording"
-                      : isRTL ? "پاسخ صوتی با میکروفون" : "Voice answer"
-                  }
-                  aria-label={recording ? "توقف ضبط صدا" : "شروع ضبط صدا با میکروفون"}
-                  className={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs active:scale-95 ${
+                  isRTL={isRTL}
+                  className="shrink-0"
+                  buttonClassName={`w-11 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 ${
                     recording
                       ? "bg-red-500/10 border border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
                       : "bg-neutral-scale100 dark:bg-neutral-scale1100 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale100 border border-neutral-scale300 dark:border-neutral-scale1000"
                   }`}
-                >
-                  {recording ? (
-                    <Microphon className="text-red-500 !w-[28px] !h-[28px] animate-pulse scale-110" />
-                  ) : (
-                    <Microphon className="!w-[28px] !h-[28px] text-primery-500 transition-all duration-300" />
-                  )}
-                </button>
+                  iconClassName="w-[22px] h-[22px]"
+                />
 
                 {/* Submit Button */}
                 <button

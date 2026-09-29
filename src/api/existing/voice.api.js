@@ -80,20 +80,28 @@ export async function deleteAudio() {
 
 /**
  * Creates and opens a WebSocket connection for real-time speech-to-text.
+ * Supports Persian (fa, port 8881) and English (en, port 8882).
  * 
- * @endpoint WSS /ws (on STT_WS_URL)
+ * @endpoint WSS /ws (on STT_WS_URL_FA or STT_WS_URL_EN)
  * @param {Object} callbacks
+ * @param {'fa'|'en'} [callbacks.lang='fa'] Language for STT ('fa' = Port 8881, 'en' = Port 8882)
  * @param {Function} [callbacks.onOpen] WebSocket opened handler
  * @param {Function} [callbacks.onTranscript] Emits received transcription text (data.text || data.result)
  * @param {Function} [callbacks.onError] WebSocket error handler
  * @param {Function} [callbacks.onClose] WebSocket closed handler
  * @returns {WebSocket} Active WebSocket instance
  */
-export function createSTTWebSocket({ onOpen, onTranscript, onError, onClose } = {}) {
-  const ws = new WebSocket(API_CONFIG.STT_WS_URL);
+export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError, onClose } = {}) {
+  const isEn = String(lang || "").toLowerCase() === "en";
+  const wsUrl = isEn
+    ? (API_CONFIG.STT_WS_URL_EN || "wss://172.20.13.39:8882/ws")
+    : (API_CONFIG.STT_WS_URL_FA || "wss://172.20.13.39:8881/ws");
+
+  console.log(`[STT WebSocket] Connecting (${isEn ? "English :8882" : "Persian :8881"}) to:`, wsUrl);
+  const ws = new WebSocket(wsUrl);
 
   ws.onopen = (event) => {
-    console.log("[STT WebSocket] Connected to:", API_CONFIG.STT_WS_URL);
+    console.log(`[STT WebSocket] Connected (${isEn ? "en" : "fa"}) to:`, wsUrl);
     if (onOpen) onOpen(event);
   };
 
@@ -110,12 +118,12 @@ export function createSTTWebSocket({ onOpen, onTranscript, onError, onClose } = 
   };
 
   ws.onerror = (event) => {
-    console.error("[STT WebSocket] Error:", event);
+    console.error(`[STT WebSocket] Error on ${wsUrl}:`, event);
     if (onError) onError(event);
   };
 
   ws.onclose = (event) => {
-    console.log("[STT WebSocket] Closed");
+    console.log(`[STT WebSocket] Closed (${isEn ? "en" : "fa"})`);
     if (onClose) onClose(event);
   };
 

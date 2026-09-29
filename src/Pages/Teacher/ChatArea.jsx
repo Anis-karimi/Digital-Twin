@@ -20,6 +20,7 @@ import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { ChatMessages } from "@/Components/ChatMessages";
 import { TelegramCommentNotification } from "@/Components/TelegramCommentNotification";
 import { TelegramQuizBottomSheet } from "@/Components/TelegramQuizBottomSheet";
+import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { adminApi, chatApi, voiceApi, coursesApi, studentsApi, chatHistoryApi } from "@/api";
 import { resolveMediaUrl } from "@/utils/mediaUrl";
 import { isPersianText, cleanMessageText } from "@/utils/textUtils";
@@ -79,6 +80,7 @@ export const ChatArea = () => {
     const isSendingRef = useRef(false);
 
     const [recording, setRecording] = useState(false);
+    const [voiceLang, setVoiceLang] = useState(() => localStorage.getItem("voice_lang") || "fa");
     // const [transcript, setTranscript] = useState("");
 
     const composerInputId = useId();
@@ -538,21 +540,22 @@ export const ChatArea = () => {
         }
     };
 
-    const startRecording = async () => {
+    const startRecording = async (selectedLang) => {
         if (isStudentBlockedFromChatting) return;
         if (recordingRef.current) return;
 
-        console.log("🎙 Starting recording...");
+        const activeLang = selectedLang || voiceLang || "fa";
+        console.log(`🎙 Starting recording (${activeLang})...`);
 
         setRecording(true);
         recordingRef.current = true;
-
 
         setMessage("");
         setIsTyping(false);
 
         ws.current = voiceApi.createSTTWebSocket({
-            onOpen: () => console.log("[WS] Connected"),
+            lang: activeLang,
+            onOpen: () => console.log(`[WS] Connected (${activeLang})`),
             onTranscript: (msg) => {
                 if (msg) setMessage(msg);
                 console.log("[WS]", msg);
@@ -1360,33 +1363,29 @@ export const ChatArea = () => {
               })()}
 
               {/* Send / Mic button - Always on right */}
-              <button
-                type="button"
-                className={`absolute bottom-[1px] right-[1px] w-[35px] h-[35px] transition-all duration-300 flex items-center justify-center cursor-pointer ${
-                  recording ? "animate-pulse" : ""
-                }`}
-                onClick={() => {
-                  if (recording) {
-                    stopRecording();
-                    return;
-                  }
-
-                  if (isTyping) {
-                    sendMessage();
-                    return;
-                  }
-
-                  startRecording();
-                }}
-              >
-                {recording ? (
-                  <Microphon className="text-red-500 !w-[35px] !h-[35px] animate-pulse scale-110" />
-                ) : isTyping ? (
-                  <Send className="!w-[35px] !h-[35px]" />
-                ) : (
-                  <Microphon className="!w-[35px] !h-[35px] text-primery-500 transition-all duration-300" />
-                )}
-              </button>
+              {isTyping && !recording ? (
+                <button
+                  type="button"
+                  className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20 transition-all duration-300 flex items-center justify-center cursor-pointer"
+                  onClick={sendMessage}
+                  title={isRTL ? "ارسال پیام" : "Send message"}
+                >
+                  <Send className="!w-[35px] !h-[35px] text-primery-500" />
+                </button>
+              ) : (
+                <VoiceMicButton
+                  recording={recording}
+                  voiceLang={voiceLang}
+                  onLanguageChange={setVoiceLang}
+                  onStartRecording={startRecording}
+                  onStopRecording={stopRecording}
+                  disabled={isStudentBlockedFromChatting}
+                  isRTL={isRTL}
+                  className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20"
+                  buttonClassName="w-[35px] h-[35px] rounded-full flex items-center justify-center cursor-pointer"
+                  iconClassName="w-[24px] h-[24px]"
+                />
+              )}
 
               {/* Quiz button - Always on right (to the left of mic/send button) */}
               <button
@@ -1394,7 +1393,7 @@ export const ChatArea = () => {
                 onClick={handleOpenQuiz}
                 aria-label={quizBarTitle}
                 title={quizBarTitle}
-                className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer"
+                className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer z-20"
               >
                 <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
               </button>
