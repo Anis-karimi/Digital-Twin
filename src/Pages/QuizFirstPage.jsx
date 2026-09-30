@@ -122,7 +122,7 @@ export const QuizFirstPage = ({
         count: parsedCount,
         difficulty,
         contexts: contextsString,
-        language: activeLanguage || "en",
+        language: "",//activeLanguage || "en"
         llmModel: "gemma4",
       });
 
