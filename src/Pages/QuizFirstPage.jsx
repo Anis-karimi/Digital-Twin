@@ -1,4 +1,4 @@
-import { useState, useContext, useId } from "react";
+import { useState, useContext, useId, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { quizApi } from "@/api";
@@ -40,6 +40,13 @@ export const QuizFirstPage = ({
   const [difficulty, setDifficulty] = useState("normal"); // 'easy' | 'normal' | 'hard'
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [processing, setProcessing] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (processing && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [processing]);
 
   const isPersianText = (text) => /[\u0600-\u06FF]/.test(String(text || ""));
 
@@ -410,27 +417,38 @@ export const QuizFirstPage = ({
         </form>
       </section>
 
-      {/* ----------------- Telegram Loading Overlay ----------------- */}
+      {/* ----------------- Telegram Loading Overlay with Motion ----------------- */}
       {processing && (
         <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          className={`${
+            isModal ? "absolute" : "fixed"
+          } inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200`}
           aria-live="polite"
         >
-          <div className="w-[85%] max-w-[320px] bg-white dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-3.5">
-            <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-primery-50 dark:bg-primery-950/40 text-primery-700 dark:text-sky-400">
-              <Loader2 className="w-8 h-8 animate-spin" />
+          <div className="w-[88%] max-w-[320px] bg-white rounded-3xl p-5 border-0 border-none shadow-none flex flex-col items-center text-center gap-2 select-none overflow-hidden">
+            {/* Seamless Motion Video without border or shadow */}
+            <div className="w-full flex items-center justify-center overflow-hidden bg-white border-0 border-none shadow-none">
+              <video
+                ref={videoRef}
+                src="/motion_loading_quiz.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full max-h-[180px] object-contain border-0 border-none shadow-none outline-none pointer-events-none bg-white mix-blend-multiply"
+              />
             </div>
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 pb-1">
               <h3
-                className={`text-sm font-bold text-neutral-900 dark:text-neutral-100 ${
+                className={`text-sm font-bold text-neutral-900 ${
                   isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
                 }`}
               >
                 {t("generatingQuiz")}
               </h3>
               <p
-                className={`text-xs text-neutral-500 dark:text-neutral-400 ${
+                className={`text-xs text-neutral-500 ${
                   isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
                 }`}
               >
