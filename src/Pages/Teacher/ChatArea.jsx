@@ -1091,18 +1091,13 @@ export const ChatArea = () => {
               ) : (
                 <div className="relative w-[38px] h-[38px] rounded-full overflow-hidden border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm">
                   <img
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    className="w-full h-full object-cover"
                     src={resolveMediaUrl(currentCourse?.photo_url) || AI}
                     alt={chatTitle || "Course"}
                     onError={(e) => {
                       e.currentTarget.src = AI;
                     }}
                   />
-                  {!isStudentRole && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-3.5 h-3.5 text-white drop-shadow" />
-                    </div>
-                  )}
                 </div>
               )}
             </div>

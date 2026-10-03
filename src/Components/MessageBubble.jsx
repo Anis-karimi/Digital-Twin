@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import "@/styles/Allpages.css";
-import { Trash2 } from "lucide-react";
+import { Trash2, X, Check, Loader2, MessageSquareQuot } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatTime } from "@/utils/dateFormatter";
@@ -19,6 +19,14 @@ export const MessageBubble = ({
   isStudentViewer = false,
   currentUserId = null,
   highlightCommentId = null,
+  commentAction = null,
+  commentInputOpen = false,
+  commentInputText = "",
+  setCommentInputText,
+  onSaveComment,
+  onCloseComment,
+  isSubmittingComment = false,
+  teacherName = "",
 }) => {
   const { t, isRTL } = useContext(AppContext);
   const [deletingCommentIds, setDeletingCommentIds] = useState(() => new Set());
@@ -27,7 +35,9 @@ export const MessageBubble = ({
 
   const dir = isPersian ? "rtl" : "ltr";
 
-  const textClass = isPersian ? "text-right font-vazir" : "text-left font-inter";
+  const textClass = isPersian
+    ? "text-right font-vazir"
+    : "text-left font-inter";
 
   const handleDeleteComment = (commentId) => {
     if (deletingCommentIds.has(commentId)) return;
@@ -86,8 +96,13 @@ export const MessageBubble = ({
 
       if (isBullet) {
         return (
-          <div key={index} className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed">
-            <span className="text-neutral-400 dark:text-neutral-500 select-none text-sm shrink-0 leading-relaxed">•</span>
+          <div
+            key={index}
+            className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed"
+          >
+            <span className="text-neutral-400 dark:text-neutral-500 select-none text-sm shrink-0 leading-relaxed">
+              •
+            </span>
             <div className="flex-1 leading-relaxed">{renderedParts}</div>
           </div>
         );
@@ -95,7 +110,10 @@ export const MessageBubble = ({
 
       if (numMatch) {
         return (
-          <div key={index} className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed">
+          <div
+            key={index}
+            className="flex items-start gap-1.5 my-1 ms-1 leading-relaxed"
+          >
             <span className="font-semibold text-neutral-500 dark:text-neutral-400 select-none text-xs shrink-0 leading-relaxed">
               {numMatch[1]}.
             </span>
@@ -105,7 +123,10 @@ export const MessageBubble = ({
       }
 
       return (
-        <div key={index} className={index > 0 ? "mt-2 leading-relaxed" : "leading-relaxed"}>
+        <div
+          key={index}
+          className={index > 0 ? "mt-2 leading-relaxed" : "leading-relaxed"}
+        >
           {renderedParts}
         </div>
       );
@@ -124,17 +145,21 @@ export const MessageBubble = ({
           {comments.map((c, cIdx) => {
             const rawTeacherName = (c.teacher_name || "").trim();
             const teacherDisplayName = rawTeacherName
-              ? (rawTeacherName.startsWith("استاد") || rawTeacherName.startsWith("دکتر")
-                  ? rawTeacherName
-                  : `استاد ${rawTeacherName}`)
+              ? rawTeacherName.startsWith("استاد") ||
+                rawTeacherName.startsWith("دکتر")
+                ? rawTeacherName
+                : `استاد ${rawTeacherName}`
               : "استاد";
             const isDeleting = deletingCommentIds.has(c.id);
             const isUnread = Boolean(
               isStudentViewer &&
               !c.is_read &&
-              (!c.read_by || !currentUserId || !c.read_by.includes(String(currentUserId)))
+              (!c.read_by ||
+                !currentUserId ||
+                !c.read_by.includes(String(currentUserId))),
             );
-            const isHighlighted = highlightCommentId && String(c.id) === String(highlightCommentId);
+            const isHighlighted =
+              highlightCommentId && String(c.id) === String(highlightCommentId);
 
             return (
               <div
@@ -178,9 +203,15 @@ export const MessageBubble = ({
                     </p>
 
                     {/* Bottom Row: Delete Comment Action in Corner & Timestamp */}
-                    <div className="flex items-center justify-between mt-1.5 pt-0.5" dir="rtl">
+                    <div
+                      className="flex items-center justify-between mt-1.5 pt-0.5"
+                      dir="rtl"
+                    >
                       {c.time || c.created_at ? (
-                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-vazir" dir="ltr">
+                        <span
+                          className="text-[10px] text-neutral-400 dark:text-neutral-500 font-vazir"
+                          dir="ltr"
+                        >
                           {formatChatTime(c.created_at || c.time, isRTL)}
                         </span>
                       ) : (
@@ -217,7 +248,96 @@ export const MessageBubble = ({
         </div>
       )}
 
-      <div className="flex justify-end mt-1" dir="ltr">
+      {/* Inline Comment Input INSIDE Message Bubble */}
+      {commentInputOpen && (
+        <div
+          className={`relative w-full mt-2.5 p-3 ${
+            isRTL ? "pr-4 pl-3" : "pl-4 pr-3"
+          } bg-[#edf5fd] dark:bg-[#182533] rounded-xl shadow-md shadow-[#2481cc]/10 flex flex-col gap-2.5 animate-in fade-in zoom-in-95 duration-200 select-text overflow-hidden`}
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          {/* Accent Line */}
+          <div
+            className={`absolute ${
+              isRTL ? "right-0" : "left-0"
+            } top-0 bottom-0 w-[4px] bg-[#2481cc] dark:bg-[#52a2f6]`}
+          />
+
+          {/* Header */}
+          <div className="flex items-center justify-between text-xs border-b border-[#2481cc]/20 dark:border-[#52a2f6]/20 pb-1.5">
+            <span className="font-bold text-xs text-[#2481cc] dark:text-[#52a2f6] font-vazir truncate">
+              {teacherName
+                ? teacherName.startsWith("استاد") ||
+                  teacherName.startsWith("دکتر")
+                  ? teacherName
+                  : `استاد ${teacherName}`
+                : t("writeComment") || "افزودن نظر استاد روی پیام بات"}
+            </span>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <QuoteSvg className="w-3.5 h-3.5 text-[#2481cc] dark:text-[#52a2f6] shrink-0" />
+
+              <button
+                type="button"
+                onClick={onCloseComment}
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Textarea */}
+          <textarea
+            autoFocus
+            rows={2}
+            value={commentInputText}
+            onChange={(e) => setCommentInputText?.(e.target.value)}
+            placeholder={
+              t("commentPlaceholder") ||
+              "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید..."
+            }
+            className="w-full resize-none text-xs sm:text-sm p-2 rounded-xl bg-white dark:bg-[#121c27] border border-[#2481cc]/30 dark:border-[#52a2f6]/30 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] font-vazir leading-relaxed"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && commentInputText.trim()) {
+                e.preventDefault();
+                onSaveComment?.();
+              }
+            }}
+          />
+
+          {/* Buttons */}
+          <div className="flex items-center justify-end gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={onCloseComment}
+              className="px-2.5 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 rounded-lg transition-colors cursor-pointer"
+            >
+              {t("cancelComment") || "انصراف"}
+            </button>
+
+            <button
+              type="button"
+              disabled={!commentInputText.trim() || isSubmittingComment}
+              onClick={onSaveComment}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-[#2481cc] hover:bg-[#1b70b5] dark:bg-[#52a2f6] dark:hover:bg-[#3d91ea] rounded-lg transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmittingComment ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
+
+              <span>{t("saveComment") || "ثبت نظر"}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Message Time & Comment Action */}
+      <div className="flex items-center justify-between mt-2" dir="ltr">
+        <div className="flex items-center">{commentAction}</div>
+
         <span className={classNames.messageTime}>
           {formatChatTime(createdAt || time, isRTL)}
         </span>
