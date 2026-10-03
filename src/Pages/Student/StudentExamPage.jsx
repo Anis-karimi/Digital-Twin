@@ -89,18 +89,17 @@ export const StudentExamPage = () => {
 
   // TTS & Live Word-by-Word State for Question Box
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
+  const [isBufferingTTS, setIsBufferingTTS] = useState(false);
   const [spokenWordCount, setSpokenWordCount] = useState(0);
   const [ttsVoiceLevel, setTtsVoiceLevel] = useState(0);
   const ttsIntervalRef = useRef(null);
+  const ttsAnimFrameRef = useRef(null);
   const ttsSourceRef = useRef(null);
   const audioCtxRef = useRef(null);
-  const sampleRateRef = useRef(22050);
-  const leftoverRef = useRef(new Uint8Array(0));
-  const nextStartRef = useRef(0);
-  const activeSourcesRef = useRef([]);
   const ttsAbortControllerRef = useRef(null);
   const ttsAnalyserRef = useRef(null);
   const ttsTimerRef = useRef(null);
+  const ttsBufferCacheRef = useRef(new Map());
 
   const questionWords = useMemo(() => {
     if (!currentQuestion) return [];
@@ -121,6 +120,7 @@ export const StudentExamPage = () => {
 
   const stopQuestionTTS = useCallback(() => {
     setIsSpeakingQuestion(false);
+    setIsBufferingTTS(false);
     setTtsVoiceLevel(0);
 
     if (ttsAbortControllerRef.current) {
@@ -128,6 +128,11 @@ export const StudentExamPage = () => {
         ttsAbortControllerRef.current.abort();
       } catch (e) {}
       ttsAbortControllerRef.current = null;
+    }
+
+    if (ttsAnimFrameRef.current) {
+      cancelAnimationFrame(ttsAnimFrameRef.current);
+      ttsAnimFrameRef.current = null;
     }
 
     if (ttsIntervalRef.current) {
@@ -140,24 +145,12 @@ export const StudentExamPage = () => {
       ttsTimerRef.current = null;
     }
 
-    if (activeSourcesRef.current && activeSourcesRef.current.length > 0) {
-      activeSourcesRef.current.forEach((src) => {
-        try {
-          src.stop();
-        } catch (e) {}
-      });
-      activeSourcesRef.current = [];
-    }
-
     if (ttsSourceRef.current) {
       try {
         ttsSourceRef.current.stop();
       } catch (e) {}
       ttsSourceRef.current = null;
     }
-
-    leftoverRef.current = new Uint8Array(0);
-    nextStartRef.current = 0;
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -171,9 +164,6 @@ export const StudentExamPage = () => {
 
       const words = text.split(/\s+/).filter(Boolean);
       if (words.length === 0) return;
-
-      setIsSpeakingQuestion(true);
-      setSpokenWordCount(1);
 
       const abortController = new AbortController();
       ttsAbortControllerRef.current = abortController;
@@ -196,146 +186,176 @@ export const StudentExamPage = () => {
           ttsAnalyserRef.current = analyser;
         }
 
-        nextStartRef.current = audioCtxRef.current.currentTime + 0.08;
-        leftoverRef.current = new Uint8Array(0);
-        sampleRateRef.current = 22050;
-        activeSourcesRef.current = [];
+        let audioBuffer = ttsBufferCacheRef.current.get(text);
 
-        // Start listening to analyser frequency for VoiceBeam level
-        const freqData = new Uint8Array(ttsAnalyserRef.current.frequencyBinCount);
-        ttsIntervalRef.current = setInterval(() => {
-          if (!ttsAnalyserRef.current) return;
-          ttsAnalyserRef.current.getByteFrequencyData(freqData);
-          let sum = 0;
-          for (let i = 0; i < freqData.length; i++) {
-            sum += freqData[i];
-          }
-          const avg = sum / (freqData.length || 1);
-          // Scale to 0.18 - 0.90 range for VoiceBeam
-          const normalized = avg > 6 ? Math.min(0.9, Math.max(0.2, avg / 90)) : 0;
-          setTtsVoiceLevel(normalized);
-        }, 40);
+        // If not cached, fetch complete response from TTS endpoint first
+        if (!audioBuffer) {
+          setIsBufferingTTS(true);
+          setSpokenWordCount(0);
 
-        // Fetch TTS stream from backend endpoint (https://dgtw.um.ac.ir/tts_router_stream)
-        const res = await voiceApi.streamTTS(text);
-        if (!res || !res.body) {
-          throw new Error("TTS streaming response invalid");
-        }
-
-        const reader = res.body.getReader();
-        let leftover = leftoverRef.current;
-        let seq = 0;
-        let totalScheduledDuration = 0;
-        const streamStartTime = Date.now();
-
-        // Progressive word reveal pacing based on scheduled audio
-        const pacingInterval = setInterval(() => {
-          if (abortController.signal.aborted) {
-            clearInterval(pacingInterval);
-            return;
-          }
-          const elapsed = (Date.now() - streamStartTime) / 1000;
-          if (totalScheduledDuration > 0) {
-            const progress = Math.min(1, elapsed / (totalScheduledDuration + 0.3));
-            const revealed = Math.max(1, Math.min(words.length, Math.ceil(progress * words.length)));
-            setSpokenWordCount(revealed);
-          }
-        }, 110);
-
-        while (true) {
-          if (abortController.signal.aborted) {
-            try {
-              reader.cancel();
-            } catch (e) {}
-            break;
+          const res = await voiceApi.streamTTS(text);
+          if (!res || !res.body) {
+            throw new Error("TTS streaming response invalid");
           }
 
-          const { done, value } = await reader.read();
-          if (done) break;
-          seq += 1;
+          const reader = res.body.getReader();
+          const chunks = [];
+          let totalBytes = 0;
 
-          let chunkBytes = value ? new Uint8Array(value) : new Uint8Array(0);
-          if (leftover.byteLength > 0) {
-            chunkBytes = concatUint8(leftover, chunkBytes);
-            leftover = new Uint8Array(0);
-          }
+          while (true) {
+            if (abortController.signal.aborted) {
+              try {
+                reader.cancel();
+              } catch (e) {}
+              return;
+            }
 
-          // Process X-PCM header on initial chunk
-          if (seq === 1) {
-            const txt = new TextDecoder("ascii").decode(
-              chunkBytes.subarray(0, Math.min(128, chunkBytes.length))
-            );
-            if (txt.startsWith("X-PCM:")) {
-              const nl = txt.indexOf("\n");
-              if (nl >= 0) {
-                const headerLine = txt.slice(0, nl).trim();
-                headerLine
-                  .replace("X-PCM:", "")
-                  .split(";")
-                  .forEach((pair) => {
-                    const [k, v] = pair.split("=").map((s) => s.trim());
-                    if (k === "sample_rate") sampleRateRef.current = parseInt(v, 10);
-                  });
-                chunkBytes = chunkBytes.subarray(nl + 1);
-              } else {
-                leftover = chunkBytes;
-                continue;
-              }
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value && value.byteLength > 0) {
+              chunks.push(value);
+              totalBytes += value.byteLength;
             }
           }
 
-          // Ensure 4-byte alignment for 32-bit float audio buffer
-          const rem = chunkBytes.byteLength % 4;
-          if (rem !== 0) {
-            leftover = chunkBytes.subarray(chunkBytes.byteLength - rem);
-            chunkBytes = chunkBytes.subarray(0, chunkBytes.byteLength - rem);
+          if (totalBytes === 0) {
+            throw new Error("Empty audio response from TTS");
           }
-          if (chunkBytes.byteLength === 0) continue;
 
-          const floatBuf = new Float32Array(
-            chunkBytes.buffer,
-            chunkBytes.byteOffset,
-            chunkBytes.byteLength / 4
+          // Combine all chunks into one continuous Uint8Array
+          const combined = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const c of chunks) {
+            combined.set(c, offset);
+            offset += c.byteLength;
+          }
+
+          // Parse X-PCM header if present
+          let sampleRate = 22050;
+          let audioPayload = combined;
+
+          const headerSnippet = new TextDecoder("ascii").decode(
+            combined.subarray(0, Math.min(128, combined.length))
           );
 
-          const buffer = audioCtxRef.current.createBuffer(
+          if (headerSnippet.startsWith("X-PCM:")) {
+            const nl = headerSnippet.indexOf("\n");
+            if (nl >= 0) {
+              const headerLine = headerSnippet.slice(0, nl).trim();
+              headerLine
+                .replace("X-PCM:", "")
+                .split(";")
+                .forEach((pair) => {
+                  const [k, v] = pair.split("=").map((s) => s.trim());
+                  if (k === "sample_rate") {
+                    const parsed = parseInt(v, 10);
+                    if (!isNaN(parsed) && parsed > 0) sampleRate = parsed;
+                  }
+                });
+              audioPayload = combined.subarray(nl + 1);
+            }
+          }
+
+          // Ensure 4-byte alignment
+          const remainder = audioPayload.byteLength % 4;
+          if (remainder !== 0) {
+            audioPayload = audioPayload.subarray(0, audioPayload.byteLength - remainder);
+          }
+
+          if (audioPayload.byteLength === 0) {
+            throw new Error("No valid PCM payload after header");
+          }
+
+          // Guaranteed safe 4-byte aligned Float32Array
+          const alignedPayload = new Uint8Array(audioPayload);
+          const float32 = new Float32Array(
+            alignedPayload.buffer,
+            0,
+            alignedPayload.byteLength / 4
+          );
+
+          audioBuffer = audioCtxRef.current.createBuffer(
             1,
-            floatBuf.length,
-            sampleRateRef.current
+            float32.length,
+            sampleRate
           );
-          buffer.getChannelData(0).set(floatBuf);
+          audioBuffer.getChannelData(0).set(float32);
 
-          const source = audioCtxRef.current.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ttsAnalyserRef.current);
-
-          const scheduledTime = Math.max(
-            nextStartRef.current,
-            audioCtxRef.current.currentTime + 0.04
-          );
-          source.start(scheduledTime);
-          nextStartRef.current = scheduledTime + buffer.duration;
-          totalScheduledDuration += buffer.duration;
-          activeSourcesRef.current.push(source);
+          // Cache for instant replay
+          ttsBufferCacheRef.current.set(text, audioBuffer);
         }
 
-        // Wait until all scheduled audio has finished playing
-        const remainingPlayTimeMs = Math.max(
-          150,
-          (nextStartRef.current - audioCtxRef.current.currentTime) * 1000
-        );
+        if (abortController.signal.aborted) return;
 
-        ttsTimerRef.current = setTimeout(() => {
-          clearInterval(pacingInterval);
-          setSpokenWordCount(words.length);
+        setIsBufferingTTS(false);
+        setIsSpeakingQuestion(true);
+        setSpokenWordCount(1);
+
+        const source = audioCtxRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        ttsSourceRef.current = source;
+        source.connect(ttsAnalyserRef.current);
+
+        const playStartTime = audioCtxRef.current.currentTime;
+        source.start(playStartTime);
+
+        const totalDuration = audioBuffer.duration;
+        const wordsCount = words.length;
+        const freqData = new Uint8Array(ttsAnalyserRef.current.frequencyBinCount);
+
+        // Butter-smooth zero-lag word reveal strictly locked to audio clock
+        const syncLoop = () => {
+          if (abortController.signal.aborted || !audioCtxRef.current) return;
+
+          const now = audioCtxRef.current.currentTime;
+          const elapsed = now - playStartTime;
+
+          if (elapsed >= 0) {
+            const progress = Math.min(1, elapsed / totalDuration);
+            const revealed = Math.min(wordsCount, Math.max(1, Math.ceil(progress * wordsCount)));
+            setSpokenWordCount(revealed);
+
+            // Compute high-fidelity audio level for VoiceBeam
+            if (ttsAnalyserRef.current && elapsed < totalDuration) {
+              ttsAnalyserRef.current.getByteFrequencyData(freqData);
+              let sum = 0;
+              for (let i = 0; i < freqData.length; i++) {
+                sum += freqData[i];
+              }
+              const avg = sum / (freqData.length || 1);
+              // Scale to punchy 0.35 - 0.95 range for vibrant bottom glow
+              const level = avg > 4 ? Math.min(0.95, Math.max(0.4, avg / 55)) : 0.35;
+              setTtsVoiceLevel(level);
+            }
+          }
+
+          if (elapsed < totalDuration) {
+            ttsAnimFrameRef.current = requestAnimationFrame(syncLoop);
+          } else {
+            setSpokenWordCount(wordsCount);
+            stopQuestionTTS();
+          }
+        };
+
+        ttsAnimFrameRef.current = requestAnimationFrame(syncLoop);
+
+        source.onended = () => {
+          if (ttsAnimFrameRef.current) {
+            cancelAnimationFrame(ttsAnimFrameRef.current);
+            ttsAnimFrameRef.current = null;
+          }
+          setSpokenWordCount(wordsCount);
           stopQuestionTTS();
-        }, remainingPlayTimeMs + 200);
+        };
       } catch (streamErr) {
         if (abortController.signal.aborted) return;
         console.warn("[TTS Endpoint] Stream playback encountered error, using fallback:", streamErr);
+        setIsBufferingTTS(false);
 
-        // Fallback: If network to dgtw.um.ac.ir failed, try browser speechSynthesis or reveal words
+        // Fallback: If network to dgtw.um.ac.ir failed, try browser speechSynthesis
         if ("speechSynthesis" in window) {
+          setIsSpeakingQuestion(true);
+          setSpokenWordCount(1);
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = isQuestionRTL ? "fa-IR" : "en-US";
@@ -349,12 +369,13 @@ export const StudentExamPage = () => {
             }
           };
 
-          const wordIntervalMs = Math.max(200, Math.min(360, Math.round(14000 / words.length)));
+          const wordIntervalMs = Math.max(180, Math.min(320, Math.round(12000 / words.length)));
           let timerCount = 1;
           const pacingTimer = setInterval(() => {
             if (timerCount < words.length) {
               timerCount++;
               setSpokenWordCount((prev) => Math.max(prev, timerCount));
+              setTtsVoiceLevel(0.45 + Math.random() * 0.4);
             } else {
               clearInterval(pacingTimer);
             }
@@ -1015,32 +1036,39 @@ export const StudentExamPage = () => {
           </div>
         ) : (
           /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
-          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3.5 sm:gap-5 py-2 my-auto">
-            {/* Upper Box: Compact Live Question Box with subtle bottom-restricted Voice-Glow & Word-by-Word sync */}
-            <div className="w-full max-w-[360px] mx-auto">
+          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3.5 sm:gap-4 py-2 my-auto">
+            {/* Upper Box: Live Question Chat Message Blob (Enters from Left) */}
+            <div
+              key={`bot-q-${currentTurnIndex}`}
+              className="w-full max-w-[360px] mx-auto chat-bubble-enter-left relative"
+            >
               <VoiceBeam
                 type="default"
-                scale={0.55}
-                reach={0.22}
-                spread={0.5}
+                scale={0.8}
+                reach={0.65}
+                spread={0.85}
                 bend={0}
-                strokeOpacity={0}
-                innerOpacity={0.08}
-                bloomOpacity={0.35}
+                strokeOpacity={0.85}
+                innerOpacity={0.25}
+                bloomOpacity={0.9}
                 idle={0}
-                level={isSpeakingQuestion ? Math.min(0.48, ttsVoiceLevel * 0.6) : 0}
-                processing={false}
-                className="w-full rounded-2xl"
+                level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
+                processing={isBufferingTTS}
+                className="w-full chat-bubble-ai"
+                style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
               >
-                <div className="w-full rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 p-3 sm:p-3.5 shadow-2xl flex flex-col gap-2 transition-all">
-                  {/* Sleek Minimal Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                <div
+                  className="w-full chat-bubble-ai bg-[#161615] backdrop-blur-xl border border-white/15 p-3.5 sm:p-4 shadow-2xl flex flex-col gap-2.5 transition-all"
+                  style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
+                >
+                  {/* Chat Blob Header: Turn Tag + Difficulty + Replay Button (No Logo) */}
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
                       <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
                         {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
                         {currentDifficulty > 0.6
                           ? (isQuestionRTL ? "پیشرفته" : "Hard")
                           : currentDifficulty > 0.35
@@ -1053,20 +1081,20 @@ export const StudentExamPage = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (isSpeakingQuestion) {
+                        if (isSpeakingQuestion || isBufferingTTS) {
                           stopQuestionTTS();
                         } else {
                           playQuestionTTS(currentQuestion);
                         }
                       }}
-                      className={`p-1 rounded-md border transition-all cursor-pointer ${
-                        isSpeakingQuestion
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                        isSpeakingQuestion || isBufferingTTS
                           ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
                           : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
                       }`}
                       title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
                     >
-                      {isSpeakingQuestion ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
 
@@ -1077,7 +1105,14 @@ export const StudentExamPage = () => {
                       isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
                     }`}
                   >
-                    {questionWords.length > 0 ? (
+                    {isBufferingTTS ? (
+                      <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
+                        <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
+                          {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
+                        </span>
+                      </div>
+                    ) : questionWords.length > 0 ? (
                       questionWords.map((word, idx) => {
                         const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
                         const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
@@ -1105,79 +1140,161 @@ export const StudentExamPage = () => {
                   </div>
                 </div>
               </VoiceBeam>
+
+              {/* Authentic chat bubble tail at bottom-left corner (Seamless, unified, zero-leak) */}
+              <div className="absolute bottom-0 -left-[8px] w-[16px] h-[16px] pointer-events-none z-20">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  className="w-full h-full overflow-visible"
+                >
+                  {/* Tail fill */}
+                  <path
+                    d="M8.5,0 C8.5,5 2.5,11 1,14 C2,15.5 5,15.5 8.5,15.5 L8.5,0 Z"
+                    fill="#161615"
+                  />
+                  {/* Erase the box's inner 1px left border line without leaking below or above */}
+                  <rect
+                    x="8"
+                    y="0.5"
+                    width="1"
+                    height="14.5"
+                    fill="#161615"
+                  />
+                  {/* Outer border stroke seamlessly joining bottom & left box borders */}
+                  <path
+                    d="M8.5,0 C8.5,5 2.5,11 1,14 C2,15.5 5,15.5 8.5,15.5"
+                    fill="none"
+                    stroke="rgba(255, 255, 255, 0.15)"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
             </div>
 
-            {/* Bottom Box: Writing & Voice Centered, Cleaned of Text Clutter */}
-            <div className="w-full max-w-[360px] mx-auto">
-              <VoiceBeam
-                type="default"
-                scale={0.55}
-                reach={0.25}
-                spread={0.55}
-                bend={0}
-                strokeOpacity={0}
-                innerOpacity={0.08}
-                bloomOpacity={0.35}
-                idle={0}
-                stream={micStream}
-                level={recording ? 0.48 : 0}
-                processing={isSubmitting}
-                className="w-full rounded-2xl"
-              >
-                <div className="w-full rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 p-3 sm:p-3.5 shadow-2xl flex flex-col gap-2.5 transition-all">
-                  {/* Text Input Area with Adaptive Direction */}
-                  <textarea
-                    dir={isAnswerRTL ? "rtl" : "ltr"}
-                    rows={2}
-                    value={answerText}
-                    onChange={(e) => setAnswerText(e.target.value)}
-                    placeholder={
-                      isQuestionRTL
-                        ? "با میکروفون صحبت کنید یا پاسخ را اینجا بنویسید..."
-                        : "Speak with mic or type your response here..."
-                    }
-                    className={`w-full rounded-xl bg-black/40 border border-white/10 p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 resize-none transition-all leading-relaxed ${
-                      isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
-                    }`}
-                  />
-
-                  {/* Controls Row: VoiceMicButton + Submit Button */}
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <VoiceMicButton
-                      recording={recording}
-                      voiceLang={voiceLang}
-                      onLanguageChange={setVoiceLang}
-                      onStartRecording={startRecording}
-                      onStopRecording={stopRecording}
-                      disabled={isSubmitting || isCompleted}
-                      isRTL={isRTL}
-                      className="w-11 h-11 relative shrink-0"
-                      buttonClassName={`w-full h-full rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-                        recording
-                          ? "bg-red-600 text-white shadow-red-500/50"
-                          : "bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md"
+            {/* Bottom Section: Response Field Box + Controls Row Below (Enters from Right) */}
+            <div
+              key={`student-ans-${currentTurnIndex}`}
+              className="w-full max-w-[360px] mx-auto flex flex-col gap-3 chat-bubble-enter-right"
+            >
+              {/* Dedicated Student Response Field (Bottom-Right corner stretched/pointed) */}
+              <div className="relative w-full">
+                <VoiceBeam
+                  type="default"
+                  scale={0.8}
+                  reach={0.65}
+                  spread={0.85}
+                  bend={0}
+                  strokeOpacity={0.85}
+                  innerOpacity={0.25}
+                  bloomOpacity={0.9}
+                  idle={0}
+                  stream={micStream}
+                  level={recording ? 0.85 : 0}
+                  processing={isSubmitting}
+                  className="w-full chat-bubble-student"
+                  style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
+                >
+                  <div
+                    className="w-full chat-bubble-student bg-[#161615] backdrop-blur-xl border border-white/15 p-3.5 shadow-2xl transition-all"
+                    style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
+                  >
+                    <textarea
+                      dir={isAnswerRTL ? "rtl" : "ltr"}
+                      rows={2}
+                      value={answerText}
+                      onChange={(e) => setAnswerText(e.target.value)}
+                      placeholder={
+                        isQuestionRTL
+                          ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
+                          : "Type response here or speak with mic..."
+                      }
+                      className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none resize-none leading-relaxed ${
+                        isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
                       }`}
-                      badgeClassName="-top-1 -right-1"
-                      iconClassName="!w-4 !h-4"
                     />
-
-                    {/* Submit / Next Button */}
-                    <button
-                      type="button"
-                      disabled={!answerText.trim() || isSubmitting}
-                      onClick={handleSubmitAnswer}
-                      className={`flex-1 h-11 rounded-xl font-vazir text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lg cursor-pointer ${
-                        !answerText.trim() || isSubmitting
-                          ? "bg-white/10 text-slate-500 border border-white/10 cursor-not-allowed"
-                          : "bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:brightness-110 text-white shadow-emerald-500/25"
-                      }`}
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>{isRTL ? "ارسال پاسخ و سوال بعد" : "Submit Answer & Next"}</span>
-                    </button>
                   </div>
+                </VoiceBeam>
+
+                {/* Authentic chat bubble tail at bottom-right corner (Seamless, unified, zero-leak) */}
+                <div className="absolute bottom-0 -right-[8px] w-[16px] h-[16px] pointer-events-none z-20">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    className="w-full h-full overflow-visible"
+                  >
+                    {/* Tail fill */}
+                    <path
+                      d="M7.5,0 C7.5,5 13.5,11 15,14 C14,15.5 11,15.5 7.5,15.5 L7.5,0 Z"
+                      fill="#161615"
+                    />
+                    {/* Erase the box's inner 1px right border line without leaking below or above */}
+                    <rect
+                      x="7"
+                      y="0.5"
+                      width="1"
+                      height="14.5"
+                      fill="#161615"
+                    />
+                    {/* Outer border stroke seamlessly joining bottom & right box borders */}
+                    <path
+                      d="M7.5,0 C7.5,5 13.5,11 15,14 C14,15.5 11,15.5 7.5,15.5"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.15)"
+                      strokeWidth="1"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </div>
-              </VoiceBeam>
+              </div>
+
+              {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
+              <div className="w-full flex items-center justify-between px-2">
+                {/* Left Spacer to keep mic in exact mathematical center */}
+                <div className="w-11 h-11 shrink-0" />
+
+                {/* Center: Morphing Mic -> ThinkingOrb Button */}
+                <div className="flex items-center justify-center">
+                  <VoiceMicButton
+                    recording={recording}
+                    recordingOrbState="listening"
+                    orbSize={64}
+                    orbColor="#38bdf8"
+                    voiceLang={voiceLang}
+                    onLanguageChange={setVoiceLang}
+                    onStartRecording={startRecording}
+                    onStopRecording={stopRecording}
+                    disabled={isSubmitting || isCompleted}
+                    isRTL={isRTL}
+                    className="w-12 h-12 relative shrink-0 flex items-center justify-center"
+                    buttonClassName="w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md"
+                    badgeClassName="-top-1 -right-1"
+                    iconClassName="!w-4 !h-4 text-sky-300"
+                  />
+                </div>
+
+                {/* Right: Sleek Compact Send Button */}
+                <button
+                  type="button"
+                  disabled={!answerText.trim() || isSubmitting}
+                  onClick={handleSubmitAnswer}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-lg shrink-0 ${
+                    !answerText.trim() || isSubmitting
+                      ? "bg-white/10 text-slate-500 border border-white/10 cursor-not-allowed opacity-40 scale-90"
+                      : "bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 text-white shadow-emerald-500/30 hover:scale-105 active:scale-95 ring-2 ring-emerald-400/25"
+                  }`}
+                  title={isRTL ? "ارسال پاسخ و سوال بعد" : "Submit answer & next"}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Send className="w-4 h-4 text-white -rotate-12 translate-x-[-1px]" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

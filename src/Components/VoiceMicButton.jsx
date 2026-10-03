@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Mic } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 
 /**
  * Reusable Voice Microphone Button with Press-and-Hold Language Selector.
@@ -12,6 +13,9 @@ import { Mic } from "lucide-react";
  */
 export const VoiceMicButton = ({
   recording = false,
+  recordingOrbState = null,
+  orbSize = 32,
+  orbColor = "#38bdf8",
   onStartRecording,
   onStopRecording,
   voiceLang: controlledLang,
@@ -198,7 +202,7 @@ export const VoiceMicButton = ({
         </div>
       )}
 
-      {/* Main Microphone Button */}
+      {/* Main Microphone Button / Morphing Orb */}
       <button
         type="button"
         disabled={disabled}
@@ -209,27 +213,66 @@ export const VoiceMicButton = ({
         onPointerLeave={handlePointerCancel}
         title={title || defaultTitle}
         aria-label={title || defaultTitle}
-        className={`group relative w-full h-full flex items-center justify-center transition-all cursor-pointer ${
-          recording ? "animate-pulse" : ""
-        } ${buttonClassName}`}
+        className="group relative w-full h-full flex items-center justify-center cursor-pointer select-none bg-transparent border-0 p-0 focus:outline-none"
       >
-        {/* Language Badge on Corner (Clicks pass through to button via pointer-events-none) */}
-        <span
-          className={`pointer-events-none absolute z-10 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1e1e1e] text-white font-inter text-[9px] font-bold flex items-center justify-center border border-white/20 shadow-xs select-none ${
-            recording ? "ring-1 ring-red-400" : ""
-          } ${badgeClassName || "-top-0.5 -left-0.5"}`}
+        {/* Layer 1: Frosted Microphone Circle Button (Idle State) */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            recording && recordingOrbState
+              ? "opacity-0 scale-50 -rotate-45 pointer-events-none"
+              : "opacity-100 scale-100 rotate-0 pointer-events-auto"
+          }`}
         >
-          {badgeText}
-        </span>
+          <div
+            className={`w-full h-full flex items-center justify-center transition-all duration-300 ${
+              recording && !recordingOrbState ? "animate-pulse" : ""
+            } ${buttonClassName}`}
+          >
+            <Mic
+              className={`transition-all duration-300 ${
+                recording
+                  ? "text-red-500 scale-110 animate-pulse"
+                  : "text-sky-300 group-hover:scale-105"
+              } ${iconClassName}`}
+            />
+          </div>
 
-        {/* Lucide Mic Icon */}
-        <Mic
-          className={`transition-all duration-300 ${
-            recording
-              ? "text-red-500 scale-110 animate-pulse"
-              : "text-primery-500 group-hover:scale-105"
-          } ${iconClassName}`}
-        />
+          {/* Language Badge on Corner (Clicks pass through to button via pointer-events-none) */}
+          <span
+            className={`pointer-events-none absolute z-20 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1e1e1e] text-white font-inter text-[9px] font-bold flex items-center justify-center border border-white/20 shadow-xs select-none transition-all duration-300 ${
+              recording && !recordingOrbState ? "ring-1 ring-red-400" : ""
+            } ${badgeClassName || "-top-0.5 -left-0.5"}`}
+          >
+            {badgeText}
+          </span>
+        </div>
+
+        {/* Layer 2: ThinkingOrb (Active Morph State - No boxed container, button itself is the orb) */}
+        {recordingOrbState && (
+          <div
+            className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              recording
+                ? "opacity-100 scale-100 rotate-0 pointer-events-auto drop-shadow-[0_0_18px_rgba(56,189,248,0.65)] hover:scale-110 active:scale-95"
+                : "opacity-0 scale-40 rotate-45 pointer-events-none"
+            }`}
+          >
+            {/* Ambient soft glow aura */}
+            <div className="absolute inset-0 rounded-full bg-sky-400/25 blur-md pointer-events-none animate-pulse" />
+            <ThinkingOrb
+              state={recordingOrbState}
+              size={64}
+              theme="dark"
+              color={orbColor || "#38bdf8"}
+              paused={!recording}
+              style={{
+                width: 64,
+                height: 64,
+                transform: "scale(0.72)",
+                transformOrigin: "center",
+              }}
+            />
+          </div>
+        )}
       </button>
     </div>
   );
