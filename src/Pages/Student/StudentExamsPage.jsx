@@ -567,7 +567,7 @@ export const StudentExams = () => {
                                     : isReadyToStart
                                       ? "آماده شروع"
                                       : isUpcoming
-                                        ? "در انتظار نوبت"
+                                        ? "در انتظار برگزاری"
                                         : "تعریف شده"}
                             </span>
                           </div>
@@ -611,7 +611,9 @@ export const StudentExams = () => {
                         <div className="flex items-center gap-[5px]">
                           <CalendarDays className="!w-[14px] !h-[14px] shrink-0 text-primery-600 dark:text-primery-400" />
 
-                          <span>{isRTL ? toPersianDigits(exam.date) : exam.date}</span>
+                          <span>
+                            {isRTL ? toPersianDigits(exam.date) : exam.date}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-[5px]">
@@ -623,8 +625,8 @@ export const StudentExams = () => {
                                 ? `${toPersianDigits(exam.duration)} دقیقه`
                                 : `${exam.duration} min`
                               : isRTL
-                              ? "۲۰ دقیقه"
-                              : "20 min"}
+                                ? "۲۰ دقیقه"
+                                : "20 min"}
                           </span>
                         </div>
                       </div>
@@ -731,10 +733,12 @@ export const StudentExams = () => {
                                 bg-neutral-scale70
                                 border
                                 border-error-100
+                                dark:border-neutral-scale90
                                 hover:bg-neutral-scale90
                                 dark:bg-neutral-scale700
                                 dark:hover:bg-neutral-scale600
                                 text-error-300
+                                dark:text-neutral-scale70
                                 cursor-pointer
                               `
                               : isPassed
@@ -805,7 +809,9 @@ export const StudentExams = () => {
                               className={`${isRTL ? "font-vazir" : "font-inter"} font-bold tabular-nums`}
                             >
                               {isRTL
-                                ? toPersianDigits(formatCountdown(timing.remainingUntilStart))
+                                ? toPersianDigits(
+                                    formatCountdown(timing.remainingUntilStart),
+                                  )
                                 : formatCountdown(timing.remainingUntilStart)}
                             </span>
                           </>
