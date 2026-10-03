@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
@@ -7,6 +7,11 @@ import "@/styles/fonts.css";
 
 export const StudentLayout = () => {
   const { language, isRTL } = useContext(AppContext);
+  const location = useLocation();
+
+  const isExamLive =
+    location.pathname.toLowerCase().includes("/studentexam/") ||
+    location.pathname.toLowerCase().startsWith("/studentexam/");
 
   return (
     <div
@@ -18,9 +23,11 @@ export const StudentLayout = () => {
     >
       <Outlet />
 
-      <FooterGlass>
-        <StudentNavigationBar />
-      </FooterGlass>
+      {!isExamLive && (
+        <FooterGlass>
+          <StudentNavigationBar />
+        </FooterGlass>
+      )}
     </div>
   );
 };

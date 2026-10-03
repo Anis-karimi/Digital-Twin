@@ -27,7 +27,9 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
-    "vite-plugin-svgr": "^5.2.0"
+    "thinking-orbs": "^0.3.2",
+    "vite-plugin-svgr": "^5.2.0",
+    "voice-glow": "^0.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

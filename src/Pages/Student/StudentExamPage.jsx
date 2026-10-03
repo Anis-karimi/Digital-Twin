@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState, useRef, useCallback } from "react";
+import { useContext, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
-  ArrowLeft,
   Clock3,
   Brain,
   Send,
@@ -9,21 +8,23 @@ import {
   CheckCircle2,
   Award,
   Sparkles,
-  BarChart3,
-  HelpCircle,
   AlertCircle,
   BookOpen,
   Mic,
-  MicOff,
+  PhoneOff,
+  Volume2,
+  VolumeX,
+  UserCheck,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { toPersianDigits } from "@/utils/dateUtils";
-import { ExamProctoringCamera } from "@/Components/ExamProctoringCamera";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
-import Microphon from "@/assets/icons/Microphon.svg?react";
+import { VoiceBeam } from "voice-glow";
+import { ThinkingOrb } from "thinking-orbs";
+import AI from "@/assets/images/AI.png";
 import { voiceApi } from "@/api";
 
 export const StudentExamPage = () => {
@@ -70,6 +71,355 @@ export const StudentExamPage = () => {
   const streamRef = useRef(null);
   const audioCtx = useRef(null);
   const processor = useRef(null);
+
+  // Full-Screen Video Call Webcam state & controls (Always On - No close ability)
+  const videoRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const [cameraLoading, setCameraLoading] = useState(true);
+  const [cameraError, setCameraError] = useState(false);
+  const [micStream, setMicStream] = useState(null);
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  const concatUint8 = (a, b) => {
+    const out = new Uint8Array(a.byteLength + b.byteLength);
+    out.set(a, 0);
+    out.set(b, a.byteLength);
+    return out;
+  };
+
+  // TTS & Live Word-by-Word State for Question Box
+  const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
+  const [spokenWordCount, setSpokenWordCount] = useState(0);
+  const [ttsVoiceLevel, setTtsVoiceLevel] = useState(0);
+  const ttsIntervalRef = useRef(null);
+  const ttsSourceRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const sampleRateRef = useRef(22050);
+  const leftoverRef = useRef(new Uint8Array(0));
+  const nextStartRef = useRef(0);
+  const activeSourcesRef = useRef([]);
+  const ttsAbortControllerRef = useRef(null);
+  const ttsAnalyserRef = useRef(null);
+  const ttsTimerRef = useRef(null);
+
+  const questionWords = useMemo(() => {
+    if (!currentQuestion) return [];
+    return currentQuestion.split(/\s+/).filter(Boolean);
+  }, [currentQuestion]);
+
+  const stopQuestionTTS = useCallback(() => {
+    setIsSpeakingQuestion(false);
+    setTtsVoiceLevel(0);
+
+    if (ttsAbortControllerRef.current) {
+      try {
+        ttsAbortControllerRef.current.abort();
+      } catch (e) {}
+      ttsAbortControllerRef.current = null;
+    }
+
+    if (ttsIntervalRef.current) {
+      clearInterval(ttsIntervalRef.current);
+      ttsIntervalRef.current = null;
+    }
+
+    if (ttsTimerRef.current) {
+      clearTimeout(ttsTimerRef.current);
+      ttsTimerRef.current = null;
+    }
+
+    if (activeSourcesRef.current && activeSourcesRef.current.length > 0) {
+      activeSourcesRef.current.forEach((src) => {
+        try {
+          src.stop();
+        } catch (e) {}
+      });
+      activeSourcesRef.current = [];
+    }
+
+    if (ttsSourceRef.current) {
+      try {
+        ttsSourceRef.current.stop();
+      } catch (e) {}
+      ttsSourceRef.current = null;
+    }
+
+    leftoverRef.current = new Uint8Array(0);
+    nextStartRef.current = 0;
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  const playQuestionTTS = useCallback(
+    async (text) => {
+      if (!text) return;
+      stopQuestionTTS();
+
+      const words = text.split(/\s+/).filter(Boolean);
+      if (words.length === 0) return;
+
+      setIsSpeakingQuestion(true);
+      setSpokenWordCount(1);
+
+      const abortController = new AbortController();
+      ttsAbortControllerRef.current = abortController;
+
+      try {
+        // Initialize or resume AudioContext
+        if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtxRef.current.state === "suspended") {
+          await audioCtxRef.current.resume();
+        }
+
+        // Setup real-time AnalyserNode for accurate VoiceBeam pulsing
+        if (!ttsAnalyserRef.current) {
+          const analyser = audioCtxRef.current.createAnalyser();
+          analyser.fftSize = 128;
+          analyser.smoothingTimeConstant = 0.65;
+          analyser.connect(audioCtxRef.current.destination);
+          ttsAnalyserRef.current = analyser;
+        }
+
+        nextStartRef.current = audioCtxRef.current.currentTime + 0.08;
+        leftoverRef.current = new Uint8Array(0);
+        sampleRateRef.current = 22050;
+        activeSourcesRef.current = [];
+
+        // Start listening to analyser frequency for VoiceBeam level
+        const freqData = new Uint8Array(ttsAnalyserRef.current.frequencyBinCount);
+        ttsIntervalRef.current = setInterval(() => {
+          if (!ttsAnalyserRef.current) return;
+          ttsAnalyserRef.current.getByteFrequencyData(freqData);
+          let sum = 0;
+          for (let i = 0; i < freqData.length; i++) {
+            sum += freqData[i];
+          }
+          const avg = sum / (freqData.length || 1);
+          // Scale to 0.18 - 0.90 range for VoiceBeam
+          const normalized = avg > 6 ? Math.min(0.9, Math.max(0.2, avg / 90)) : 0;
+          setTtsVoiceLevel(normalized);
+        }, 40);
+
+        // Fetch TTS stream from backend endpoint (https://dgtw.um.ac.ir/tts_router_stream)
+        const res = await voiceApi.streamTTS(text);
+        if (!res || !res.body) {
+          throw new Error("TTS streaming response invalid");
+        }
+
+        const reader = res.body.getReader();
+        let leftover = leftoverRef.current;
+        let seq = 0;
+        let totalScheduledDuration = 0;
+        const streamStartTime = Date.now();
+
+        // Progressive word reveal pacing based on scheduled audio
+        const pacingInterval = setInterval(() => {
+          if (abortController.signal.aborted) {
+            clearInterval(pacingInterval);
+            return;
+          }
+          const elapsed = (Date.now() - streamStartTime) / 1000;
+          if (totalScheduledDuration > 0) {
+            const progress = Math.min(1, elapsed / (totalScheduledDuration + 0.3));
+            const revealed = Math.max(1, Math.min(words.length, Math.ceil(progress * words.length)));
+            setSpokenWordCount(revealed);
+          }
+        }, 110);
+
+        while (true) {
+          if (abortController.signal.aborted) {
+            try {
+              reader.cancel();
+            } catch (e) {}
+            break;
+          }
+
+          const { done, value } = await reader.read();
+          if (done) break;
+          seq += 1;
+
+          let chunkBytes = value ? new Uint8Array(value) : new Uint8Array(0);
+          if (leftover.byteLength > 0) {
+            chunkBytes = concatUint8(leftover, chunkBytes);
+            leftover = new Uint8Array(0);
+          }
+
+          // Process X-PCM header on initial chunk
+          if (seq === 1) {
+            const txt = new TextDecoder("ascii").decode(
+              chunkBytes.subarray(0, Math.min(128, chunkBytes.length))
+            );
+            if (txt.startsWith("X-PCM:")) {
+              const nl = txt.indexOf("\n");
+              if (nl >= 0) {
+                const headerLine = txt.slice(0, nl).trim();
+                headerLine
+                  .replace("X-PCM:", "")
+                  .split(";")
+                  .forEach((pair) => {
+                    const [k, v] = pair.split("=").map((s) => s.trim());
+                    if (k === "sample_rate") sampleRateRef.current = parseInt(v, 10);
+                  });
+                chunkBytes = chunkBytes.subarray(nl + 1);
+              } else {
+                leftover = chunkBytes;
+                continue;
+              }
+            }
+          }
+
+          // Ensure 4-byte alignment for 32-bit float audio buffer
+          const rem = chunkBytes.byteLength % 4;
+          if (rem !== 0) {
+            leftover = chunkBytes.subarray(chunkBytes.byteLength - rem);
+            chunkBytes = chunkBytes.subarray(0, chunkBytes.byteLength - rem);
+          }
+          if (chunkBytes.byteLength === 0) continue;
+
+          const floatBuf = new Float32Array(
+            chunkBytes.buffer,
+            chunkBytes.byteOffset,
+            chunkBytes.byteLength / 4
+          );
+
+          const buffer = audioCtxRef.current.createBuffer(
+            1,
+            floatBuf.length,
+            sampleRateRef.current
+          );
+          buffer.getChannelData(0).set(floatBuf);
+
+          const source = audioCtxRef.current.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ttsAnalyserRef.current);
+
+          const scheduledTime = Math.max(
+            nextStartRef.current,
+            audioCtxRef.current.currentTime + 0.04
+          );
+          source.start(scheduledTime);
+          nextStartRef.current = scheduledTime + buffer.duration;
+          totalScheduledDuration += buffer.duration;
+          activeSourcesRef.current.push(source);
+        }
+
+        // Wait until all scheduled audio has finished playing
+        const remainingPlayTimeMs = Math.max(
+          150,
+          (nextStartRef.current - audioCtxRef.current.currentTime) * 1000
+        );
+
+        ttsTimerRef.current = setTimeout(() => {
+          clearInterval(pacingInterval);
+          setSpokenWordCount(words.length);
+          stopQuestionTTS();
+        }, remainingPlayTimeMs + 200);
+      } catch (streamErr) {
+        if (abortController.signal.aborted) return;
+        console.warn("[TTS Endpoint] Stream playback encountered error, using fallback:", streamErr);
+
+        // Fallback: If network to dgtw.um.ac.ir failed, try browser speechSynthesis or reveal words
+        if ("speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = isRTL ? "fa-IR" : "en-US";
+          utterance.rate = 0.95;
+
+          utterance.onboundary = (e) => {
+            if (e.name === "word") {
+              const charIdx = e.charIndex;
+              const count = text.slice(0, charIdx).split(/\s+/).filter(Boolean).length + 1;
+              setSpokenWordCount(Math.min(words.length, Math.max(1, count)));
+            }
+          };
+
+          const wordIntervalMs = Math.max(200, Math.min(360, Math.round(14000 / words.length)));
+          let timerCount = 1;
+          const pacingTimer = setInterval(() => {
+            if (timerCount < words.length) {
+              timerCount++;
+              setSpokenWordCount((prev) => Math.max(prev, timerCount));
+            } else {
+              clearInterval(pacingTimer);
+            }
+          }, wordIntervalMs);
+
+          utterance.onend = () => {
+            clearInterval(pacingTimer);
+            setSpokenWordCount(words.length);
+            stopQuestionTTS();
+          };
+
+          utterance.onerror = () => {
+            clearInterval(pacingTimer);
+            setSpokenWordCount(words.length);
+            stopQuestionTTS();
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } else {
+          setSpokenWordCount(words.length);
+          stopQuestionTTS();
+        }
+      }
+    },
+    [isRTL, stopQuestionTTS]
+  );
+
+  // Auto-play TTS and sync word-by-word reveal whenever a new question is loaded
+  useEffect(() => {
+    if (currentQuestion && !isCompleted && !loading) {
+      playQuestionTTS(currentQuestion);
+    }
+    return () => {
+      stopQuestionTTS();
+    };
+  }, [currentQuestion, isCompleted, loading, playQuestionTTS, stopQuestionTTS]);
+
+  const startWebcam = useCallback(async () => {
+    try {
+      setCameraLoading(true);
+      setCameraError(false);
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error("No getUserMedia");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+        },
+      });
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.warn("Webcam play warning:", e);
+        }
+      }
+    } catch (err) {
+      console.warn("Webcam access failed:", err);
+      setCameraError(true);
+    } finally {
+      setCameraLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    startWebcam();
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      stopQuestionTTS();
+    };
+  }, [startWebcam, stopQuestionTTS]);
 
   // ⚡ Downsample function to 16kHz (Matching ChatArea.jsx)
   function downsample(buffer, inputRate, outputRate) {
@@ -122,6 +472,7 @@ export const StudentExamPage = () => {
       });
 
       streamRef.current = stream;
+      setMicStream(stream);
 
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       audioCtx.current = new AudioContextClass();
@@ -167,6 +518,7 @@ export const StudentExamPage = () => {
       console.error("Microphone access error:", err);
       recordingRef.current = false;
       setRecording(false);
+      setMicStream(null);
     }
   };
 
@@ -177,6 +529,7 @@ export const StudentExamPage = () => {
 
     recordingRef.current = false;
     setRecording(false);
+    setMicStream(null);
 
     processor.current?.disconnect();
     audioCtx.current?.close();
@@ -426,120 +779,171 @@ export const StudentExamPage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden select-text"
+      className="relative w-full md:w-[420px] h-dvh mx-auto overflow-hidden bg-slate-950 text-white flex flex-col select-none"
     >
-      {/* Header */}
-      <header className="w-full h-[65px] flex shrink-0">
-        <div className="w-full h-[65px] relative flex items-center px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000">
-          <button
-            onClick={() => navigate("/StudentExams")}
-            type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-neutral-scale70 cursor-pointer"
-          >
-            <ArrowLeft className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
-          </button>
-          <div className="flex-1 text-center min-w-0 px-2">
-            <h1 className="font-vazir font-semibold text-base text-neutral-scale70 truncate">
-              {examMeta?.title || (isRTL ? "آزمون تطبیقی شفاهی" : "Adaptive Oral Exam")}
-            </h1>
-            <p className="font-vazir text-xs text-neutral-scale200 truncate">
-              {examMeta?.course || (isRTL ? "درس سیستم عامل" : "Operating Systems")}
+      {/* ================= 1. Full-Screen Live Webcam Video Layer ================= */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover scale-x-[-1]"
+        />
+
+        {/* Fallback if camera permission is denied */}
+        {cameraError && (
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-indigo-950/70 to-slate-950 flex flex-col items-center justify-center p-6 text-center pointer-events-auto">
+            <div className="w-16 h-16 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-3 shadow-xl">
+              <UserCheck className="w-8 h-8 text-sky-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-300 mb-1 font-vazir">
+              {isRTL ? "دسترسی به دوربین وب‌کم الزامی است" : "Webcam access is required"}
             </p>
+            <p className="text-xs text-slate-400 mb-4 max-w-[260px] font-vazir">
+              {isRTL
+                ? "برای شرکت در آزمون شفاهی، لطفا دسترسی به دوربین را تایید نمایید."
+                : "Please allow camera access to proceed with the oral examination."}
+            </p>
+            <button
+              type="button"
+              onClick={startWebcam}
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-md"
+            >
+              {isRTL ? "تلاش مجدد اتصال دوربین" : "Retry Camera"}
+            </button>
           </div>
-          <div className="w-10 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-white/80" />
-          </div>
+        )}
+
+        {/* 2. Frosted Blur Layer over Webcam Feed (Reduced blur) */}
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] transition-all duration-500 pointer-events-none" />
+
+        {/* Vignette Gradient Shadow for Contrast & Depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/75 pointer-events-none" />
+      </div>
+
+      {/* ================= 2. Top Bar (Only Exit Button & Timer) ================= */}
+      <header className="relative z-20 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between">
+        {/* Hang up / Exit Button */}
+        <button
+          type="button"
+          onClick={() => setShowExitModal(true)}
+          aria-label={isRTL ? "خروج از آزمون" : "Exit Exam"}
+          className="w-10 h-10 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-90 transition-all cursor-pointer shrink-0"
+          title={isRTL ? "پایان و خروج از آزمون" : "Exit Exam"}
+        >
+          <PhoneOff className="w-4 h-4" />
+        </button>
+
+        {/* Minimalist Floating Timer Pill */}
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-amber-300 font-mono text-xs font-bold shadow-lg">
+          <Clock3 className="w-3.5 h-3.5 text-amber-400" />
+          <span>{formatTimer(remainingSeconds)}</span>
         </div>
       </header>
 
-      {/* Main Body */}
-      <section className="w-full flex-1 min-h-0 overflow-y-auto px-3.5 py-3">
+      {/* ================= 3. Main Body / Floating Call Stage ================= */}
+      <section className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between px-3.5 py-2 overflow-y-auto">
         {loading ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-8 h-8 text-primery-700 animate-spin" />
-            <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale300">
-              {isRTL ? "در حال برقراری ارتباط با مدل تطبیقی..." : "Connecting to adaptive model..."}
-            </p>
+          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/80 backdrop-blur-2xl border border-white/20 p-8 flex flex-col items-center justify-center text-center gap-4 shadow-2xl">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-sky-500/20 border-2 border-sky-400 flex items-center justify-center animate-pulse">
+                <Brain className="w-8 h-8 text-sky-400 animate-bounce" />
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-slate-900">
+                <Sparkles className="w-3 h-3 text-white" />
+              </span>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white font-vazir">
+                {isRTL ? "در حال برقراری تماس با استاد هوش مصنوعی..." : "Connecting to AI Examiner..."}
+              </h3>
+              <p className="text-xs text-slate-400 font-vazir">
+                {isRTL ? "جلسه آزمون شفاهی در حال آماده‌سازی است." : "Oral exam room is being initialized."}
+              </p>
+            </div>
           </div>
         ) : error ? (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col items-center gap-2 text-center text-red-600 dark:text-red-400 font-vazir text-xs">
-            <AlertCircle className="w-6 h-6 text-red-500" />
-            <span>{error}</span>
+          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-rose-500/40 p-6 flex flex-col items-center justify-center text-center gap-3 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500 flex items-center justify-center text-rose-400">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <p className="text-xs text-rose-200 leading-relaxed font-vazir">{error}</p>
             <button
+              type="button"
               onClick={() => navigate("/StudentExams")}
-              className="mt-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs cursor-pointer"
+              className="mt-2 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
             >
-              {isRTL ? "بازگشت به آزمون‌ها" : "Return to Exams"}
+              {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams"}
             </button>
           </div>
         ) : isCompleted ? (
           /* ================= Complete Result View ================= */
-          <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-5 flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/15 border-2 border-emerald-500 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-3 shadow-sm">
+          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/20 p-6 flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 mb-3 shadow-[0_0_20px_rgba(52,211,153,0.3)]">
               <Award className="w-8 h-8" />
             </div>
 
-            <h2 className="font-vazir font-bold text-lg text-neutral-scale1800 dark:text-neutral-scale70 mb-1">
+            <h2 className="font-vazir font-bold text-lg text-white mb-1">
               {completionReason === "timeout"
                 ? (isRTL ? "زمان آزمون به پایان رسید" : "Exam Time Expired")
-                : (isRTL ? "آزمون با موفقیت به پایان رسید" : "Exam Successfully Completed")}
+                : (isRTL ? "جلسه آزمون شفاهی پایان یافت" : "Oral Exam Completed")}
             </h2>
 
-            <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale400 mb-4">
+            <p className="font-vazir text-xs text-slate-300 mb-4">
               {isRTL
                 ? "ارزیابی چندبُعدی و تطبیقی پاسخ‌های شما ثبت و نهایی شد."
                 : "Your multidimensional adaptive responses have been graded."}
             </p>
 
-            <div className="w-full bg-primery-50 dark:bg-primery-950/40 border border-primery-200 dark:border-primery-900 rounded-xl p-3.5 mb-4 flex items-center justify-around">
+            <div className="w-full bg-slate-950/60 border border-white/10 rounded-2xl p-4 mb-4 flex items-center justify-around">
               <div className="flex flex-col items-center">
-                <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400">
+                <span className="font-vazir text-[11px] text-slate-400 mb-1">
                   {isRTL ? "نمره ارزیابی" : "Score"}
                 </span>
-                <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-primery-800 dark:text-primery-200`}>
+                <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-sky-400`}>
                   {finalScore !== null
                     ? isRTL ? `${toPersianDigits(finalScore)}٪` : `${finalScore}%`
                     : isRTL ? "۸۵٪" : "85%"}
                 </span>
               </div>
-              <div className="w-[1px] h-8 bg-neutral-scale300 dark:bg-neutral-scale1000" />
+              <div className="w-[1px] h-8 bg-white/10" />
               <div className="flex flex-col items-center">
-                <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400">
+                <span className="font-vazir text-[11px] text-slate-400 mb-1">
                   {isRTL ? "وضعیت قبولی" : "Status"}
                 </span>
                 <span
                   className={`font-vazir text-sm font-bold flex items-center gap-1 ${
                     isPassed
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-amber-600 dark:text-amber-400"
+                      ? "text-emerald-400"
+                      : "text-amber-400"
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   {isPassed
                     ? (isRTL ? "قبول" : "Passed")
-                    : (isRTL ? "نیاز به تلاش" : "Needs Review")}
+                    : (isRTL ? "نیاز به بررسی" : "Needs Review")}
                 </span>
               </div>
             </div>
 
             {lastFeedback && (
-              <div className="w-full text-right bg-neutral-scale90 dark:bg-neutral-scale900 rounded-xl p-3 mb-4 text-xs font-vazir text-neutral-scale1200 dark:text-neutral-scale300 border border-neutral-scale200 dark:border-neutral-scale1000">
-                <div className="font-bold mb-1 flex items-center gap-1 text-primery-700 dark:text-primery-300">
+              <div className="w-full text-right bg-black/40 rounded-xl p-3 mb-4 text-xs font-vazir text-slate-200 border border-white/10">
+                <div className="font-bold mb-1 flex items-center gap-1 text-sky-300">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {isRTL ? "بازخورد هوش مصنوعی:" : "AI Feedback:"}
+                  {isRTL ? "بازخورد استاد هوش مصنوعی:" : "AI Feedback:"}
                 </div>
                 <p className="leading-relaxed">{lastFeedback}</p>
               </div>
             )}
 
             {autoRedirectSeconds !== null && (
-              <div className="w-full mb-3 text-center text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale400 flex items-center justify-center gap-1.5">
-                <Clock3 className="w-3.5 h-3.5 text-primery-700 dark:text-primery-300 animate-pulse" />
+              <div className="w-full mb-3 text-center text-xs font-vazir text-slate-400 flex items-center justify-center gap-1.5">
+                <Clock3 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                 <span>
                   {isRTL
-                    ? `انتقال خودکار به فهرست آزمون‌ها در ${toPersianDigits(autoRedirectSeconds)} ثانیه...`
-                    : `Auto redirecting to exams in ${autoRedirectSeconds}s...`}
+                    ? `انتقال به فهرست آزمون‌ها در ${toPersianDigits(autoRedirectSeconds)} ثانیه...`
+                    : `Redirecting in ${autoRedirectSeconds}s...`}
                 </span>
               </div>
             )}
@@ -548,20 +952,20 @@ export const StudentExamPage = () => {
               <button
                 type="button"
                 onClick={() =>
-                  navigate(`/StudentExamResult/${assignmentId}`, {
+                  navigate(`/StudentExamResult/${id}`, {
                     state: {
                       exam: {
-                        id: assignmentId,
-                        assignment_id: assignmentId,
+                        id: id,
+                        assignment_id: id,
                         session_id: sessionId,
-                        title: examTitle,
+                        title: examMeta?.title,
                         score: finalScore,
                         passed: isPassed,
                       },
                     },
                   })
                 }
-                className="w-full h-10 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer"
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-110 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sky-600/30 cursor-pointer"
               >
                 <Award className="w-4 h-4" />
                 {isRTL ? "مشاهده کارنامه و تحلیل کامل آزمون" : "View Full Exam Report"}
@@ -570,155 +974,225 @@ export const StudentExamPage = () => {
               <button
                 type="button"
                 onClick={() => navigate("/StudentExams")}
-                className="w-full h-9 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 bg-white dark:bg-neutral-scale1200 text-neutral-scale1800 dark:text-neutral-scale100 font-vazir text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer hover:bg-neutral-scale50 dark:hover:bg-neutral-scale1100"
+                className="w-full h-10 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 font-vazir text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
               >
                 {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams List"}
               </button>
             </div>
           </div>
+        ) : isSubmitting ? (
+          /* ================= 4. Thinking-Orbs AI Transition State (Libraries.dev) ================= */
+          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/20 p-8 flex flex-col items-center justify-center text-center gap-5 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative flex items-center justify-center p-2">
+              <ThinkingOrb state="searching" size={64} theme="dark" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-white font-vazir">
+                {isRTL
+                  ? "استاد هوش مصنوعی در حال تحلیل پاسخ شماست..."
+                  : "AI Examiner is analyzing your answer..."}
+              </h3>
+              <p className="text-xs text-slate-300 font-vazir leading-relaxed max-w-[260px]">
+                {isRTL
+                  ? "طراحی و آماده‌سازی سوال تطبیقی بعدی متناسب با سطح پاسخ شما"
+                  : "Formulating next adaptive question based on your response"}
+              </p>
+            </div>
+          </div>
         ) : (
-          /* ================= Active Exam Question View ================= */
-          <div className="flex flex-col gap-3 pb-8">
-            {/* Top Stat Bar */}
-            <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-xl p-2.5 flex items-center justify-between text-xs font-vazir shadow-2xs">
-              {/* Question Turn Pill */}
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primery-100 dark:bg-primery-900/40 text-primery-800 dark:text-primery-200 font-semibold">
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>{isRTL ? `سوال ${currentTurnIndex}` : `Question ${currentTurnIndex}`}</span>
-              </div>
-
-              {/* Difficulty indicator */}
-              <div className="flex items-center gap-1 text-neutral-scale1000 dark:text-neutral-scale300">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>{isRTL ? "سطح چالش:" : "Difficulty:"}</span>
-                <span className="font-semibold text-primery-700 dark:text-primery-300">
-                  {currentDifficulty > 0.6 ? (isRTL ? "پیشرفته" : "Hard") : currentDifficulty > 0.35 ? (isRTL ? "متوسط" : "Medium") : (isRTL ? "مقدماتی" : "Easy")}
-                </span>
-              </div>
-
-              {/* Global Timer */}
-              <div className={`flex items-center gap-1 text-neutral-scale1100 dark:text-neutral-scale200 ${isRTL ? "font-vazir" : "font-inter"} font-semibold tabular-nums`}>
-                <Clock3 className="w-3.5 h-3.5 text-red-500" />
-                <span>{formatTimer(remainingSeconds)}</span>
-              </div>
-            </div>
-
-            {/* Proctoring Camera & Face Verification Preview */}
-            <ExamProctoringCamera sessionId={sessionId} />
-
-            {/* Question Card */}
-            <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-xl p-4 shadow-sm flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="font-vazir font-semibold text-xs text-primery-800 dark:text-primery-200 flex items-center gap-1">
-                  <BookOpen className="w-4 h-4 text-primery-600" />
-                  {isRTL ? "متن سوال ارزیابی:" : "Question prompt:"}
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale300 ${isRTL ? "font-vazir" : "font-mono"}`}>
-                  {isRTL ? `نوبت ${toPersianDigits(currentTurnIndex)}` : `Turn #${currentTurnIndex}`}
-                </span>
-              </div>
-
-              <div
-                dir={isRTL ? "rtl" : "ltr"}
-                className="font-vazir text-sm leading-relaxed text-neutral-scale1800 dark:text-neutral-scale70 mt-1 select-text"
+          /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
+          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3.5 sm:gap-5 py-2 my-auto">
+            {/* Upper Box: Compact Live Question Box with Voice-Glow & Word-by-Word sync */}
+            <div className="w-full max-w-[360px] mx-auto">
+              <VoiceBeam
+                type="mobile"
+                level={isSpeakingQuestion ? ttsVoiceLevel : 0}
+                processing={false}
+                className="w-full rounded-2xl"
               >
-                {currentQuestion || (isRTL ? "در حال بارگذاری سوال..." : "Loading question...")}
-              </div>
+                <div className="w-full rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 p-3 sm:p-3.5 shadow-2xl flex flex-col gap-2 transition-all">
+                  {/* Sleek Minimal Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
+                      <span className="text-[11px] font-bold text-sky-300 font-vazir">
+                        {isRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-vazir">
+                        {currentDifficulty > 0.6
+                          ? (isRTL ? "پیشرفته" : "Hard")
+                          : currentDifficulty > 0.35
+                          ? (isRTL ? "متوسط" : "Medium")
+                          : (isRTL ? "مقدماتی" : "Easy")}
+                      </span>
+                    </div>
+
+                    {/* Audio Replay / Mute Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSpeakingQuestion) {
+                          stopQuestionTTS();
+                        } else {
+                          playQuestionTTS(currentQuestion);
+                        }
+                      }}
+                      className={`p-1 rounded-md border transition-all cursor-pointer ${
+                        isSpeakingQuestion
+                          ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
+                          : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                      }`}
+                      title={isRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                    >
+                      {isSpeakingQuestion ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {/* Synchronized Word-by-Word Question Text */}
+                  <div
+                    dir={isRTL ? "rtl" : "ltr"}
+                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text ${
+                      isRTL ? "font-vazir text-right" : "font-inter text-left"
+                    }`}
+                  >
+                    {questionWords.length > 0 ? (
+                      questionWords.map((word, idx) => {
+                        const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
+                        const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
+
+                        return (
+                          <span
+                            key={idx}
+                            className={`inline-block mr-1 transition-all duration-150 ${
+                              isCurrent
+                                ? "text-sky-300 font-bold scale-105"
+                                : isVisible
+                                ? "text-white opacity-100"
+                                : "opacity-0 translate-y-0.5"
+                            }`}
+                          >
+                            {word}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-slate-400">
+                        {isRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </VoiceBeam>
             </div>
 
-            {/* Answer Input Card */}
-            <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-xl p-3.5 shadow-sm flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <label className="font-vazir text-xs font-semibold text-neutral-scale1600 dark:text-neutral-scale100">
-                  {isRTL ? "پاسخ تحلیلی شما:" : "Your Analytical Answer:"}
-                </label>
-                <div className="flex items-center gap-2">
-                  {recording && (
-                    <span className="flex items-center gap-1 text-[11px] text-red-500 font-vazir animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
-                      {isRTL ? "در حال ضبط صدا..." : "Recording..."}
-                    </span>
-                  )}
-                  <span className={`text-[11px] text-neutral-scale900 dark:text-neutral-scale400 ${isRTL ? "font-vazir" : "font-inter"}`}>
-                    {isRTL ? toPersianDigits(answerText.length) : answerText.length} {isRTL ? "کاراکتر" : "chars"}
-                  </span>
+            {/* Bottom Box: Writing & Voice Centered, Cleaned of Text Clutter */}
+            <div className="w-full max-w-[360px] mx-auto">
+              <VoiceBeam
+                type="mobile"
+                stream={micStream}
+                level={recording ? 0.8 : 0}
+                processing={isSubmitting}
+                className="w-full rounded-2xl"
+              >
+                <div className="w-full rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 p-3 sm:p-3.5 shadow-2xl flex flex-col gap-2.5 transition-all">
+                  {/* Text Input Area */}
+                  <textarea
+                    dir={isRTL ? "rtl" : "ltr"}
+                    rows={2}
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value)}
+                    placeholder={
+                      isRTL
+                        ? "با میکروفون صحبت کنید یا پاسخ را اینجا بنویسید..."
+                        : "Speak with mic or type your response here..."
+                    }
+                    className="w-full rounded-xl bg-black/40 border border-white/10 p-2.5 text-xs font-vazir text-white placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 resize-none transition-all leading-relaxed"
+                  />
+
+                  {/* Controls Row: VoiceMicButton + Submit Button */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <VoiceMicButton
+                      recording={recording}
+                      voiceLang={voiceLang}
+                      onLanguageChange={setVoiceLang}
+                      onStartRecording={startRecording}
+                      onStopRecording={stopRecording}
+                      disabled={isSubmitting || isCompleted}
+                      isRTL={isRTL}
+                      className="w-11 h-11 relative shrink-0"
+                      buttonClassName={`w-full h-full rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+                        recording
+                          ? "bg-red-600 text-white shadow-red-500/50"
+                          : "bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md"
+                      }`}
+                      badgeClassName="-top-1 -right-1"
+                      iconClassName="!w-4 !h-4"
+                    />
+
+                    {/* Submit / Next Button */}
+                    <button
+                      type="button"
+                      disabled={!answerText.trim() || isSubmitting}
+                      onClick={handleSubmitAnswer}
+                      className={`flex-1 h-11 rounded-xl font-vazir text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lg cursor-pointer ${
+                        !answerText.trim() || isSubmitting
+                          ? "bg-white/10 text-slate-500 border border-white/10 cursor-not-allowed"
+                          : "bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 hover:brightness-110 text-white shadow-emerald-500/25"
+                      }`}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{isRTL ? "ارسال پاسخ و سوال بعد" : "Submit Answer & Next"}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <textarea
-                dir={isRTL ? "rtl" : "ltr"}
-                rows={5}
-                value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
-                placeholder={
-                  isRTL
-                    ? "پاسخ کامل و استدلال خود را در اینجا بنویسید یا با میکروفون صحبت کنید..."
-                    : "Type your detailed answer or speak using the microphone..."
-                }
-                className="w-full rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 p-3 text-xs font-vazir text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 focus:ring-1 focus:ring-primery-600 resize-none transition-all"
-              />
-
-              {/* Action Buttons Row: Mic Button + Submit Button */}
-              <div className="flex items-center gap-2.5">
-                {/* Voice / Mic Button with Hold-to-change Language Menu */}
-                <VoiceMicButton
-                  recording={recording}
-                  voiceLang={voiceLang}
-                  onLanguageChange={setVoiceLang}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                  disabled={isSubmitting || isCompleted}
-                  isRTL={isRTL}
-                  className="shrink-0 w-12 h-11 relative"
-                  buttonClassName={`w-full h-full rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 ${
-                    recording
-                      ? "bg-red-500/15 border-2 border-red-500 text-red-500 animate-pulse ring-2 ring-red-400/50"
-                      : "bg-white dark:bg-[#152331] hover:bg-neutral-50 dark:hover:bg-[#1a2d40] text-primery-600 dark:text-[#52a2f6] border border-neutral-scale300 dark:border-neutral-scale1000"
-                  }`}
-                  badgeClassName="-top-1.5 -right-1"
-                  iconClassName="!w-6 !h-6"
-                />
-
-                {/* Submit Button */}
-                <button
-                  type="button"
-                  disabled={!answerText.trim() || isSubmitting}
-                  onClick={handleSubmitAnswer}
-                  className={`flex-1 h-11 rounded-xl font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md cursor-pointer ${
-                    !answerText.trim() || isSubmitting
-                      ? "bg-neutral-scale300 dark:bg-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale500 cursor-not-allowed"
-                      : "bg-primery-700 hover:bg-primery-800 text-white"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{isRTL ? "در حال تحلیل پاسخ توسط مدل..." : "Evaluating answer..."}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>{isRTL ? "ارسال پاسخ و دریافت سوال بعد" : "Submit Answer & Next Question"}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Mic Status Banner */}
-              {recording && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-vazir">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
-                  <span>
-                    {isRTL
-                      ? "در حال تبدیل گفتار به متن... هر زمان صحبت‌تان تمام شد دوباره دکمه را لمس کنید."
-                      : "Listening and transcribing speech... Tap again when finished."}
-                  </span>
-                </div>
-              )}
+              </VoiceBeam>
             </div>
           </div>
         )}
       </section>
+
+      {/* ================= 6. Video Call Hangup Confirmation Modal ================= */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-[320px] rounded-3xl bg-slate-900 border border-white/20 p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 mx-auto flex items-center justify-center shadow-lg shadow-rose-500/20">
+              <PhoneOff className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white font-vazir">
+                {isRTL ? "قطع تماس و خروج از آزمون" : "Leave Exam Call"}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-vazir">
+                {isRTL
+                  ? "آیا مطمئن هستید که می‌خواهید جلسه آزمون را پایان دهید؟ پاسخ‌های ارسال شده تا این لحظه ذخیره می‌شوند."
+                  : "Are you sure you want to end this exam session? Answers submitted so far will be saved."}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 font-semibold text-xs active:scale-95 transition-all cursor-pointer font-vazir"
+              >
+                {isRTL ? "ادامه آزمون" : "Continue"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitModal(false);
+                  handleFinishExam("submitted");
+                }}
+                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-600/30 font-vazir"
+              >
+                {isRTL ? "قطع تماس" : "End Call"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
+
