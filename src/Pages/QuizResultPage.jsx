@@ -207,6 +207,45 @@ export const QuizResultPage = ({
         return rawAnswer.charAt(0).toUpperCase();
       };
 
+      // Lucide icon vector renderer for HTML5 Canvas (guarantees pixel-perfect rendering in html2canvas)
+      const createLucideIconCanvas = (type, color) => {
+        const iconCanvas = document.createElement("canvas");
+        iconCanvas.width = 28;
+        iconCanvas.height = 28;
+        iconCanvas.style.width = "14px";
+        iconCanvas.style.height = "14px";
+        iconCanvas.style.verticalAlign = "middle";
+        if (isRTL) {
+          iconCanvas.style.marginLeft = "5px";
+        } else {
+          iconCanvas.style.marginRight = "5px";
+        }
+        const ctx = iconCanvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(28 / 24, 28 / 24);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.8;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          if (type === "check") {
+            ctx.moveTo(20, 6);
+            ctx.lineTo(9, 17);
+            ctx.lineTo(4, 12);
+          } else if (type === "x") {
+            ctx.moveTo(18, 6);
+            ctx.lineTo(6, 18);
+            ctx.moveTo(6, 6);
+            ctx.lineTo(18, 18);
+          } else {
+            ctx.moveTo(5, 12);
+            ctx.lineTo(19, 12);
+          }
+          ctx.stroke();
+        }
+        return iconCanvas;
+      };
+
       // 1. Fetch AI explanations for any question missing one
       const fetchExplanation = async (question) => {
         const existing =
@@ -484,54 +523,52 @@ export const QuizResultPage = ({
         tdResult.style.textAlign = "center";
 
         const badge = document.createElement("div");
-        badge.style.display = "inline-flex";
-        badge.style.alignItems = "center";
-        badge.style.justifyContent = "center";
-        badge.style.padding = "5px 12px";
+        badge.style.display = "inline-block";
+        badge.style.padding = "4px 10px";
         badge.style.borderRadius = "9999px";
-        badge.style.fontWeight = "700";
+        badge.style.verticalAlign = "middle";
+        badge.style.boxSizing = "border-box";
         badge.style.lineHeight = "1";
         badge.style.whiteSpace = "nowrap";
-        badge.style.boxSizing = "border-box";
-        badge.style.verticalAlign = "middle";
         badge.dir = isRTL ? "rtl" : "ltr";
+
+        let iconType = "x";
+        let iconColor = "#b91c1c";
+        let labelText = isRTL ? "نادرست" : "Incorrect";
 
         if (isCorrect) {
           badge.style.background = "#dcfce7";
           badge.style.border = "1.5px solid #22c55e";
-          badge.style.color = "#15803d";
+          iconType = "check";
+          iconColor = "#15803d";
+          labelText = isRTL ? "درست" : "Correct";
         } else if (isUnanswered) {
           badge.style.background = "#f3f4f6";
           badge.style.border = "1.5px solid #9ca3af";
-          badge.style.color = "#4b5563";
+          iconType = "minus";
+          iconColor = "#4b5563";
+          labelText = isRTL ? "بی‌پاسخ" : "Unanswered";
         } else {
           badge.style.background = "#fee2e2";
           badge.style.border = "1.5px solid #ef4444";
-          badge.style.color = "#b91c1c";
+          iconType = "x";
+          iconColor = "#b91c1c";
+          labelText = isRTL ? "نادرست" : "Incorrect";
         }
 
-        const iconSpan = document.createElement("span");
-        iconSpan.style.display = "inline-flex";
-        iconSpan.style.alignItems = "center";
-        iconSpan.style.justifyContent = "center";
-        iconSpan.style.lineHeight = "1";
-        iconSpan.style.fontSize = "12px";
-        iconSpan.textContent = isCorrect ? "✔" : isUnanswered ? "—" : "✖";
+        const iconEl = createLucideIconCanvas(iconType, iconColor);
 
         const textSpan = document.createElement("span");
-        textSpan.style.display = "inline-flex";
-        textSpan.style.alignItems = "center";
-        textSpan.style.justifyContent = "center";
+        textSpan.style.display = "inline-block";
+        textSpan.style.verticalAlign = "middle";
         textSpan.style.lineHeight = "1";
         textSpan.style.fontSize = "11.5px";
-        textSpan.style.margin = isRTL ? "0 4px 0 0" : "0 0 0 4px";
-        textSpan.textContent = isCorrect
-          ? (isRTL ? "درست" : "Correct")
-          : isUnanswered
-          ? (isRTL ? "بی‌پاسخ" : "Unanswered")
-          : (isRTL ? "نادرست" : "Incorrect");
+        textSpan.style.fontWeight = "700";
+        textSpan.style.color = iconColor;
+        textSpan.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        textSpan.textContent = labelText;
 
-        badge.appendChild(iconSpan);
+        badge.appendChild(iconEl);
         badge.appendChild(textSpan);
         tdResult.appendChild(badge);
         row.appendChild(tdResult);
