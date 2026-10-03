@@ -578,13 +578,6 @@ export const CreateExamAccordion = ({
           <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
             <BookOpen className="w-4 h-4" />
           </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-xs font-vazir text-neutral-500 dark:text-neutral-400">
-              {isEditMode
-                ? (isRTL ? "ویرایش مشخصات آزمون" : "Edit Exam Specifications")
-                : (isRTL ? "تنظیمات و ساخت آزمون شفاهی" : "Oral Exam Setup")}
-            </span>
-          </div>
           <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
             {isRTL ? "نام درس" : "Course Name"}
           </span>
@@ -845,7 +838,9 @@ export const CreateExamAccordion = ({
             </div>
             <div className="flex flex-col">
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
-                {isRTL ? "پیوست فایل‌ها و منابع مرجع آزمون" : "Exam Reference Files"}
+                {isRTL
+                  ? "پیوست فایل‌ها و منابع مرجع آزمون"
+                  : "Exam Reference Files"}
               </span>
               <span className="text-[10px] text-neutral-400">
                 {attachedFiles.length > 0
@@ -880,7 +875,9 @@ export const CreateExamAccordion = ({
               <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                  {isRTL ? "انتخاب یا کشیدن فایل‌های مرجع آزمون" : "Select or drop reference files"}
+                  {isRTL
+                    ? "انتخاب یا کشیدن فایل‌های مرجع آزمون"
+                    : "Select or drop reference files"}
                 </span>
                 <span className="text-[10px] text-neutral-400">
                   {isRTL
@@ -931,8 +928,12 @@ export const CreateExamAccordion = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setAttachedFiles((prev) => prev.filter((_, i) => i !== fIdx));
-                        setRawFiles((prev) => prev.filter((_, i) => i !== fIdx));
+                        setAttachedFiles((prev) =>
+                          prev.filter((_, i) => i !== fIdx),
+                        );
+                        setRawFiles((prev) =>
+                          prev.filter((_, i) => i !== fIdx),
+                        );
                       }}
                       className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
                       title={isRTL ? "حذف فایل" : "Remove file"}
@@ -1087,8 +1088,12 @@ export const CreateExamAccordion = ({
                   disabled={isGeneratingGoals}
                   title={
                     isGoalSuccess
-                      ? (isRTL ? "اهداف با موفقیت استخراج شد (کلیک برای استخراج مجدد)" : "Goals generated (click to regenerate)")
-                      : (isRTL ? "استخراج هوشمند اهداف با هوش مصنوعی" : "Generate goals via AI")
+                      ? isRTL
+                        ? "اهداف با موفقیت استخراج شد (کلیک برای استخراج مجدد)"
+                        : "Goals generated (click to regenerate)"
+                      : isRTL
+                        ? "استخراج هوشمند اهداف با هوش مصنوعی"
+                        : "Generate goals via AI"
                   }
                   className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
                     isGoalSuccess
@@ -1114,10 +1119,16 @@ export const CreateExamAccordion = ({
               <div className="flex flex-col items-center gap-0.5 text-center select-none">
                 <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 leading-tight">
                   {isGeneratingGoals
-                    ? (isRTL ? "در حال استخراج هوشمند اهداف با هوش مصنوعی..." : "Extracting goals with AI...")
+                    ? isRTL
+                      ? "در حال استخراج هوشمند اهداف با هوش مصنوعی..."
+                      : "Extracting goals with AI..."
                     : isGoalSuccess
-                      ? (isRTL ? "اهداف آزمون با موفقیت بر اساس فایل تنظیم شد" : "Goals extracted successfully from file")
-                      : (isRTL ? "تولید هوشمند اهداف از فایل مرجع با هوش مصنوعی" : "Auto-generate goals from reference file via AI")}
+                      ? isRTL
+                        ? "اهداف آزمون با موفقیت تنظیم شد"
+                        : "Goals extracted successfully from file"
+                      : isRTL
+                        ? "تولید هوشمند اهداف از فایل مرجع با هوش مصنوعی"
+                        : "Auto-generate goals from reference file via AI"}
                 </span>
                 {rawFiles.length > 0 && !isGeneratingGoals && (
                   <span className="text-[10px] font-normal text-neutral-400 dark:text-neutral-500 max-w-xs truncate">
@@ -1155,52 +1166,54 @@ export const CreateExamAccordion = ({
                   </span>
                 </div>
 
-                {Array.from({ length: Math.min(3, Math.max(2, goalCount)) }).map((_, sIdx) => (
-                  <div
-                    key={`skeleton-goal-${sIdx}`}
-                    className="p-3.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs animate-pulse"
-                  >
-                    {/* Header + Title input skeleton */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-800" />
-                          <div className="h-3 w-28 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                {Array.from({ length: Math.min(3, goalCount) }).map(
+                  (_, sIdx) => (
+                    <div
+                      key={`skeleton-goal-${sIdx}`}
+                      className="p-3.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 flex flex-col gap-3 shadow-2xs animate-pulse"
+                    >
+                      {/* Header + Title input skeleton */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-800" />
+                            <div className="h-3 w-28 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                          </div>
+                          <div className="h-3 w-12 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
                         </div>
-                        <div className="h-3 w-12 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                        <div className="h-9 w-full bg-neutral-100 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-800" />
                       </div>
-                      <div className="h-9 w-full bg-neutral-100 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-800" />
-                    </div>
 
-                    {/* Goal Type buttons skeleton */}
-                    <div className="flex flex-col gap-2">
-                      <div className="h-3 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
-                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
-                        <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                      {/* Goal Type buttons skeleton */}
+                      <div className="flex flex-col gap-2">
+                        <div className="h-3 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                          <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                          <div className="h-7 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Bloom Taxonomy slider skeleton */}
-                    <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/60">
-                      <div className="flex items-center justify-between">
-                        <div className="h-3 w-36 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
-                        <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
+                      {/* Bloom Taxonomy slider skeleton */}
+                      <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/60">
+                        <div className="flex items-center justify-between">
+                          <div className="h-3 w-36 bg-neutral-200 dark:bg-neutral-800 rounded-md" />
+                          <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
+                        </div>
+                        <div className="h-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-lg my-1" />
+                        <div className="flex justify-between items-center px-1">
+                          {Array.from({ length: 6 }).map((_, bIdx) => (
+                            <div
+                              key={bIdx}
+                              className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-neutral-800"
+                            />
+                          ))}
+                        </div>
+                        <div className="h-8 w-full bg-neutral-100 dark:bg-neutral-800/40 rounded-lg mt-1" />
                       </div>
-                      <div className="h-2 w-full bg-neutral-200 dark:bg-neutral-800 rounded-lg my-1" />
-                      <div className="flex justify-between items-center px-1">
-                        {Array.from({ length: 6 }).map((_, bIdx) => (
-                          <div
-                            key={bIdx}
-                            className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-neutral-800"
-                          />
-                        ))}
-                      </div>
-                      <div className="h-8 w-full bg-neutral-100 dark:bg-neutral-800/40 rounded-lg mt-1" />
                     </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             ) : (
               /* ========================================================
@@ -1217,10 +1230,15 @@ export const CreateExamAccordion = ({
                   const currentGoal =
                     typeof goals[idx] === "object" && goals[idx] !== null
                       ? goals[idx]
-                      : { title: String(goals[idx] || ""), goal_type: "theoretical", bloom_level: 2 };
+                      : {
+                          title: String(goals[idx] || ""),
+                          goal_type: "theoretical",
+                          bloom_level: 2,
+                        };
                   const currentBloomLevel = currentGoal.bloom_level || 2;
                   const currentBloomObj =
-                    BLOOM_LEVELS.find((b) => b.level === currentBloomLevel) || BLOOM_LEVELS[1];
+                    BLOOM_LEVELS.find((b) => b.level === currentBloomLevel) ||
+                    BLOOM_LEVELS[1];
 
                   return (
                     <div
@@ -1280,7 +1298,8 @@ export const CreateExamAccordion = ({
                         <div className="grid grid-cols-3 gap-1.5">
                           {GOAL_TYPES.map((gt) => {
                             const isSelected =
-                              (currentGoal.goal_type || "theoretical") === gt.id;
+                              (currentGoal.goal_type || "theoretical") ===
+                              gt.id;
                             return (
                               <button
                                 key={gt.id}
@@ -1343,7 +1362,11 @@ export const CreateExamAccordion = ({
                                 <div
                                   key={bl.level}
                                   onClick={() =>
-                                    handleGoalFieldChange(idx, "bloom_level", bl.level)
+                                    handleGoalFieldChange(
+                                      idx,
+                                      "bloom_level",
+                                      bl.level,
+                                    )
                                   }
                                   className="flex flex-col items-center gap-0.5 cursor-pointer group"
                                 >
@@ -1613,8 +1636,8 @@ export const CreateExamAccordion = ({
                     ? "در حال ذخیره تغییرات..."
                     : "Saving changes..."
                   : isRTL
-                  ? "در حال ایجاد آزمون..."
-                  : "Creating exam..."}
+                    ? "در حال ایجاد آزمون..."
+                    : "Creating exam..."}
               </span>
             </>
           ) : (
@@ -1626,8 +1649,8 @@ export const CreateExamAccordion = ({
                     ? "ذخیره تغییرات آزمون"
                     : "Save Exam Changes"
                   : isRTL
-                  ? "ثبت و ایجاد آزمون"
-                  : "Create Exam"}
+                    ? "ثبت و ایجاد آزمون"
+                    : "Create Exam"}
               </span>
             </>
           )}
