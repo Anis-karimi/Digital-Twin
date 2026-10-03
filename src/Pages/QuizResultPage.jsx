@@ -161,7 +161,15 @@ export const QuizResultPage = ({
     setIsDownloadingPdf(true);
     setStatusMessage(t("downloadingPdf") || "در حال آماده‌سازی کارنامه...");
 
+    let fontFixStyle = null;
     try {
+      // Fix html2canvas font metrics baseline calculation with Tailwind CSS
+      // Tailwind's preflight forces img { display: block }, causing html2canvas to wrap its internal metric probe and inflate text baseline.
+      fontFixStyle = document.createElement("style");
+      fontFixStyle.id = "html2canvas-font-fix";
+      fontFixStyle.innerHTML = `img { display: inline-block !important; }`;
+      document.head.appendChild(fontFixStyle);
+
       const getOptionLetter = (option, optionIndex) => {
         if (typeof option === "object" && option !== null) {
           return option.letter || String.fromCharCode(65 + optionIndex);
@@ -476,29 +484,55 @@ export const QuizResultPage = ({
         tdResult.style.textAlign = "center";
 
         const badge = document.createElement("div");
-        badge.style.display = "inline-block";
-        badge.style.padding = "4px 10px";
+        badge.style.display = "inline-flex";
+        badge.style.alignItems = "center";
+        badge.style.justifyContent = "center";
+        badge.style.padding = "5px 12px";
         badge.style.borderRadius = "9999px";
-        badge.style.fontSize = "12px";
-        badge.style.fontWeight = "800";
+        badge.style.fontWeight = "700";
+        badge.style.lineHeight = "1";
         badge.style.whiteSpace = "nowrap";
+        badge.style.boxSizing = "border-box";
+        badge.style.verticalAlign = "middle";
+        badge.dir = isRTL ? "rtl" : "ltr";
 
         if (isCorrect) {
           badge.style.background = "#dcfce7";
           badge.style.border = "1.5px solid #22c55e";
           badge.style.color = "#15803d";
-          badge.textContent = isRTL ? "✔ درست" : "✔ Correct";
         } else if (isUnanswered) {
           badge.style.background = "#f3f4f6";
           badge.style.border = "1.5px solid #9ca3af";
           badge.style.color = "#4b5563";
-          badge.textContent = isRTL ? "— بی‌پاسخ" : "— Unanswered";
         } else {
           badge.style.background = "#fee2e2";
           badge.style.border = "1.5px solid #ef4444";
           badge.style.color = "#b91c1c";
-          badge.textContent = isRTL ? "✖ نادرست" : "✖ Incorrect";
         }
+
+        const iconSpan = document.createElement("span");
+        iconSpan.style.display = "inline-flex";
+        iconSpan.style.alignItems = "center";
+        iconSpan.style.justifyContent = "center";
+        iconSpan.style.lineHeight = "1";
+        iconSpan.style.fontSize = "12px";
+        iconSpan.textContent = isCorrect ? "✔" : isUnanswered ? "—" : "✖";
+
+        const textSpan = document.createElement("span");
+        textSpan.style.display = "inline-flex";
+        textSpan.style.alignItems = "center";
+        textSpan.style.justifyContent = "center";
+        textSpan.style.lineHeight = "1";
+        textSpan.style.fontSize = "11.5px";
+        textSpan.style.margin = isRTL ? "0 4px 0 0" : "0 0 0 4px";
+        textSpan.textContent = isCorrect
+          ? (isRTL ? "درست" : "Correct")
+          : isUnanswered
+          ? (isRTL ? "بی‌پاسخ" : "Unanswered")
+          : (isRTL ? "نادرست" : "Incorrect");
+
+        badge.appendChild(iconSpan);
+        badge.appendChild(textSpan);
         tdResult.appendChild(badge);
         row.appendChild(tdResult);
 
@@ -578,6 +612,9 @@ export const QuizResultPage = ({
       console.error("PDF generation failed:", err);
       setStatusMessage(t("errorGettingExplanation") || "خطا در ساخت کارنامه PDF");
     } finally {
+      if (fontFixStyle && fontFixStyle.parentNode) {
+        fontFixStyle.parentNode.removeChild(fontFixStyle);
+      }
       setIsDownloadingPdf(false);
     }
   };

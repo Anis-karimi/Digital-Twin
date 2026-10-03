@@ -53,6 +53,13 @@ body {
 ========================================= */
 
 @tailwind base;
+
+@layer base {
+  img {
+    display: inline-block;
+  }
+}
+
 @tailwind components;
 @tailwind utilities;
 

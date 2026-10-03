@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import "@/styles/Allpages.css";
-import { Trash2, X, Check, Loader2, MessageSquareQuot } from "lucide-react";
+import { Trash2, X, Check, Loader2, MessageSquareQuote } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatTime } from "@/utils/dateFormatter";
