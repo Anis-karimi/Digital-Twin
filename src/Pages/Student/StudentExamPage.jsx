@@ -107,6 +107,18 @@ export const StudentExamPage = () => {
     return currentQuestion.split(/\s+/).filter(Boolean);
   }, [currentQuestion]);
 
+  // True if question contains Persian / Arabic characters, false for English / Latin
+  const isQuestionRTL = useMemo(() => {
+    if (!currentQuestion) return isRTL;
+    return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(currentQuestion);
+  }, [currentQuestion, isRTL]);
+
+  // Dynamic direction for student's typed answer
+  const isAnswerRTL = useMemo(() => {
+    if (!answerText.trim()) return isQuestionRTL;
+    return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(answerText);
+  }, [answerText, isQuestionRTL]);
+
   const stopQuestionTTS = useCallback(() => {
     setIsSpeakingQuestion(false);
     setTtsVoiceLevel(0);
@@ -326,7 +338,7 @@ export const StudentExamPage = () => {
         if ("speechSynthesis" in window) {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = isRTL ? "fa-IR" : "en-US";
+          utterance.lang = isQuestionRTL ? "fa-IR" : "en-US";
           utterance.rate = 0.95;
 
           utterance.onboundary = (e) => {
@@ -367,18 +379,20 @@ export const StudentExamPage = () => {
         }
       }
     },
-    [isRTL, stopQuestionTTS]
+    [isQuestionRTL, stopQuestionTTS]
   );
 
   // Auto-play TTS and sync word-by-word reveal whenever a new question is loaded
   useEffect(() => {
     if (currentQuestion && !isCompleted && !loading) {
       playQuestionTTS(currentQuestion);
+      // Auto-align voice input language with question language (fa for Persian, en for English)
+      setVoiceLang(isQuestionRTL ? "fa" : "en");
     }
     return () => {
       stopQuestionTTS();
     };
-  }, [currentQuestion, isCompleted, loading, playQuestionTTS, stopQuestionTTS]);
+  }, [currentQuestion, isCompleted, isQuestionRTL, loading, playQuestionTTS, stopQuestionTTS]);
 
   const startWebcam = useCallback(async () => {
     try {
@@ -1002,11 +1016,19 @@ export const StudentExamPage = () => {
         ) : (
           /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
           <div className="w-full flex flex-col justify-center items-center flex-1 gap-3.5 sm:gap-5 py-2 my-auto">
-            {/* Upper Box: Compact Live Question Box with Voice-Glow & Word-by-Word sync */}
+            {/* Upper Box: Compact Live Question Box with subtle bottom-restricted Voice-Glow & Word-by-Word sync */}
             <div className="w-full max-w-[360px] mx-auto">
               <VoiceBeam
-                type="mobile"
-                level={isSpeakingQuestion ? ttsVoiceLevel : 0}
+                type="default"
+                scale={0.55}
+                reach={0.22}
+                spread={0.5}
+                bend={0}
+                strokeOpacity={0}
+                innerOpacity={0.08}
+                bloomOpacity={0.35}
+                idle={0}
+                level={isSpeakingQuestion ? Math.min(0.48, ttsVoiceLevel * 0.6) : 0}
                 processing={false}
                 className="w-full rounded-2xl"
               >
@@ -1015,15 +1037,15 @@ export const StudentExamPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
-                      <span className="text-[11px] font-bold text-sky-300 font-vazir">
-                        {isRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
+                      <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                        {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-vazir">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
                         {currentDifficulty > 0.6
-                          ? (isRTL ? "پیشرفته" : "Hard")
+                          ? (isQuestionRTL ? "پیشرفته" : "Hard")
                           : currentDifficulty > 0.35
-                          ? (isRTL ? "متوسط" : "Medium")
-                          : (isRTL ? "مقدماتی" : "Easy")}
+                          ? (isQuestionRTL ? "متوسط" : "Medium")
+                          : (isQuestionRTL ? "مقدماتی" : "Easy")}
                       </span>
                     </div>
 
@@ -1042,17 +1064,17 @@ export const StudentExamPage = () => {
                           ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
                           : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
                       }`}
-                      title={isRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                      title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
                     >
                       {isSpeakingQuestion ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
 
-                  {/* Synchronized Word-by-Word Question Text */}
+                  {/* Synchronized Word-by-Word Question Text (Auto LTR for English regardless of app language) */}
                   <div
-                    dir={isRTL ? "rtl" : "ltr"}
+                    dir={isQuestionRTL ? "rtl" : "ltr"}
                     className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text ${
-                      isRTL ? "font-vazir text-right" : "font-inter text-left"
+                      isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
                     }`}
                   >
                     {questionWords.length > 0 ? (
@@ -1063,7 +1085,7 @@ export const StudentExamPage = () => {
                         return (
                           <span
                             key={idx}
-                            className={`inline-block mr-1 transition-all duration-150 ${
+                            className={`inline-block me-1.5 transition-all duration-150 ${
                               isCurrent
                                 ? "text-sky-300 font-bold scale-105"
                                 : isVisible
@@ -1077,7 +1099,7 @@ export const StudentExamPage = () => {
                       })
                     ) : (
                       <span className="text-slate-400">
-                        {isRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                        {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
                       </span>
                     )}
                   </div>
@@ -1088,25 +1110,35 @@ export const StudentExamPage = () => {
             {/* Bottom Box: Writing & Voice Centered, Cleaned of Text Clutter */}
             <div className="w-full max-w-[360px] mx-auto">
               <VoiceBeam
-                type="mobile"
+                type="default"
+                scale={0.55}
+                reach={0.25}
+                spread={0.55}
+                bend={0}
+                strokeOpacity={0}
+                innerOpacity={0.08}
+                bloomOpacity={0.35}
+                idle={0}
                 stream={micStream}
-                level={recording ? 0.8 : 0}
+                level={recording ? 0.48 : 0}
                 processing={isSubmitting}
                 className="w-full rounded-2xl"
               >
                 <div className="w-full rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 p-3 sm:p-3.5 shadow-2xl flex flex-col gap-2.5 transition-all">
-                  {/* Text Input Area */}
+                  {/* Text Input Area with Adaptive Direction */}
                   <textarea
-                    dir={isRTL ? "rtl" : "ltr"}
+                    dir={isAnswerRTL ? "rtl" : "ltr"}
                     rows={2}
                     value={answerText}
                     onChange={(e) => setAnswerText(e.target.value)}
                     placeholder={
-                      isRTL
+                      isQuestionRTL
                         ? "با میکروفون صحبت کنید یا پاسخ را اینجا بنویسید..."
                         : "Speak with mic or type your response here..."
                     }
-                    className="w-full rounded-xl bg-black/40 border border-white/10 p-2.5 text-xs font-vazir text-white placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 resize-none transition-all leading-relaxed"
+                    className={`w-full rounded-xl bg-black/40 border border-white/10 p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 resize-none transition-all leading-relaxed ${
+                      isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
+                    }`}
                   />
 
                   {/* Controls Row: VoiceMicButton + Submit Button */}
