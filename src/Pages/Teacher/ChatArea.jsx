@@ -1,5 +1,5 @@
 import { useId, useState, useRef, useContext, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Camera, ChevronUp, X, MessageSquareQuote, AlertCircle } from "lucide-react";
+import { ArrowLeft, ChevronUp, X, MessageSquareQuote, AlertCircle } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { ChatDropdownMenu } from "@/Components/ChatDropdownMenu";
@@ -1055,23 +1055,7 @@ export const ChatArea = () => {
             />
 
             {/* Avatar */}
-            <div
-              className={`mx-2 shrink-0 flex items-center justify-center ${
-                !isStudentChat && !isStudentRole ? "cursor-pointer group relative" : ""
-              }`}
-              onClick={() => {
-                if (!isStudentChat && !isStudentRole) {
-                  navigate(`/TeacherCourseDoc/${activeCourseId}`);
-                }
-              }}
-              title={
-                !isStudentChat && !isStudentRole
-                  ? isRTL
-                    ? "تنظیمات و تغییر عکس درس"
-                    : "Course settings & photo"
-                  : undefined
-              }
-            >
+            <div className="mx-2 shrink-0 flex items-center justify-center">
               {isStudentChat ? (
                 currentStudent?.photo_url ? (
                   <img
@@ -1091,18 +1075,13 @@ export const ChatArea = () => {
               ) : (
                 <div className="relative w-[38px] h-[38px] rounded-full overflow-hidden border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm">
                   <img
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    className="w-full h-full object-cover"
                     src={resolveMediaUrl(currentCourse?.photo_url) || AI}
                     alt={chatTitle || "Course"}
                     onError={(e) => {
                       e.currentTarget.src = AI;
                     }}
                   />
-                  {!isStudentRole && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-3.5 h-3.5 text-white drop-shadow" />
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1114,14 +1093,7 @@ export const ChatArea = () => {
                 isPersianText(chatTitle)
                   ? "fa-title-3 font-vazir"
                   : (isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter")
-              } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70 ${
-                !isStudentChat && !isStudentRole ? "cursor-pointer" : ""
-              }`}
-              onClick={() => {
-                if (!isStudentChat && !isStudentRole) {
-                  navigate(`/TeacherCourseDoc/${activeCourseId}`);
-                }
-              }}
+              } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70`}
             >
               {chatTitle}
             </h1>

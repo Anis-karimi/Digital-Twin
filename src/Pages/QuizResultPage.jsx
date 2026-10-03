@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { AppContext } from "@/Context/AppContext";
+import { quizApi } from "@/api";
 import {
   ArrowLeft,
   ArrowRight,
@@ -158,6 +159,7 @@ export const QuizResultPage = ({
   const handleDownload = async () => {
     if (isDownloadingPdf) return;
     setIsDownloadingPdf(true);
+    setStatusMessage(t("downloadingPdf") || "در حال آماده‌سازی کارنامه...");
 
     try {
       const getOptionLetter = (option, optionIndex) => {
@@ -197,68 +199,193 @@ export const QuizResultPage = ({
         return rawAnswer.charAt(0).toUpperCase();
       };
 
-      // Temporary off-screen container for PDF capture
+      // 1. Fetch AI explanations for any question missing one
+      const fetchExplanation = async (question) => {
+        const existing =
+          question.explanation ||
+          question.explain ||
+          question.explain_answer ||
+          question.reason ||
+          question.ai_explanation;
+        if (existing && typeof existing === "string" && existing.trim()) {
+          return existing.trim();
+        }
+        const qText = question.question || "";
+        if (!qText) return "";
+        try {
+          const timeoutPromise = new Promise((resolve) =>
+            setTimeout(() => resolve(""), 6000)
+          );
+          const apiPromise = quizApi.explainAnswer(qText);
+          const res = await Promise.race([apiPromise, timeoutPromise]);
+          if (res && typeof res === "string" && res.trim()) {
+            question.explanation = res.trim();
+            return res.trim();
+          }
+        } catch (err) {
+          console.warn("Could not fetch explanation for question:", err);
+        }
+        return "";
+      };
+
+      const explanations = await Promise.all(
+        quizData.map((q) => fetchExplanation(q))
+      );
+
+      // 2. Off-screen container for Landscape PDF capture (A4 landscape ratio ~ 1.41)
       const container = document.createElement("div");
       container.style.position = "absolute";
       container.style.left = "-10000px";
       container.style.top = "0";
-      container.style.width = "794px";
+      container.style.width = "1120px";
       container.style.background = "#ffffff";
-      container.style.padding = "40px";
+      container.style.padding = "35px 40px";
       container.style.boxSizing = "border-box";
-      container.style.fontFamily = "Inter, Arial, sans-serif";
-      container.style.color = "#000000";
+      container.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+      container.style.color = "#0f172a";
+      container.dir = isRTL ? "rtl" : "ltr";
 
-      // Header
+      // 3. Header
+      const headerDiv = document.createElement("div");
+      headerDiv.style.display = "flex";
+      headerDiv.style.justifyContent = "space-between";
+      headerDiv.style.alignItems = "center";
+      headerDiv.style.marginBottom = "20px";
+      headerDiv.style.paddingBottom = "15px";
+      headerDiv.style.borderBottom = "2px solid #e2e8f0";
+
       const title = document.createElement("h1");
-      title.textContent = t("quizResultTitle");
-      title.style.fontSize = "22px";
-      title.style.margin = "0 0 20px 0";
-      title.style.fontWeight = "700";
-      title.style.textAlign = isRTL ? "right" : "left";
+      title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+      title.style.fontSize = "24px";
+      title.style.margin = "0";
+      title.style.fontWeight = "800";
+      title.style.color = "#0f172a";
       title.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-      title.dir = isRTL ? "rtl" : "ltr";
-      container.appendChild(title);
 
-      // Summary
+      const subtitle = document.createElement("div");
+      subtitle.textContent = t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
+      subtitle.style.fontSize = "12px";
+      subtitle.style.color = "#64748b";
+      subtitle.style.marginTop = "4px";
+
+      const titleBox = document.createElement("div");
+      titleBox.appendChild(title);
+      titleBox.appendChild(subtitle);
+      headerDiv.appendChild(titleBox);
+
+      const dateStamp = document.createElement("div");
+      dateStamp.textContent = new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US");
+      dateStamp.style.fontSize = "12px";
+      dateStamp.style.color = "#64748b";
+      dateStamp.style.fontWeight = "600";
+      headerDiv.appendChild(dateStamp);
+
+      container.appendChild(headerDiv);
+
+      // 4. Summary cards grid in Landscape
       const summary = document.createElement("div");
-      summary.style.fontSize = "13px";
-      summary.style.marginBottom = "25px";
-      summary.style.lineHeight = "1.9";
-      summary.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+      summary.style.display = "grid";
+      summary.style.gridTemplateColumns = "repeat(4, 1fr)";
+      summary.style.gap = "14px";
+      summary.style.marginBottom = "24px";
       summary.dir = isRTL ? "rtl" : "ltr";
 
-      summary.innerHTML = `<div><strong>${t("totalQuestions")}:</strong> ${totalQuestions}</div>
-           <div><strong>${t("correctCount")}:</strong> ${correctCount}</div>
-           <div><strong>${t("incorrectCount")}:</strong> ${incorrectCount}</div>
-           <div><strong>${t("accuracyRate")}:</strong> ${correctPercentage}%</div>`;
+      const summaryCards = [
+        {
+          label: t("totalQuestions") || "کل سوالات",
+          value: totalQuestions,
+          bg: "#f8fafc",
+          border: "#cbd5e1",
+          color: "#334155",
+        },
+        {
+          label: t("correctCount") || "پاسخ‌های صحیح",
+          value: correctCount,
+          bg: "#f0fdf4",
+          border: "#86efac",
+          color: "#15803d",
+        },
+        {
+          label: t("incorrectCount") || "پاسخ‌های نادرست",
+          value: incorrectCount,
+          bg: "#fef2f2",
+          border: "#fca5a5",
+          color: "#b91c1c",
+        },
+        {
+          label: t("accuracyRate") || "درصد موفقیت",
+          value: `${correctPercentage}%`,
+          bg: "#eff6ff",
+          border: "#93c5fd",
+          color: "#1d4ed8",
+        },
+      ];
+
+      summaryCards.forEach((c) => {
+        const card = document.createElement("div");
+        card.style.background = c.bg;
+        card.style.border = `1.5px solid ${c.border}`;
+        card.style.borderRadius = "12px";
+        card.style.padding = "12px 16px";
+        card.style.textAlign = isRTL ? "right" : "left";
+
+        const lbl = document.createElement("div");
+        lbl.textContent = c.label;
+        lbl.style.fontSize = "11px";
+        lbl.style.color = "#64748b";
+        lbl.style.fontWeight = "600";
+        lbl.style.marginBottom = "4px";
+
+        const val = document.createElement("div");
+        val.textContent = String(c.value);
+        val.style.fontSize = "22px";
+        val.style.fontWeight = "800";
+        val.style.color = c.color;
+
+        card.appendChild(lbl);
+        card.appendChild(val);
+        summary.appendChild(card);
+      });
 
       container.appendChild(summary);
 
-      // Table
+      // 5. 5-Column Landscape Table
       const table = document.createElement("table");
       table.style.width = "100%";
-      table.style.borderCollapse = "collapse";
+      table.style.borderCollapse = "separate";
+      table.style.borderSpacing = "0";
       table.style.tableLayout = "fixed";
       table.style.fontSize = "11px";
       table.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+      table.dir = isRTL ? "rtl" : "ltr";
+      table.style.borderRadius = "8px";
+      table.style.overflow = "hidden";
+      table.style.border = "1px solid #cbd5e1";
 
-      // Table Header
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
-      const headers = isRTL
-        ? [t("result"), t("correctAnswer"), t("yourAnswer"), t("question")]
-        : [t("question"), t("yourAnswer"), t("correctAnswer"), t("result")];
 
-      headers.forEach((header) => {
+      const columnDefs = [
+        { title: t("question") || "سوال", width: "29%", align: isRTL ? "right" : "left" },
+        { title: t("yourAnswer") || "پاسخ شما", width: "15%", align: isRTL ? "right" : "left" },
+        { title: t("correctAnswer") || "پاسخ صحیح", width: "15%", align: isRTL ? "right" : "left" },
+        { title: t("result") || "نتیجه", width: "11%", align: "center" },
+        { title: t("explainAnswer") || "شرح پاسخ (AI)", width: "30%", align: isRTL ? "right" : "left" },
+      ];
+
+      columnDefs.forEach((col) => {
         const th = document.createElement("th");
-        th.textContent = header;
-        th.style.border = "1px solid #cccccc";
-        th.style.padding = "8px";
-        th.style.background = "#f2f2f2";
+        th.textContent = col.title;
+        th.style.width = col.width;
+        th.style.borderBottom = "2px solid #cbd5e1";
+        th.style.borderRight = "1px solid #e2e8f0";
+        th.style.padding = "10px 12px";
+        th.style.background = "#f1f5f9";
+        th.style.color = "#1e293b";
         th.style.fontWeight = "700";
-        th.style.textAlign = isRTL ? "right" : "left";
+        th.style.textAlign = col.align;
         th.style.verticalAlign = "middle";
+        th.style.fontSize = "11.5px";
         headerRow.appendChild(th);
       });
 
@@ -290,40 +417,112 @@ export const QuizResultPage = ({
 
         const questionText = `${index + 1}. ${question.question || ""}`;
         const isCorrect = selectedAnswer === correctAnswer;
-        const resultText = isCorrect ? t("correct") : t("incorrect");
+        const isUnanswered = selectedAnswer === t("unanswered") || !selectedAnswers[index];
 
         const row = document.createElement("tr");
-        const cells = isRTL
-          ? [resultText, correctAnswerText, selectedAnswerText, questionText]
-          : [questionText, selectedAnswerText, correctAnswerText, resultText];
+        row.style.background = isCorrect
+          ? "#f0fdf4"
+          : isUnanswered
+          ? "#fefce8"
+          : "#fef2f2";
+        row.style.borderBottom = "1px solid #e2e8f0";
 
-        cells.forEach((text, cellIndex) => {
-          const td = document.createElement("td");
-          td.textContent = text;
-          td.style.border = "1px solid #cccccc";
-          td.style.padding = "8px";
-          td.style.verticalAlign = "middle";
-          td.style.lineHeight = "1.6";
-          td.style.wordBreak = "break-word";
+        // 1. Question Cell
+        const tdQ = document.createElement("td");
+        tdQ.style.width = "29%";
+        tdQ.style.padding = "10px 12px";
+        tdQ.style.borderBottom = "1px solid #e2e8f0";
+        tdQ.style.borderRight = "1px solid #e2e8f0";
+        tdQ.style.verticalAlign = "top";
+        tdQ.style.lineHeight = "1.6";
+        tdQ.style.fontWeight = "500";
+        tdQ.style.color = "#0f172a";
+        tdQ.textContent = questionText;
+        row.appendChild(tdQ);
 
-          if (isPersianText(text)) {
-            td.dir = "rtl";
-            td.style.textAlign = "right";
-            td.style.fontFamily = "Vazirmatn, Arial, sans-serif";
-          } else {
-            td.dir = "ltr";
-            td.style.textAlign = "left";
-            td.style.fontFamily = "Inter, Arial, sans-serif";
-          }
+        // 2. Your Answer Cell
+        const tdYour = document.createElement("td");
+        tdYour.style.width = "15%";
+        tdYour.style.padding = "10px 12px";
+        tdYour.style.borderBottom = "1px solid #e2e8f0";
+        tdYour.style.borderRight = "1px solid #e2e8f0";
+        tdYour.style.verticalAlign = "top";
+        tdYour.style.lineHeight = "1.5";
+        tdYour.style.fontWeight = "600";
+        tdYour.style.color = isCorrect ? "#15803d" : isUnanswered ? "#64748b" : "#b91c1c";
+        tdYour.textContent = selectedAnswerText;
+        row.appendChild(tdYour);
 
-          const resultCellIndex = isRTL ? 0 : 3;
-          if (cellIndex === resultCellIndex) {
-            td.style.fontWeight = "700";
-            td.style.color = isCorrect ? "#15803d" : "#be123c";
-          }
+        // 3. Correct Answer Cell
+        const tdCorrect = document.createElement("td");
+        tdCorrect.style.width = "15%";
+        tdCorrect.style.padding = "10px 12px";
+        tdCorrect.style.borderBottom = "1px solid #e2e8f0";
+        tdCorrect.style.borderRight = "1px solid #e2e8f0";
+        tdCorrect.style.verticalAlign = "top";
+        tdCorrect.style.lineHeight = "1.5";
+        tdCorrect.style.fontWeight = "600";
+        tdCorrect.style.color = "#15803d";
+        tdCorrect.textContent = correctAnswerText;
+        row.appendChild(tdCorrect);
 
-          row.appendChild(td);
-        });
+        // 4. Result Cell with Check/Cross Badge
+        const tdResult = document.createElement("td");
+        tdResult.style.width = "11%";
+        tdResult.style.padding = "10px 8px";
+        tdResult.style.borderBottom = "1px solid #e2e8f0";
+        tdResult.style.borderRight = "1px solid #e2e8f0";
+        tdResult.style.verticalAlign = "middle";
+        tdResult.style.textAlign = "center";
+
+        const badge = document.createElement("div");
+        badge.style.display = "inline-block";
+        badge.style.padding = "4px 10px";
+        badge.style.borderRadius = "9999px";
+        badge.style.fontSize = "12px";
+        badge.style.fontWeight = "800";
+        badge.style.whiteSpace = "nowrap";
+
+        if (isCorrect) {
+          badge.style.background = "#dcfce7";
+          badge.style.border = "1.5px solid #22c55e";
+          badge.style.color = "#15803d";
+          badge.textContent = isRTL ? "✔ درست" : "✔ Correct";
+        } else if (isUnanswered) {
+          badge.style.background = "#f3f4f6";
+          badge.style.border = "1.5px solid #9ca3af";
+          badge.style.color = "#4b5563";
+          badge.textContent = isRTL ? "— بی‌پاسخ" : "— Unanswered";
+        } else {
+          badge.style.background = "#fee2e2";
+          badge.style.border = "1.5px solid #ef4444";
+          badge.style.color = "#b91c1c";
+          badge.textContent = isRTL ? "✖ نادرست" : "✖ Incorrect";
+        }
+        tdResult.appendChild(badge);
+        row.appendChild(tdResult);
+
+        // 5. AI Explanation Cell
+        const tdExp = document.createElement("td");
+        tdExp.style.width = "30%";
+        tdExp.style.padding = "10px 12px";
+        tdExp.style.borderBottom = "1px solid #e2e8f0";
+        tdExp.style.verticalAlign = "top";
+        tdExp.style.lineHeight = "1.65";
+        tdExp.style.fontSize = "10.5px";
+        tdExp.style.color = "#1e293b";
+        tdExp.style.wordBreak = "break-word";
+
+        const expContent =
+          (explanations[index] || "").trim() ||
+          (isCorrect
+            ? (isRTL ? "پاسخ کاملاً صحیح است." : "Correct answer.")
+            : (isRTL
+                ? `گزینه صحیح (${correctAnswer}) است.`
+                : `The correct option is (${correctAnswer}).`));
+
+        tdExp.textContent = expContent;
+        row.appendChild(tdExp);
 
         tbody.appendChild(row);
       });
@@ -336,7 +535,7 @@ export const QuizResultPage = ({
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 250));
 
       const canvas = await html2canvas(container, {
         scale: 2,
@@ -347,28 +546,29 @@ export const QuizResultPage = ({
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: "portrait",
+        orientation: "landscape",
         unit: "mm",
         format: "a4",
       });
 
-      const pageWidth = 210;
-      const pageHeight = 297;
+      const pageWidth = 297;
+      const pageHeight = 210;
       const margin = 10;
       const usableWidth = pageWidth - margin * 2;
+      const usableHeight = pageHeight - margin * 2;
       const imageHeight = (canvas.height * usableWidth) / canvas.width;
 
       let heightLeft = imageHeight;
       let position = margin;
 
       pdf.addImage(imgData, "PNG", margin, position, usableWidth, imageHeight);
-      heightLeft -= pageHeight - margin * 2;
+      heightLeft -= usableHeight;
 
       while (heightLeft > 0) {
         position = margin - (imageHeight - heightLeft);
         pdf.addPage();
         pdf.addImage(imgData, "PNG", margin, position, usableWidth, imageHeight);
-        heightLeft -= pageHeight - margin * 2;
+        heightLeft -= usableHeight;
       }
 
       document.body.removeChild(container);
@@ -376,6 +576,7 @@ export const QuizResultPage = ({
       setStatusMessage(t("pdfDownloadedSuccess"));
     } catch (err) {
       console.error("PDF generation failed:", err);
+      setStatusMessage(t("errorGettingExplanation") || "خطا در ساخت کارنامه PDF");
     } finally {
       setIsDownloadingPdf(false);
     }
