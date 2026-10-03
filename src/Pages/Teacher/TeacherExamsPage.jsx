@@ -10,6 +10,7 @@ import {
   Filter,
   ArrowUpDown,
   Check,
+  X,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -612,15 +613,64 @@ export const TeacherExams = () => {
                     </div>
                   </div>
 
-                  {filterStatus !== "all" && (
-                    <button
-                      type="button"
-                      onClick={() => setFilterStatus("all")}
-                      className="text-xs font-vazir text-primery-700 dark:text-primery-300 hover:underline cursor-pointer"
-                    >
-                      {isRTL ? "پاک کردن فیلتر" : "Clear filter"}
-                    </button>
-                  )}
+                  {/* Active Filter / Sort Chips */}
+                {(filterStatus !== "all" || sortOrder !== "date_desc") && (
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {/* Active Filter */}
+                    {filterStatus !== "all" && (
+                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-primery-100 dark:bg-primery-900/40 border border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200">
+                        <span className="text-[10px] font-vazir font-medium">
+                          {filterStatus === "active"
+                            ? isRTL
+                              ? "در حال برگزاری"
+                              : "Active"
+                            : filterStatus === "upcoming"
+                              ? isRTL
+                                ? "شروع نشده"
+                                : "Upcoming"
+                              : isRTL
+                                ? "پایان یافته"
+                                : "Ended"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setFilterStatus("all")}
+                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primery-200 dark:hover:bg-primery-800 cursor-pointer transition-colors"
+                          aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Active Sort */}
+                    {sortOrder !== "date_desc" && (
+                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1100 border border-neutral-scale300 dark:border-neutral-scale900 text-neutral-scale1200 dark:text-neutral-scale300">
+                        <span className="text-[10px] font-vazir font-medium">
+                          {sortOrder === "date_asc"
+                            ? isRTL
+                              ? "نزدیک‌ترین تاریخ"
+                              : "Earliest date"
+                            : isRTL
+                              ? "عنوان آزمون"
+                              : "Title"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setSortOrder("date_desc")}
+                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-neutral-scale200 dark:hover:bg-neutral-scale900 cursor-pointer transition-colors"
+                          aria-label={
+                            isRTL ? "حذف مرتب‌سازی" : "Remove sorting"
+                          }
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 </div>
               </div>
 

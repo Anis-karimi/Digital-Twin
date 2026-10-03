@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useMemo } from "react";
 import {
   ArrowLeft,
   Clock3,
@@ -10,6 +10,10 @@ import {
   BarChart3,
   AlertCircle,
   BookOpen,
+  Filter,
+  ArrowUpDown,
+  Check,
+  X,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -20,8 +24,6 @@ import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
 import { toPersianDigits } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
- 
-
   const navigate = useNavigate();
   const { isRTL, t } = useContext(AppContext);
 
@@ -29,6 +31,11 @@ export const StudentExams = () => {
   const [loading, setLoading] = useState(true);
   const [schedulingExam, setSchedulingExam] = useState(null);
   const [turnWarning, setTurnWarning] = useState("");
+
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [sortOrder, setSortOrder] = useState("date_desc");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
 
   const [now, setNow] = useState(new Date());
 
@@ -168,10 +175,7 @@ export const StudentExams = () => {
             const key = String(item.id || item.assignment_id);
             const titleKey = (item.title || "").trim().toLowerCase();
 
-            if (
-              seenIds.has(key) ||
-              (titleKey && seenTitles.has(titleKey))
-            ) {
+            if (seenIds.has(key) || (titleKey && seenTitles.has(titleKey))) {
               continue;
             }
 
@@ -185,7 +189,7 @@ export const StudentExams = () => {
                     .map((g) =>
                       typeof g === "object" && g !== null
                         ? g.title || g.name || ""
-                        : String(g)
+                        : String(g),
                     )
                     .filter(Boolean)
                     .join("، ")
@@ -198,27 +202,15 @@ export const StudentExams = () => {
               title: item.title,
               course: item.course || "سیستم عامل",
               topic: topic || "مباحث آزمون",
-              date:
-                item.date ||
-                item.exam_date ||
-                "1405/07/20",
+              date: item.date || item.exam_date || "1405/07/20",
               startAt: item.start_at,
               endAt: item.end_at,
-              duration:
-                item.duration ||
-                item.duration_minutes ||
-                20,
+              duration: item.duration || item.duration_minutes || 20,
               status: item.status || "assigned",
               score: item.score,
               passed: item.passed,
-              windowStart:
-                item.window_start ||
-                item.start_at ||
-                "10:00",
-              windowEnd:
-                item.window_end ||
-                item.end_at ||
-                "14:00",
+              windowStart: item.window_start || item.start_at || "10:00",
+              windowEnd: item.window_end || item.end_at || "14:00",
               studentSlotStart: item.student_slot_start,
               studentSlotEnd: item.student_slot_end,
               gapMinutes: item.gap_minutes || 5,
@@ -229,9 +221,7 @@ export const StudentExams = () => {
         } else {
           // Fallback to course quizzes if empty
           examsApi
-            .getLessonQuizzes(
-              "c0000000-0000-4000-8000-000000000001"
-            )
+            .getLessonQuizzes("c0000000-0000-4000-8000-000000000001")
             .then((quizzes) => {
               if (
                 !isMounted ||
@@ -248,7 +238,7 @@ export const StudentExams = () => {
                         .map((g) =>
                           typeof g === "object" && g !== null
                             ? g.title || g.name || ""
-                            : String(g)
+                            : String(g),
                         )
                         .filter(Boolean)
                         .join("، ")
@@ -262,6 +252,8 @@ export const StudentExams = () => {
                   course: "سیستم عامل",
                   topic: topic || "مباحث آزمون",
                   date: q.exam_date || "1405/07/20",
+                  startAt: q.start_at,
+                  endAt: q.end_at,
                   duration: q.duration_minutes || 20,
                   status: "assigned",
                   score: null,
@@ -285,8 +277,7 @@ export const StudentExams = () => {
       isMounted = false;
     };
   }, []);
-  
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
@@ -304,6 +295,59 @@ export const StudentExams = () => {
 
     return "assigned";
   };
+
+  const displayedExams = useMemo(() => {
+    let result = exams.map((exam) => {
+      const timing = checkSlotTiming(exam);
+
+      let filterStatus = "upcoming";
+
+      if (exam.status === "completed") {
+        filterStatus = "ended";
+      } else if (
+        exam.status === "started" ||
+        exam.status === "active" ||
+        timing.status === "current"
+      ) {
+        filterStatus = "active";
+      } else if (timing.status === "passed") {
+        filterStatus = "ended";
+      } else {
+        filterStatus = "upcoming";
+      }
+
+      return {
+        ...exam,
+        filterStatus,
+      };
+    });
+
+    if (filterStatus !== "all") {
+      result = result.filter((exam) => exam.filterStatus === filterStatus);
+    }
+
+    result.sort((a, b) => {
+      if (sortOrder === "title") {
+        return (a.title || "").localeCompare(b.title || "", "fa");
+      }
+
+      const dateA = a.startAt
+        ? new Date(a.startAt).getTime()
+        : new Date(a.date || "").getTime();
+
+      const dateB = b.startAt
+        ? new Date(b.startAt).getTime()
+        : new Date(b.date || "").getTime();
+
+      if (sortOrder === "date_asc") {
+        return dateA - dateB;
+      }
+
+      return dateB - dateA;
+    });
+
+    return result;
+  }, [exams, filterStatus, sortOrder, now]);
 
   const handleStartExam = (exam) => {
     const targetId = exam.assignment_id || exam.id;
@@ -369,20 +413,316 @@ export const StudentExams = () => {
         <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[105px]">
           <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             {/* Section Header */}
-            <div className="px-4 flex items-center justify-between gap-2">
-              <p
-                className={`text-primery-800 dark:text-neutral-scale70 ${
-                  isRTL
-                    ? "fa-body-medium font-vazir text-right"
-                    : "en-body-medium font-inter text-left"
-                }`}
-              >
-                {isRTL ? "آزمون‌های من" : "My Exams"}
-              </p>
+            <div className="px-4 flex flex-col gap-2.5">
+              {/* Row 1 */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`text-primery-800 dark:text-neutral-scale70 ${
+                      isRTL
+                        ? "fa-body-medium font-vazir text-right"
+                        : "en-body-medium font-inter text-left"
+                    }`}
+                  >
+                    {isRTL ? "آزمون‌های من" : "My Exams"}
+                  </p>
 
-              <span className="text-xs px-2.5 py-1 rounded-full bg-primery-90 dark:bg-primery-900 text-primery-800 dark:text-primery-90 font-medium font-vazir">
-                {isRTL ? toPersianDigits(exams.length) : exams.length} {isRTL ? "آزمون" : "Exams"}
-              </span>
+                  <span className="text-[11px] font-vazir font-semibold px-2 py-0.5 rounded-full bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale300">
+                    {isRTL
+                      ? toPersianDigits(displayedExams.length)
+                      : displayedExams.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Row 2: Filter & Sort */}
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-neutral-scale200/60 dark:border-neutral-scale1100/60">
+                <div className="flex items-center gap-2">
+                  {/* Filter */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFilterOpen(!isFilterOpen);
+                        setIsSortOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
+                        filterStatus !== "all"
+                          ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
+                          : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
+                      }`}
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                      <span>{isRTL ? "فیلتر" : "Filter"}</span>
+
+                      {filterStatus !== "all" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primery-600 dark:bg-primery-400" />
+                      )}
+                    </button>
+
+                    {isFilterOpen && (
+                      <div
+                        className={`absolute top-full mt-1.5 ${
+                          isRTL ? "right-0" : "left-0"
+                        } z-30 min-w-[170px] bg-white dark:bg-neutral-scale1300 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1100 shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150`}
+                      >
+                        <div className="flex flex-col gap-0.5 text-xs font-vazir">
+                          {/* All */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterStatus("all");
+                              setIsFilterOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              filterStatus === "all"
+                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span>
+                              {isRTL ? "همه وضعیت‌ها" : "All statuses"}
+                            </span>
+
+                            {filterStatus === "all" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Active */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterStatus("active");
+                              setIsFilterOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              filterStatus === "active"
+                                ? "bg-green-50 dark:bg-green-950/40 text-success-1000 dark:text-success-100 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-success-500" />
+                              <span>
+                                {isRTL ? "در حال برگزاری (سبز)" : "Active"}
+                              </span>
+                            </span>
+
+                            {filterStatus === "active" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Upcoming */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterStatus("upcoming");
+                              setIsFilterOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              filterStatus === "upcoming"
+                                ? "bg-blue-50 dark:bg-blue-950/40 text-primery-800 dark:text-primery-200 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-primery-500" />
+                              <span>
+                                {isRTL ? "شروع نشده (آبی)" : "Upcoming"}
+                              </span>
+                            </span>
+
+                            {filterStatus === "upcoming" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Ended */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterStatus("ended");
+                              setIsFilterOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              filterStatus === "ended"
+                                ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-neutral-scale700" />
+                              <span>
+                                {isRTL ? "پایان یافته (خاکستری)" : "Ended"}
+                              </span>
+                            </span>
+
+                            {filterStatus === "ended" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sort */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSortOpen(!isSortOpen);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
+                        sortOrder !== "date_desc"
+                          ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
+                          : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
+                      }`}
+                    >
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                      <span>{isRTL ? "مرتب‌سازی" : "Sort"}</span>
+                    </button>
+
+                    {isSortOpen && (
+                      <div
+                        className={`absolute top-full mt-1.5 ${
+                          isRTL ? "right-0" : "left-0"
+                        } z-30 min-w-[160px] bg-white dark:bg-neutral-scale1300 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1100 shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150`}
+                      >
+                        <div className="flex flex-col gap-0.5 text-xs font-vazir">
+                          {/* Newest */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSortOrder("date_desc");
+                              setIsSortOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              sortOrder === "date_desc"
+                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span>
+                              {isRTL ? "جدیدترین تاریخ" : "Newest date"}
+                            </span>
+
+                            {sortOrder === "date_desc" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Earliest */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSortOrder("date_asc");
+                              setIsSortOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              sortOrder === "date_asc"
+                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span>
+                              {isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}
+                            </span>
+
+                            {sortOrder === "date_asc" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Title */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSortOrder("title");
+                              setIsSortOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                              sortOrder === "title"
+                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
+                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            }`}
+                          >
+                            <span>
+                              {isRTL ? "عنوان آزمون (الفبایی)" : "Title"}
+                            </span>
+
+                            {sortOrder === "title" && (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Active Filter / Sort Chips */}
+                {(filterStatus !== "all" || sortOrder !== "date_desc") && (
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {/* Active Filter */}
+                    {filterStatus !== "all" && (
+                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-primery-100 dark:bg-primery-900/40 border border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200">
+                        <span className="text-[10px] font-vazir font-medium">
+                          {filterStatus === "active"
+                            ? isRTL
+                              ? "در حال برگزاری"
+                              : "Active"
+                            : filterStatus === "upcoming"
+                              ? isRTL
+                                ? "شروع نشده"
+                                : "Upcoming"
+                              : isRTL
+                                ? "پایان یافته"
+                                : "Ended"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setFilterStatus("all")}
+                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primery-200 dark:hover:bg-primery-800 cursor-pointer transition-colors"
+                          aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Active Sort */}
+                    {sortOrder !== "date_desc" && (
+                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1100 border border-neutral-scale300 dark:border-neutral-scale900 text-neutral-scale1200 dark:text-neutral-scale300">
+                        <span className="text-[10px] font-vazir font-medium">
+                          {sortOrder === "date_asc"
+                            ? isRTL
+                              ? "نزدیک‌ترین تاریخ"
+                              : "Earliest date"
+                            : isRTL
+                              ? "عنوان آزمون"
+                              : "Title"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setSortOrder("date_desc")}
+                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-neutral-scale200 dark:hover:bg-neutral-scale900 cursor-pointer transition-colors"
+                          aria-label={
+                            isRTL ? "حذف مرتب‌سازی" : "Remove sorting"
+                          }
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Exams List */}
@@ -395,18 +735,22 @@ export const StudentExams = () => {
                     {isRTL ? "در حال بارگذاری آزمون‌ها..." : "Loading exams..."}
                   </span>
                 </div>
-              ) : exams.length === 0 ? (
-                <div className="w-full py-10 flex flex-col items-center justify-center text-center p-4 bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1000">
-                  <BookOpen className="w-8 h-8 text-neutral-scale500 mb-2" />
+              ) : displayedExams.length === 0 ? (
+                <div className="w-full py-12 px-4 flex flex-col items-center justify-center text-center gap-2">
+                  <CalendarDays className="w-8 h-8 text-neutral-400" />
 
-                  <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale300">
-                    {isRTL
-                      ? "در حال حاضر هیچ آزمونی برای شما تعریف نشده است."
-                      : "No exams currently assigned to you."}
-                  </p>
+                  <span className="text-xs font-vazir text-neutral-500 dark:text-neutral-400">
+                    {filterStatus !== "all"
+                      ? isRTL
+                        ? "هیچ آزمونی با این وضعیت یافت نشد."
+                        : "No exams match this filter."
+                      : isRTL
+                        ? "در حال حاضر هیچ آزمونی برای شما تعریف نشده است."
+                        : "No exams currently assigned to you."}
+                  </span>
                 </div>
               ) : (
-                exams.map((exam) => {
+                displayedExams.map((exam) => {
                   const status = getExamStatus(exam);
                   const timing = checkSlotTiming(exam);
 
