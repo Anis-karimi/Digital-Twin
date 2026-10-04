@@ -24,7 +24,6 @@ import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
-import AI from "@/assets/images/AI.png";
 import { voiceApi } from "@/api";
 
 export const StudentExamPage = () => {
