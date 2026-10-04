@@ -446,17 +446,13 @@ export const StudentExams = () => {
                         setIsFilterOpen(!isFilterOpen);
                         setIsSortOpen(false);
                       }}
-                      className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
-                        filterStatus !== "all"
-                          ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
-                          : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                      }`}
+                      className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
                     >
                       <Filter className="w-3.5 h-3.5" />
                       <span>{isRTL ? "فیلتر" : "Filter"}</span>
 
                       {filterStatus !== "all" && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-primery-600 dark:bg-primery-400" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400" />
                       )}
                     </button>
 
@@ -576,14 +572,22 @@ export const StudentExams = () => {
                         setIsSortOpen(!isSortOpen);
                         setIsFilterOpen(false);
                       }}
-                      className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
-                        sortOrder !== "date_desc"
-                          ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
-                          : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                      }`}
+                      className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
                     >
                       <ArrowUpDown className="w-3.5 h-3.5" />
-                      <span>{isRTL ? "مرتب‌سازی" : "Sort"}</span>
+                      <span>
+                        {sortOrder === "date_desc"
+                          ? isRTL
+                            ? "جدیدترین تاریخ"
+                            : "Newest date"
+                          : sortOrder === "date_asc"
+                            ? isRTL
+                              ? "نزدیک‌ترین تاریخ"
+                              : "Earliest date"
+                            : isRTL
+                              ? "عنوان آزمون"
+                              : "Title"}
+                      </span>
                     </button>
 
                     {isSortOpen && (
@@ -600,11 +604,7 @@ export const StudentExams = () => {
                               setSortOrder("date_desc");
                               setIsSortOpen(false);
                             }}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                              sortOrder === "date_desc"
-                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                            }`}
+                            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
                               {isRTL ? "جدیدترین تاریخ" : "Newest date"}
@@ -622,11 +622,7 @@ export const StudentExams = () => {
                               setSortOrder("date_asc");
                               setIsSortOpen(false);
                             }}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                              sortOrder === "date_asc"
-                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                            }`}
+                            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
                               {isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}
@@ -644,11 +640,7 @@ export const StudentExams = () => {
                               setSortOrder("title");
                               setIsSortOpen(false);
                             }}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                              sortOrder === "title"
-                                ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                            }`}
+                            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
                               {isRTL ? "عنوان آزمون (الفبایی)" : "Title"}
@@ -665,11 +657,19 @@ export const StudentExams = () => {
                 </div>
 
                 {/* Active Filter / Sort Chips */}
-                {(filterStatus !== "all" || sortOrder !== "date_desc") && (
+                {filterStatus !== "all" && (
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {/* Active Filter */}
                     {filterStatus !== "all" && (
-                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-primery-100 dark:bg-primery-900/40 border border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200">
+                      <div
+                        className={`flex items-center gap-1 h-[26px] px-2 rounded-full border ${
+                          filterStatus === "active"
+                            ? "bg-green-50 dark:bg-green-950/40 border-success-300 dark:border-success-700 text-success-1000 dark:text-success-100"
+                            : filterStatus === "upcoming"
+                              ? "bg-blue-50 dark:bg-blue-950/40 border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200"
+                              : "bg-neutral-100 dark:bg-neutral-scale800 border-neutral-scale300 dark:border-neutral-scale700 text-neutral-scale800 dark:text-neutral-scale200"
+                        }`}
+                      >
                         <span className="text-[10px] font-vazir font-medium">
                           {filterStatus === "active"
                             ? isRTL
@@ -689,32 +689,6 @@ export const StudentExams = () => {
                           onClick={() => setFilterStatus("all")}
                           className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primery-200 dark:hover:bg-primery-800 cursor-pointer transition-colors"
                           aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Active Sort */}
-                    {sortOrder !== "date_desc" && (
-                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1100 border border-neutral-scale300 dark:border-neutral-scale900 text-neutral-scale1200 dark:text-neutral-scale300">
-                        <span className="text-[10px] font-vazir font-medium">
-                          {sortOrder === "date_asc"
-                            ? isRTL
-                              ? "نزدیک‌ترین تاریخ"
-                              : "Earliest date"
-                            : isRTL
-                              ? "عنوان آزمون"
-                              : "Title"}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => setSortOrder("date_desc")}
-                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-neutral-scale200 dark:hover:bg-neutral-scale900 cursor-pointer transition-colors"
-                          aria-label={
-                            isRTL ? "حذف مرتب‌سازی" : "Remove sorting"
-                          }
                         >
                           <X className="w-3 h-3" />
                         </button>

@@ -312,8 +312,8 @@ export const TeacherExams = () => {
               editingExam
                 ? setEditingExam(null)
                 : isCreatingExam
-                ? setIsCreatingExam(false)
-                : navigate(-1)
+                  ? setIsCreatingExam(false)
+                  : navigate(-1)
             }
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
@@ -338,12 +338,12 @@ export const TeacherExams = () => {
                 ? "ویرایش آزمون"
                 : "Edit Exam"
               : isCreatingExam
-              ? isRTL
-                ? "ساخت آزمون جدید"
-                : "Create New Exam"
-              : isRTL
-              ? "آزمون‌ها"
-              : "Exams"}
+                ? isRTL
+                  ? "ساخت آزمون جدید"
+                  : "Create New Exam"
+                : isRTL
+                  ? "آزمون‌ها"
+                  : "Exams"}
           </h1>
         </div>
       </header>
@@ -427,17 +427,13 @@ export const TeacherExams = () => {
                           setIsFilterOpen(!isFilterOpen);
                           setIsSortOpen(false);
                         }}
-                        className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
-                          filterStatus !== "all"
-                            ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
-                            : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                        }`}
+                        className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
                         title={isRTL ? "فیلتر وضعیت" : "Filter status"}
                       >
                         <Filter className="w-3.5 h-3.5" />
                         <span>{isRTL ? "فیلتر" : "Filter"}</span>
                         {filterStatus !== "all" && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-primery-600 dark:bg-primery-400" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400" />
                         )}
                       </button>
 
@@ -460,7 +456,9 @@ export const TeacherExams = () => {
                                   : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                               }`}
                             >
-                              <span>{isRTL ? "همه وضعیت‌ها" : "All statuses"}</span>
+                              <span>
+                                {isRTL ? "همه وضعیت‌ها" : "All statuses"}
+                              </span>
                               {filterStatus === "all" && (
                                 <Check className="w-3.5 h-3.5" />
                               )}
@@ -479,7 +477,9 @@ export const TeacherExams = () => {
                             >
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-success-500" />
-                                <span>{isRTL ? "در حال برگزاری (سبز)" : "Active"}</span>
+                                <span>
+                                  {isRTL ? "در حال برگزاری (سبز)" : "Active"}
+                                </span>
                               </span>
                               {filterStatus === "active" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -499,7 +499,9 @@ export const TeacherExams = () => {
                             >
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-primery-500" />
-                                <span>{isRTL ? "شروع نشده (آبی)" : "Upcoming"}</span>
+                                <span>
+                                  {isRTL ? "شروع نشده (آبی)" : "Upcoming"}
+                                </span>
                               </span>
                               {filterStatus === "upcoming" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -519,7 +521,9 @@ export const TeacherExams = () => {
                             >
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-neutral-scale700" />
-                                <span>{isRTL ? "پایان یافته (خاکستری)" : "Ended"}</span>
+                                <span>
+                                  {isRTL ? "پایان یافته (خاکستری)" : "Ended"}
+                                </span>
                               </span>
                               {filterStatus === "ended" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -538,15 +542,23 @@ export const TeacherExams = () => {
                           setIsSortOpen(!isSortOpen);
                           setIsFilterOpen(false);
                         }}
-                        className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir ${
-                          sortOrder !== "date_desc"
-                            ? "bg-primery-100 dark:bg-primery-900/40 border-primery-500 text-primery-800 dark:text-primery-200 font-semibold"
-                            : "bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                        }`}
+                        className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
                         title={isRTL ? "مرتب‌سازی" : "Sort"}
                       >
                         <ArrowUpDown className="w-3.5 h-3.5" />
-                        <span>{isRTL ? "مرتب‌سازی" : "Sort"}</span>
+                        <span>
+                          {sortOrder === "date_desc"
+                            ? isRTL
+                              ? "جدیدترین تاریخ"
+                              : "Newest date"
+                            : sortOrder === "date_asc"
+                              ? isRTL
+                                ? "نزدیک‌ترین تاریخ"
+                                : "Earliest date"
+                              : isRTL
+                                ? "عنوان آزمون"
+                                : "Title"}
+                        </span>
                       </button>
 
                       {isSortOpen && (
@@ -562,13 +574,11 @@ export const TeacherExams = () => {
                                 setSortOrder("date_desc");
                                 setIsSortOpen(false);
                               }}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                                sortOrder === "date_desc"
-                                  ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                              }`}
+                              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
-                              <span>{isRTL ? "جدیدترین تاریخ" : "Newest date"}</span>
+                              <span>
+                                {isRTL ? "جدیدترین تاریخ" : "Newest date"}
+                              </span>
                               {sortOrder === "date_desc" && (
                                 <Check className="w-3.5 h-3.5" />
                               )}
@@ -579,13 +589,11 @@ export const TeacherExams = () => {
                                 setSortOrder("date_asc");
                                 setIsSortOpen(false);
                               }}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                                sortOrder === "date_asc"
-                                  ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                              }`}
+                              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
-                              <span>{isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}</span>
+                              <span>
+                                {isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}
+                              </span>
                               {sortOrder === "date_asc" && (
                                 <Check className="w-3.5 h-3.5" />
                               )}
@@ -596,13 +604,11 @@ export const TeacherExams = () => {
                                 setSortOrder("title");
                                 setIsSortOpen(false);
                               }}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                                sortOrder === "title"
-                                  ? "bg-primery-50 dark:bg-primery-900/30 text-primery-700 dark:text-primery-300 font-semibold"
-                                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                              }`}
+                              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
-                              <span>{isRTL ? "عنوان آزمون (الفبایی)" : "Title"}</span>
+                              <span>
+                                {isRTL ? "عنوان آزمون (الفبایی)" : "Title"}
+                              </span>
                               {sortOrder === "title" && (
                                 <Check className="w-3.5 h-3.5" />
                               )}
@@ -614,63 +620,51 @@ export const TeacherExams = () => {
                   </div>
 
                   {/* Active Filter / Sort Chips */}
-                {(filterStatus !== "all" || sortOrder !== "date_desc") && (
-                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    {/* Active Filter */}
-                    {filterStatus !== "all" && (
-                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-primery-100 dark:bg-primery-900/40 border border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200">
-                        <span className="text-[10px] font-vazir font-medium">
-                          {filterStatus === "active"
-                            ? isRTL
-                              ? "در حال برگزاری"
-                              : "Active"
-                            : filterStatus === "upcoming"
+                  {filterStatus !== "all" && (
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {/* Active Filter */}
+                      {filterStatus !== "all" && (
+                        <div
+                          className={`flex items-center gap-1 h-[26px] px-2 rounded-full border ${
+                            filterStatus === "active"
+                              ? "bg-green-50 dark:bg-green-950/40 border-success-300 dark:border-success-700 text-success-1000 dark:text-success-100"
+                              : filterStatus === "upcoming"
+                                ? "bg-blue-50 dark:bg-blue-950/40 border-primery-300 dark:border-primery-700 text-primery-800 dark:text-primery-200"
+                                : "bg-neutral-100 dark:bg-neutral-scale800 border-neutral-scale300 dark:border-neutral-scale700 text-neutral-scale800 dark:text-neutral-scale200"
+                          }`}
+                        >
+                          <span className="text-[10px] font-vazir font-medium">
+                            {filterStatus === "active"
                               ? isRTL
-                                ? "شروع نشده"
-                                : "Upcoming"
-                              : isRTL
-                                ? "پایان یافته"
-                                : "Ended"}
-                        </span>
+                                ? "در حال برگزاری"
+                                : "Active"
+                              : filterStatus === "upcoming"
+                                ? isRTL
+                                  ? "شروع نشده"
+                                  : "Upcoming"
+                                : isRTL
+                                  ? "پایان یافته"
+                                  : "Ended"}
+                          </span>
 
-                        <button
-                          type="button"
-                          onClick={() => setFilterStatus("all")}
-                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primery-200 dark:hover:bg-primery-800 cursor-pointer transition-colors"
-                          aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Active Sort */}
-                    {sortOrder !== "date_desc" && (
-                      <div className="flex items-center gap-1 h-[26px] px-2 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1100 border border-neutral-scale300 dark:border-neutral-scale900 text-neutral-scale1200 dark:text-neutral-scale300">
-                        <span className="text-[10px] font-vazir font-medium">
-                          {sortOrder === "date_asc"
-                            ? isRTL
-                              ? "نزدیک‌ترین تاریخ"
-                              : "Earliest date"
-                            : isRTL
-                              ? "عنوان آزمون"
-                              : "Title"}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => setSortOrder("date_desc")}
-                          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-neutral-scale200 dark:hover:bg-neutral-scale900 cursor-pointer transition-colors"
-                          aria-label={
-                            isRTL ? "حذف مرتب‌سازی" : "Remove sorting"
-                          }
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                          <button
+                            type="button"
+                            onClick={() => setFilterStatus("all")}
+                            className={`w-4 h-4 flex items-center justify-center rounded-full cursor-pointer transition-colors ${
+                              filterStatus === "active"
+                                ? "hover:bg-green-200 dark:hover:bg-green-900"
+                                : filterStatus === "upcoming"
+                                  ? "hover:bg-blue-200 dark:hover:bg-blue-900"
+                                  : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                            }`}
+                            aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -685,8 +679,8 @@ export const TeacherExams = () => {
                           ? "هیچ آزمونی با این وضعیت یافت نشد."
                           : "No exams match this filter."
                         : isRTL
-                        ? "هنوز هیچ آزمونی تعریف نشده است."
-                        : "No exams created yet."}
+                          ? "هنوز هیچ آزمونی تعریف نشده است."
+                          : "No exams created yet."}
                     </span>
                   </div>
                 )}
@@ -706,36 +700,60 @@ export const TeacherExams = () => {
                           <div
                             className={`w-[42px] h-[42px] rounded-[10px] flex items-center justify-center shrink-0 ${timing.iconBoxClass}`}
                           >
-                            <CalendarDays className={`!w-[20px] !h-[20px] ${timing.iconClass}`} />
+                            <CalendarDays
+                              className={`!w-[20px] !h-[20px] ${timing.iconClass}`}
+                            />
                           </div>
 
                           {/* Title */}
                           <div className="flex flex-col min-w-0 flex-1 gap-[2px]">
                             <span
-                              dir={isPersianText(exam.title) ? "rtl" : isRTL ? "rtl" : "ltr"}
+                              dir={
+                                isPersianText(exam.title)
+                                  ? "rtl"
+                                  : isRTL
+                                    ? "rtl"
+                                    : "ltr"
+                              }
                               className={`fa-body-medium ${
-                                isPersianText(exam.title) || isRTL ? "font-vazir" : "font-inter"
+                                isPersianText(exam.title) || isRTL
+                                  ? "font-vazir"
+                                  : "font-inter"
                               } font-semibold whitespace-normal break-words ${
-                                timing.status === "active" || timing.status === "upcoming"
+                                timing.status === "active" ||
+                                timing.status === "upcoming"
                                   ? "text-neutral-scale1800 dark:text-neutral-scale70"
                                   : "text-neutral-scale900 dark:text-neutral-scale500"
                               } ${
-                                isPersianText(exam.title) || isRTL ? "text-right" : "text-left"
+                                isPersianText(exam.title) || isRTL
+                                  ? "text-right"
+                                  : "text-left"
                               }`}
                             >
                               {exam.title}
                             </span>
 
                             <span
-                              dir={isPersianText(exam.course) ? "rtl" : isRTL ? "rtl" : "ltr"}
+                              dir={
+                                isPersianText(exam.course)
+                                  ? "rtl"
+                                  : isRTL
+                                    ? "rtl"
+                                    : "ltr"
+                              }
                               className={`fa-caption-1 ${
-                                isPersianText(exam.course) || isRTL ? "font-vazir" : "font-inter"
+                                isPersianText(exam.course) || isRTL
+                                  ? "font-vazir"
+                                  : "font-inter"
                               } truncate ${
-                                timing.status === "active" || timing.status === "upcoming"
+                                timing.status === "active" ||
+                                timing.status === "upcoming"
                                   ? "text-neutral-scale1000 dark:text-neutral-scale300"
                                   : "text-neutral-scale700 dark:text-neutral-scale500"
                               } ${
-                                isPersianText(exam.course) || isRTL ? "text-right" : "text-left"
+                                isPersianText(exam.course) || isRTL
+                                  ? "text-right"
+                                  : "text-left"
                               }`}
                             >
                               {exam.course}
@@ -773,7 +791,8 @@ export const TeacherExams = () => {
                       <div className="flex items-start gap-[5px] w-full min-w-0">
                         <span
                           className={`shrink-0 ${
-                            timing.status === "active" || timing.status === "upcoming"
+                            timing.status === "active" ||
+                            timing.status === "upcoming"
                               ? "text-neutral-scale1800 dark:text-neutral-scale70"
                               : "text-neutral-scale900 dark:text-neutral-scale500"
                           } ${
@@ -786,13 +805,20 @@ export const TeacherExams = () => {
                         </span>
 
                         <bdi
-                          dir={isPersianText(exam.topic) ? "rtl" : isRTL ? "rtl" : "ltr"}
+                          dir={
+                            isPersianText(exam.topic)
+                              ? "rtl"
+                              : isRTL
+                                ? "rtl"
+                                : "ltr"
+                          }
                           className={`min-w-0 flex-1 whitespace-normal break-words ${
                             isPersianText(exam.topic) || isRTL
                               ? "fa-caption-1 font-vazir"
                               : "en-caption-1 font-inter"
                           } ${
-                            timing.status === "active" || timing.status === "upcoming"
+                            timing.status === "active" ||
+                            timing.status === "upcoming"
                               ? "text-neutral-scale1800 dark:text-neutral-scale70"
                               : "text-neutral-scale900 dark:text-neutral-scale500"
                           } ${
@@ -811,20 +837,20 @@ export const TeacherExams = () => {
                         <div className="flex items-center gap-[5px] min-w-0">
                           <CalendarDays
                             className={`!w-[15px] !h-[15px] shrink-0 ${
-                              timing.status === "active" || timing.status === "upcoming"
+                              timing.status === "active" ||
+                              timing.status === "upcoming"
                                 ? "text-neutral-scale900 dark:text-neutral-scale400"
                                 : "text-neutral-scale700 dark:text-neutral-scale500"
                             }`}
                           />
                           <span
                             className={`truncate font-vazir ${
-                              timing.status === "active" || timing.status === "upcoming"
+                              timing.status === "active" ||
+                              timing.status === "upcoming"
                                 ? "text-neutral-scale1200 dark:text-neutral-scale300"
                                 : "text-neutral-scale800 dark:text-neutral-scale500"
                             } ${
-                              isRTL
-                                ? "fa-caption-1"
-                                : "text-xs font-medium"
+                              isRTL ? "fa-caption-1" : "text-xs font-medium"
                             }`}
                           >
                             {toPersianDigits(exam.date)}
@@ -835,20 +861,20 @@ export const TeacherExams = () => {
                         <div className="flex items-center gap-[5px] min-w-0">
                           <Clock3
                             className={`!w-[15px] !h-[15px] shrink-0 ${
-                              timing.status === "active" || timing.status === "upcoming"
+                              timing.status === "active" ||
+                              timing.status === "upcoming"
                                 ? "text-neutral-scale900 dark:text-neutral-scale400"
                                 : "text-neutral-scale700 dark:text-neutral-scale500"
                             }`}
                           />
                           <span
                             className={`truncate font-vazir ${
-                              timing.status === "active" || timing.status === "upcoming"
+                              timing.status === "active" ||
+                              timing.status === "upcoming"
                                 ? "text-neutral-scale1200 dark:text-neutral-scale300"
                                 : "text-neutral-scale800 dark:text-neutral-scale500"
                             } ${
-                              isRTL
-                                ? "fa-caption-1"
-                                : "text-xs font-medium"
+                              isRTL ? "fa-caption-1" : "text-xs font-medium"
                             }`}
                           >
                             {toPersianDigits(exam.time)}
