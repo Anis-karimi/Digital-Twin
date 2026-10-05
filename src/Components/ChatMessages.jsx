@@ -165,7 +165,7 @@ export const ChatMessages = ({
                   currentUserId={currentUserId}
                   highlightCommentId={highlightCommentId}
                   commentAction={
-                    !isMine && canComment ? (
+                    canComment ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -181,6 +181,16 @@ export const ChatMessages = ({
                             ? "bg-[#2481cc] text-white dark:bg-[#52a2f6]"
                             : "bg-[#edf5fd] hover:bg-[#e4effc] text-[#2481cc] dark:bg-[#182533] dark:hover:bg-[#203244] dark:text-[#52a2f6] border border-[#2481cc]/30 dark:border-[#52a2f6]/30"
                         }`}
+                        title={
+                          isMine
+                            ? (t("addStudentComment") || "کامنت گذاشتن روی پیام دانشجو")
+                            : (t("addComment") || "کامنت گذاشتن")
+                        }
+                        aria-label={
+                          isMine
+                            ? (t("addStudentComment") || "کامنت گذاشتن روی پیام دانشجو")
+                            : (t("addComment") || "کامنت گذاشتن")
+                        }
                       >
                         <QuoteSvg className="w-3 h-3 shrink-0" />
                       </button>

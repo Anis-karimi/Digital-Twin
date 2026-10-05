@@ -308,6 +308,8 @@ export const MessageBubble = ({
                       teacherName.startsWith("دکتر")
                       ? teacherName
                       : `استاد ${teacherName}`
+                    : isMine
+                    ? t("writeStudentComment") || "افزودن نظر استاد روی پیام دانشجو"
                     : t("writeComment") || "افزودن نظر استاد روی پیام بات"}
                 </span>
 
@@ -331,8 +333,11 @@ export const MessageBubble = ({
                 value={commentInputText}
                 onChange={(e) => setCommentInputText?.(e.target.value)}
                 placeholder={
-                  t("commentPlaceholder") ||
-                  "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید..."
+                  isMine
+                    ? t("commentStudentPlaceholder") ||
+                      "توضیحات یا نکات راهنمایی خود را درباره پیام دانشجو بنویسید..."
+                    : t("commentPlaceholder") ||
+                      "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید..."
                 }
                 className="w-full resize-none text-xs sm:text-sm p-2 rounded-xl bg-white dark:bg-[#121c27] border border-[#2481cc]/30 dark:border-[#52a2f6]/30 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] font-vazir leading-relaxed"
                 onKeyDown={(e) => {
