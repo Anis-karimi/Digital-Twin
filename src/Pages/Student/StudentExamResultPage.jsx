@@ -128,12 +128,18 @@ export const StudentExamResultPage = () => {
             onClick={() => navigate("/StudentExams")}
             type="button"
             aria-label={isRTL ? "بازگشت" : "Go back"}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-neutral-scale70 cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-white cursor-pointer"
           >
-            <ArrowLeft className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
+            <ArrowLeft className={`w-6 h-6 ${isRTL ? "rotate-180" : ""}`} />
           </button>
-
-          <h1 className="flex-1 text-center font-vazir font-semibold text-base text-neutral-scale70 truncate">
+          
+          <h1
+            className={`flex-1 mx-2 text-neutral-scale70 ${
+              isRTL
+                ? "fa-title-1 font-vazir text-right"
+                : "en-title-1 font-inter text-left"
+            } truncate whitespace-nowrap`}
+          >
             {isRTL ? "کارنامه آزمون شفاهی" : "Oral Exam Report"}
           </h1>
         </div>
@@ -145,7 +151,9 @@ export const StudentExamResultPage = () => {
           <div className="h-64 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-primery-700 dark:text-primery-400 animate-spin" />
             <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale400">
-              {isRTL ? "در حال دریافت کارنامه و تحلیل هوش مصنوعی..." : "Loading report..."}
+              {isRTL
+                ? "در حال دریافت کارنامه و تحلیل هوش مصنوعی..."
+                : "Loading report..."}
             </p>
           </div>
         ) : error ? (
@@ -186,7 +194,9 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 mb-0.5">
                     {isRTL ? "نمره ارزیابی" : "Evaluation Score"}
                   </span>
-                  <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-black text-primery-800 dark:text-primery-200`}>
+                  <span
+                    className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-black text-primery-800 dark:text-primery-200`}
+                  >
                     {isRTL ? `${toPersianDigits(scoreVal)}٪` : `${scoreVal}%`}
                   </span>
                 </div>
@@ -215,8 +225,8 @@ export const StudentExamResultPage = () => {
                           ? "قبول شده"
                           : "Passed"
                         : isRTL
-                        ? "نیاز به تقویت"
-                        : "Needs Review"}
+                          ? "نیاز به تقویت"
+                          : "Needs Review"}
                     </span>
                   </div>
                 </div>
@@ -228,10 +238,17 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "تسلط مفاهیم" : "Mastery"}
                   </span>
-                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
-                    {report?.overall_mastery !== null && report?.overall_mastery !== undefined
-                      ? isRTL ? `${toPersianDigits(Math.round(report.overall_mastery * 100))}٪` : `${Math.round(report.overall_mastery * 100)}%`
-                      : isRTL ? `${toPersianDigits(scoreVal)}٪` : `${scoreVal}%`}
+                  <span
+                    className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
+                  >
+                    {report?.overall_mastery !== null &&
+                    report?.overall_mastery !== undefined
+                      ? isRTL
+                        ? `${toPersianDigits(Math.round(report.overall_mastery * 100))}٪`
+                        : `${Math.round(report.overall_mastery * 100)}%`
+                      : isRTL
+                        ? `${toPersianDigits(scoreVal)}٪`
+                        : `${scoreVal}%`}
                   </span>
                 </div>
 
@@ -239,10 +256,17 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "پوشش سرفصل‌ها" : "Coverage"}
                   </span>
-                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
-                    {report?.overall_coverage !== null && report?.overall_coverage !== undefined
-                      ? isRTL ? `${toPersianDigits(Math.round(report.overall_coverage * 100))}٪` : `${Math.round(report.overall_coverage * 100)}%`
-                      : isRTL ? "۱۰۰٪" : "100%"}
+                  <span
+                    className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
+                  >
+                    {report?.overall_coverage !== null &&
+                    report?.overall_coverage !== undefined
+                      ? isRTL
+                        ? `${toPersianDigits(Math.round(report.overall_coverage * 100))}٪`
+                        : `${Math.round(report.overall_coverage * 100)}%`
+                      : isRTL
+                        ? "۱۰۰٪"
+                        : "100%"}
                   </span>
                 </div>
 
@@ -250,70 +274,80 @@ export const StudentExamResultPage = () => {
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
                     {isRTL ? "مدت آزمون" : "Duration"}
                   </span>
-                  <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
-                    {isRTL ? toPersianDigits(durationMins) : durationMins} {isRTL ? "دقیقه" : "min"}
+                  <span
+                    className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
+                  >
+                    {isRTL ? toPersianDigits(durationMins) : durationMins}{" "}
+                    {isRTL ? "دقیقه" : "min"}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* AI Recommendations Card */}
-            {Array.isArray(report?.recommendations) && report.recommendations.length > 0 && (
-              <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 shadow-sm">
-                <div className="flex items-center gap-1.5 mb-2.5 text-primery-700 dark:text-primery-300 font-vazir font-bold text-xs">
-                  <Sparkles className="w-4 h-4" />
-                  <span>{isRTL ? "تحلیل و توصیه‌های هوش مصنوعی" : "AI Feedback & Recommendations"}</span>
-                </div>
+            {Array.isArray(report?.recommendations) &&
+              report.recommendations.length > 0 && (
+                <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-2.5 text-primery-700 dark:text-primery-300 font-vazir font-bold text-xs">
+                    <Sparkles className="w-4 h-4" />
+                    <span>
+                      {isRTL
+                        ? "تحلیل و توصیه‌های هوش مصنوعی"
+                        : "AI Feedback & Recommendations"}
+                    </span>
+                  </div>
 
-                <div className="space-y-2">
-                  {report.recommendations.map((rec, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-primery-50/50 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-primery-100 dark:border-neutral-scale1000 text-xs font-vazir"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-neutral-scale1800 dark:text-neutral-scale80">
-                          {rec.title}
-                        </span>
-                        {rec.priority && (
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${
-                              rec.priority === "high"
-                                ? "bg-red-500/15 text-red-600 dark:text-red-400"
-                                : "bg-primery-200 dark:bg-primery-900 text-primery-800 dark:text-primery-200"
-                            }`}
-                          >
-                            {rec.priority === "high"
-                              ? isRTL
-                                ? "اولویت بالا"
-                                : "High"
-                              : isRTL
-                              ? "پیشنهادی"
-                              : "Suggested"}
+                  <div className="space-y-2">
+                    {report.recommendations.map((rec, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-primery-50/50 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-primery-100 dark:border-neutral-scale1000 text-xs font-vazir"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-neutral-scale1800 dark:text-neutral-scale80">
+                            {rec.title}
                           </span>
+                          {rec.priority && (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded-md font-medium ${
+                                rec.priority === "high"
+                                  ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                                  : "bg-primery-200 dark:bg-primery-900 text-primery-800 dark:text-primery-200"
+                              }`}
+                            >
+                              {rec.priority === "high"
+                                ? isRTL
+                                  ? "اولویت بالا"
+                                  : "High"
+                                : isRTL
+                                  ? "پیشنهادی"
+                                  : "Suggested"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-neutral-scale1100 dark:text-neutral-scale400 leading-relaxed mb-1">
+                          {rec.description}
+                        </p>
+                        {rec.action && (
+                          <div className="flex items-center gap-1 text-[11px] text-primery-700 dark:text-primery-300 font-semibold mt-1">
+                            <Lightbulb className="w-3 h-3 shrink-0" />
+                            <span>{rec.action}</span>
+                          </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-neutral-scale1100 dark:text-neutral-scale400 leading-relaxed mb-1">
-                        {rec.description}
-                      </p>
-                      {rec.action && (
-                        <div className="flex items-center gap-1 text-[11px] text-primery-700 dark:text-primery-300 font-semibold mt-1">
-                          <Lightbulb className="w-3 h-3 shrink-0" />
-                          <span>{rec.action}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Goals / Topics Progress */}
             {Array.isArray(report?.goals) && report.goals.length > 0 && (
               <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center gap-1.5 mb-2.5 text-neutral-scale1800 dark:text-neutral-scale80 font-vazir font-bold text-xs">
                   <Target className="w-4 h-4 text-primery-700 dark:text-primery-300" />
-                  <span>{isRTL ? "ارزیابی به تفکیک مباحث" : "Topic Mastery"}</span>
+                  <span>
+                    {isRTL ? "ارزیابی به تفکیک مباحث" : "Topic Mastery"}
+                  </span>
                 </div>
 
                 <div className="space-y-2.5">
@@ -323,7 +357,9 @@ export const StudentExamResultPage = () => {
                         <span className="text-neutral-scale1800 dark:text-neutral-scale80 truncate max-w-[200px]">
                           {g.title}
                         </span>
-                        <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-primery-700 dark:text-primery-300`}>
+                        <span
+                          className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-primery-700 dark:text-primery-300`}
+                        >
                           {isRTL
                             ? `${toPersianDigits(Math.round(g.mastery || g.score || 0))}٪`
                             : `${Math.round(g.mastery || g.score || 0)}%`}
@@ -332,7 +368,9 @@ export const StudentExamResultPage = () => {
                       <div className="w-full h-2 bg-neutral-scale200 dark:bg-neutral-scale1100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primery-700 dark:bg-primery-500 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(100, Math.max(0, g.mastery || g.score || 0))}%` }}
+                          style={{
+                            width: `${Math.min(100, Math.max(0, g.mastery || g.score || 0))}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -346,7 +384,11 @@ export const StudentExamResultPage = () => {
               <div className="flex items-center justify-between mb-3 text-neutral-scale1800 dark:text-neutral-scale80 font-vazir font-bold text-xs">
                 <div className="flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4 text-primery-700 dark:text-primery-300" />
-                  <span>{isRTL ? "ریز گفت‌وگو و ارزیابی سوالات" : "Interview Dialogue Review"}</span>
+                  <span>
+                    {isRTL
+                      ? "ریز گفت‌وگو و ارزیابی سوالات"
+                      : "Interview Dialogue Review"}
+                  </span>
                 </div>
                 <span className="text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 font-normal">
                   {Array.isArray(report?.turns)
@@ -367,11 +409,15 @@ export const StudentExamResultPage = () => {
                         {/* Accordion Header */}
                         <button
                           type="button"
-                          onClick={() => setExpandedTurn(isExpanded ? null : idx)}
+                          onClick={() =>
+                            setExpandedTurn(isExpanded ? null : idx)
+                          }
                           className="w-full p-2.5 flex items-center justify-between gap-2 hover:bg-neutral-scale50 dark:hover:bg-neutral-scale1100 transition-colors text-right cursor-pointer"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className={`w-5 h-5 rounded-full bg-primery-100 dark:bg-primery-900 text-primery-800 dark:text-primery-200 text-[10px] font-bold flex items-center justify-center shrink-0 ${isRTL ? "font-vazir" : "font-inter"}`}>
+                            <span
+                              className={`w-5 h-5 rounded-full bg-primery-100 dark:bg-primery-900 text-primery-800 dark:text-primery-200 text-[10px] font-bold flex items-center justify-center shrink-0 ${isRTL ? "font-vazir" : "font-inter"}`}
+                            >
                               {isRTL ? toPersianDigits(idx + 1) : idx + 1}
                             </span>
                             <span className="text-neutral-scale1800 dark:text-neutral-scale80 font-medium truncate text-[11px]">
@@ -393,7 +439,9 @@ export const StudentExamResultPage = () => {
                               <Bot className="w-4 h-4 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                               <div className="flex-1">
                                 <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                  {isRTL ? "پرسش ارزیاب هوش مصنوعی:" : "Question:"}
+                                  {isRTL
+                                    ? "پرسش ارزیاب هوش مصنوعی:"
+                                    : "Question:"}
                                 </span>
                                 <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed">
                                   {turn.question}
@@ -409,7 +457,10 @@ export const StudentExamResultPage = () => {
                                   {isRTL ? "پاسخ ثبت‌شده شما:" : "Your Answer:"}
                                 </span>
                                 <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed bg-white dark:bg-neutral-scale1200 p-2 rounded-lg border border-neutral-scale200 dark:border-neutral-scale1000">
-                                  {turn.answer || (isRTL ? "پاسخی ثبت نشد." : "No answer recorded.")}
+                                  {turn.answer ||
+                                    (isRTL
+                                      ? "پاسخی ثبت نشد."
+                                      : "No answer recorded.")}
                                 </p>
                               </div>
                             </div>
@@ -420,7 +471,9 @@ export const StudentExamResultPage = () => {
                                 <Sparkles className="w-3.5 h-3.5 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                                 <div className="flex-1">
                                   <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                    {isRTL ? "بازخورد هوش مصنوعی:" : "AI Evaluation Feedback:"}
+                                    {isRTL
+                                      ? "بازخورد هوش مصنوعی:"
+                                      : "AI Evaluation Feedback:"}
                                   </span>
                                   <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed">
                                     {turn.feedback}

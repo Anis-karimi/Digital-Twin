@@ -836,7 +836,7 @@ export const CreateExamAccordion = ({
             <div className="w-7 h-7 rounded-lg bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] flex items-center justify-center shrink-0">
               <Paperclip className="w-4 h-4" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col items-start ">
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
                 {isRTL
                   ? "پیوست فایل‌ها و منابع مرجع آزمون"

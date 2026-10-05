@@ -4,10 +4,8 @@ import { useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { HomeDropdownMenu } from "@/Components/HomeDropdownMenu";
 import { HomeChatFeedSection } from "@/Components/HomeChatFeedSection";
-import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
 import menu from "@/assets/icons/menuWhite.svg?react";
 import Bell from "@/assets/icons/Bell.svg?react";
-import { FooterGlass } from "@/Components/FooterGlass";
 import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "@/api";
 
@@ -101,10 +99,6 @@ export const StudentHome = () => {
       >
         <HomeChatFeedSection />
       </section>
-
-      <FooterGlass>
-        <StudentNavigationBar />
-      </FooterGlass>
 
       {/* ✅ OVERLAY MENU (added only) */}
       <div className="relative">
