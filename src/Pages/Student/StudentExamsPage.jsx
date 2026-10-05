@@ -735,8 +735,6 @@ export const StudentExams = () => {
 
                   const isPassed = !isCompleted && timing.status === "passed";
 
-                  const isStarted = exam.status === "started";
-
                   const isReadyToStart =
                     !isCompleted &&
                     !isUpcoming &&
@@ -744,9 +742,6 @@ export const StudentExams = () => {
                     (exam.status === "active" ||
                       (exam.status === "assigned" &&
                         timing.status === "current"));
-
-                  const isScheduled =
-                    exam.status === "assigned" && isUpcoming && !isPassed;
 
                   return (
                     <div
@@ -765,13 +760,6 @@ export const StudentExams = () => {
                             bg-neutral-scale80
                             dark:bg-neutral-scale1100
                           `
-                            : isStarted
-                              ? `
-                              border-warning-500
-                              dark:border-warning-600
-                              bg-yellow-50
-                              dark:bg-yellow-950/30
-                            `
                               : isReadyToStart
                                 ? `
                                 border-green-500
@@ -804,8 +792,6 @@ export const StudentExams = () => {
                               ${
                                 isCompleted || isPassed
                                   ? "bg-neutral-scale70 dark:bg-neutral-scale1200 text-error-500 dark:text-neutral-scale400 "
-                                  : isStarted
-                                    ? "bg-warning-100 dark:bg-warning-1000 text-warning-1000 dark:text-warning-100"
                                     : isReadyToStart
                                       ? "bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-300"
                                       : "bg-primery-90 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90"
@@ -850,8 +836,6 @@ export const StudentExams = () => {
                               ${
                                 isCompleted || isPassed
                                   ? "bg-neutral-scale70 dark:bg-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale400 border border-neutral-scale100"
-                                  : isStarted
-                                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-500/30"
                                     : isReadyToStart
                                       ? "bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 border border-green-500/30"
                                       : "bg-blue-100 dark:bg-primery-1000 text-primery-800 dark:text-primery-90 border border-blue-500/30"
@@ -866,8 +850,6 @@ export const StudentExams = () => {
                                 ${
                                   isCompleted || isPassed
                                     ? "bg-neutral-scale300"
-                                    : isStarted
-                                      ? "bg-amber-500 animate-ping"
                                       : isReadyToStart
                                         ? "bg-green-500 animate-ping"
                                         : "bg-primery-600"
@@ -880,8 +862,6 @@ export const StudentExams = () => {
                                 ? "تکمیل شده"
                                 : isPassed
                                   ? "پایان یافته"
-                                  : isStarted
-                                    ? "درحال برگزاری"
                                     : isReadyToStart
                                       ? "آماده شروع"
                                       : isUpcoming
@@ -901,8 +881,6 @@ export const StudentExams = () => {
                           ${
                             isCompleted || isPassed
                               ? "bg-neutral-scale300 dark:bg-neutral-scale1200"
-                              : isStarted
-                                ? "bg-warning-100"
                                 : isReadyToStart
                                   ? "bg-success-100"
                                   : "bg-primery-100"
@@ -973,7 +951,7 @@ export const StudentExams = () => {
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
 
                             <span>
-                              {isStarted || isReadyToStart
+                              {isReadyToStart
                                 ? isRTL
                                   ? "وضعیت جلسه:"
                                   : "Session Status:"
@@ -984,13 +962,7 @@ export const StudentExams = () => {
                           </span>
 
                           <span className="font-bold text-xs text-emerald-800 dark:text-emerald-300">
-                            {isStarted ? (
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                                {isRTL
-                                  ? "آزمون در حال ادامه است"
-                                  : "Exam In Progress"}
-                              </span>
-                            ) : isReadyToStart ? (
+                            {isReadyToStart ? (
                               <span className="text-green-600 dark:text-green-400 font-semibold">
                                 {isRTL ? "آماده شروع" : "Ready to Start"}
                               </span>
@@ -1070,14 +1042,6 @@ export const StudentExams = () => {
                                   dark:border-neutral-scale1000
                                   cursor-not-allowed
                                 `
-                                : isStarted
-                                  ? `
-                                    bg-amber-600
-                                    hover:bg-amber-700
-                                    text-white
-                                    cursor-pointer
-                                    active:scale-[0.98]
-                                  `
                                   : isReadyToStart
                                     ? `
                                       bg-green-600
@@ -1138,12 +1102,6 @@ export const StudentExams = () => {
                             <Play className="!w-[14px] !h-[14px]" />
 
                             <span>{isRTL ? "شروع آزمون" : "Start Exam"}</span>
-                          </>
-                        ) : isStarted ? (
-                          <>
-                            <Play className="!w-[14px] !h-[14px]" />
-
-                            <span>{isRTL ? "ادامه آزمون" : "Resume Exam"}</span>
                           </>
                         ) : isPassed ? (
                           <>

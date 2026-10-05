@@ -29,15 +29,17 @@ export async function getContextDocuments() {
  * @param {File} file Document file object
  * @returns {Promise<Object>} Server response
  */
-export async function uploadDocument(file) {
+export async function uploadDocument(file, onProgress) {
   try {
     const formData = new FormData();
     formData.append("file", file);
 
     const url = `${API_CONFIG.BACKEND_URL}/api/upload`;
+
     return await httpRequest(url, {
       method: "POST",
       body: formData,
+      onUploadProgress: onProgress,
     });
   } catch (error) {
     handleApiError("ContextsApi", "uploadDocument", error);

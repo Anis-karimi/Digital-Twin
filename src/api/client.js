@@ -38,8 +38,115 @@ export function handleApiError(service, action, error) {
  * @param {'json'|'blob'|'text'|'raw'} [responseType='json'] Expected return format
  */
 export async function httpRequest(url, options = {}, responseType = "json") {
-  const timeoutMs = Number(options.timeout) || API_CONFIG.REQUEST_TIMEOUT_MS || 60000;
-  const { timeout: _customTimeout, ...fetchOptions } = options;
+  const timeoutMs =
+    Number(options.timeout) || API_CONFIG.REQUEST_TIMEOUT_MS || 60000;
+
+  // Upload progress برای FormData با XMLHttpRequest
+  if (
+    typeof options.onUploadProgress === "function" &&
+    typeof XMLHttpRequest !== "undefined" &&
+    typeof FormData !== "undefined" &&
+    options.body instanceof FormData
+  ) {
+    const {
+      timeout: _customTimeout,
+      onUploadProgress,
+      ...xhrOptions
+    } = options;
+
+    return await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open(xhrOptions.method || "GET", url, true);
+      xhr.timeout = timeoutMs;
+
+      if (responseType === "blob") {
+        xhr.responseType = "blob";
+      }
+
+      // Headers
+      Object.entries(xhrOptions.headers || {}).forEach(([key, value]) => {
+        xhr.setRequestHeader(key, value);
+      });
+
+      // Upload progress
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+
+          onUploadProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percent,
+          });
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          let errorData = null;
+
+          try {
+            errorData = JSON.parse(xhr.responseText);
+          } catch {
+            errorData = xhr.responseText;
+          }
+
+          const error = new Error(`HTTP Error: ${xhr.status}`);
+          error.status = xhr.status;
+          error.data = errorData;
+
+          reject(error);
+          return;
+        }
+
+        if (responseType === "blob") {
+          resolve(xhr.response);
+          return;
+        }
+
+        if (responseType === "text") {
+          resolve(xhr.responseText);
+          return;
+        }
+
+        if (responseType === "raw") {
+          resolve(xhr);
+          return;
+        }
+
+        try {
+          resolve(
+            xhr.responseText ? JSON.parse(xhr.responseText) : { success: true },
+          );
+        } catch {
+          resolve({ success: true });
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error("Network error"));
+      };
+
+      xhr.ontimeout = () => {
+        reject(new Error(`Request timed out after ${timeoutMs}ms`));
+      };
+
+      xhr.onabort = () => {
+        reject(new Error("Request aborted"));
+      };
+
+      xhr.send(xhrOptions.body);
+    });
+  }
+
+  // رفتار قبلی fetch برای تمام درخواست‌های دیگر
+  const {
+    timeout: _customTimeout,
+    onUploadProgress: _onUploadProgress,
+    ...fetchOptions
+  } = options;
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -53,14 +160,17 @@ export async function httpRequest(url, options = {}, responseType = "json") {
 
     if (!response.ok) {
       let errorData = null;
+
       try {
         errorData = await response.json();
       } catch {
         errorData = await response.text();
       }
+
       const error = new Error(`HTTP Error: ${response.status}`);
       error.status = response.status;
       error.data = errorData;
+
       throw error;
     }
 
@@ -71,9 +181,11 @@ export async function httpRequest(url, options = {}, responseType = "json") {
     return await response.json().catch(() => ({ success: true }));
   } catch (error) {
     clearTimeout(timeoutId);
+
     if (error.name === "AbortError") {
       throw new Error(`Request timed out after ${timeoutMs}ms`);
     }
+
     throw error;
   }
 }

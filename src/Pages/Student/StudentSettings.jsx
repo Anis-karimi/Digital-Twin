@@ -1,12 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { StudentNavigationBar } from "@/Components/StudentNavigationBar";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
 import LogOut from "@/assets/icons/Log_Out.svg";
 import Language from "@/assets/icons/Language.svg";
 import PaintBrush from "@/assets/icons/paint-brush.svg";
-import { FooterGlass } from "@/Components/FooterGlass";
 import { useRef, useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { adminApi, userApi } from "@/api";
@@ -267,10 +265,6 @@ export const StudentSettings = () => {
           </button>
         </div>
       </section>
-
-      <FooterGlass>
-        <StudentNavigationBar />
-      </FooterGlass>
     </main>
   );
 };
