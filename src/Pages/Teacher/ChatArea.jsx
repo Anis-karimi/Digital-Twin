@@ -7,8 +7,6 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 
 import AI from "@/assets/images/AI.png";
-import AIdisable from "@/assets/icons/AIdisable.svg?react";
-import AIenable from "@/assets/icons/AIenable.svg?react";
 import Microphon from "@/assets/icons/Microphon.svg?react";
 import Menu from "@/assets/icons/menu.svg?react";
 import Background from "@/assets/images/Background1.png";
@@ -85,7 +83,6 @@ export const ChatArea = () => {
 
     const composerInputId = useId();
     const navigate = useNavigate();
-    const [aiEnabled, setAiEnabled] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { id } = useParams();
     const location = useLocation();
@@ -260,10 +257,6 @@ export const ChatArea = () => {
     const audioCtx = useRef(null);
     const streamRef = useRef(null);
     const recordingRef = useRef(false);
-    const audioCtxRef = useRef(null);
-    const nextStartRef = useRef(0);
-    const leftoverRef = useRef(new Uint8Array(0));
-    const sampleRateRef = useRef(22050);
 
     const [settings, setSettings] = useState(null);
     const [llmModel, setLlmModel] = useState(() => localStorage.getItem("llm_model") || "gemma4");
@@ -479,10 +472,6 @@ export const ChatArea = () => {
     const handleCloseQuiz = () => {
       setIsQuizOpen(false);
       setIsQuizMinimized(false);
-    };
-
-    const toggleAI = () => {
-        setAiEnabled(prev => !prev);
     };
 
     // ClearHistory with server persistence
@@ -846,6 +835,7 @@ export const ChatArea = () => {
             sender: "other",
             feedback: null,
             isOptimistic: true,
+            isError: isError,
             created_at: aiNow.toISOString(),
             time: formatChatTime(aiNow, isRTL),
             date: aiNow.toLocaleDateString("en-GB", {
@@ -861,10 +851,6 @@ export const ChatArea = () => {
             }
             return [...prev, aiMessage];
         });
-
-        if (!isError && aiEnabled && aiText) {
-            playTTSBytes(aiText);
-        }
 
         // Persist both user prompt and response (or error message) to new backend history database
         try {
@@ -907,102 +893,6 @@ export const ChatArea = () => {
         } finally {
             isSendingRef.current = false;
             setIsLoading(false);
-        }
-    };
-
-
-    const concatUint8 = (a, b) => {
-        const out = new Uint8Array(a.byteLength + b.byteLength);
-        out.set(a, 0);
-        out.set(b, a.byteLength);
-        return out;
-    };
-
-    const playTTSBytes = async (text) => {
-        if (!aiEnabled || !text) {
-            console.log("AI voice disabled or text empty.");
-            return;
-        }
-
-        try {
-            // Instantiate AudioContext on demand
-            if (!audioCtxRef.current) {
-                audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-                console.log("AudioContext created:", audioCtxRef.current);
-                // Resume AudioContext if suspended by browser autoplay policy
-                if (audioCtxRef.current.state === "suspended") {
-                    console.log("Resuming AudioContext...");
-                    await audioCtxRef.current.resume();
-                }
-                nextStartRef.current = audioCtxRef.current.currentTime + 0.1;
-            }
-
-            const res = await voiceApi.streamTTS(text);
-            if (!res.body) throw new Error("Streaming not supported");
-
-            const reader = res.body.getReader();
-            let leftover = leftoverRef.current;
-            let seq = 0;
-
-            const processLoop = async () => {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    seq += 1;
-
-                    let chunkBytes = value ? new Uint8Array(value) : new Uint8Array(0);
-                    if (leftover.byteLength > 0) {
-                        chunkBytes = concatUint8(leftover, chunkBytes);
-                        leftover = new Uint8Array(0);
-                    }
-
-                    // Process X-PCM header on initial chunk
-                    if (seq === 1) {
-                        const txt = new TextDecoder("ascii").decode(chunkBytes.subarray(0, Math.min(128, chunkBytes.length)));
-                        if (txt.startsWith("X-PCM:")) {
-                            const nl = txt.indexOf("\n");
-                            if (nl >= 0) {
-                                const headerLine = txt.slice(0, nl).trim();
-                                headerLine.replace("X-PCM:", "").split(";").forEach(pair => {
-                                    const [k, v] = pair.split("=").map(s => s.trim());
-                                    if (k === "sample_rate") sampleRateRef.current = parseInt(v);
-                                });
-                                chunkBytes = chunkBytes.subarray(nl + 1);
-                            } else {
-                                leftover = chunkBytes;
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Ensure 4-byte alignment for 32-bit float audio buffer
-                    const rem = chunkBytes.byteLength % 4;
-                    if (rem !== 0) {
-                        leftover = chunkBytes.subarray(chunkBytes.byteLength - rem);
-                        chunkBytes = chunkBytes.subarray(0, chunkBytes.byteLength - rem);
-                    }
-                    if (chunkBytes.byteLength === 0) continue;
-
-                    const floatBuf = new Float32Array(chunkBytes.buffer, chunkBytes.byteOffset, chunkBytes.byteLength / 4);
-
-                    const buffer = audioCtxRef.current.createBuffer(1, floatBuf.length, sampleRateRef.current);
-                    buffer.getChannelData(0).set(floatBuf);
-
-                    const source = audioCtxRef.current.createBufferSource();
-                    source.buffer = buffer;
-                    source.connect(audioCtxRef.current.destination);
-
-                    const scheduledTime = Math.max(nextStartRef.current, audioCtxRef.current.currentTime + 0.05);
-                    source.start(scheduledTime);
-
-                    nextStartRef.current = scheduledTime + buffer.duration;
-                }
-            };
-
-            await processLoop();
-            console.log("TTS streaming finished.");
-        } catch (err) {
-            console.error("playTTSBytes error:", err);
         }
     };
 
@@ -1098,24 +988,8 @@ export const ChatArea = () => {
               {chatTitle}
             </h1>
 
-            {/* Actions: AI Toggle & Menu */}
+            {/* Actions: Menu */}
             <div className="flex items-center gap-2 shrink-0">
-              {/* AI Toggle */}
-              <button
-                type="button"
-                onClick={toggleAI}
-                aria-label={t("toggleAi")}
-                className={`w-7 h-7 flex items-center justify-center transition-all duration-300 ${
-                  aiEnabled ? "scale-125 animate-pulse" : "scale-100"
-                }`}
-              >
-                {aiEnabled ? (
-                  <AIenable className="!w-6 !h-6" />
-                ) : (
-                  <AIdisable className="!w-6 !h-6 [--icon-bg:black] [--icon-fg:white] dark:[--icon-bg:white] dark:[--icon-fg:black]" />
-                )}
-              </button>
-
               {/* Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(true)}

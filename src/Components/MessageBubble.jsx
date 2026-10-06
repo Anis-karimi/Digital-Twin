@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import "@/styles/Allpages.css";
 import {
   Trash2,
@@ -7,11 +7,22 @@ import {
   Loader2,
   Play,
   Pause,
+  AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { AppContext } from "@/Context/AppContext";
 import { formatChatTime } from "@/utils/dateFormatter";
 import { cleanMessageText, isPersianText } from "@/utils/textUtils";
+import {
+  synthesizeAndDecodeTTS,
+  playTTSAudio,
+  pauseTTSAudio,
+  seekTTSAudio,
+  stopTTSAudio,
+  formatAudioDuration,
+  isAudioPlayingFor,
+} from "@/utils/ttsPlayer";
 import * as Popover from "@radix-ui/react-popover";
 
 export const MessageBubble = ({
@@ -20,6 +31,7 @@ export const MessageBubble = ({
   time,
   createdAt,
   isMine,
+  isError = false,
   classNames,
   comments = [],
   onDeleteComment,
@@ -40,11 +52,120 @@ export const MessageBubble = ({
   const [deletingCommentIds, setDeletingCommentIds] = useState(() => new Set());
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [audioData, setAudioData] = useState(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [audioError, setAudioError] = useState(null);
+
   const clean = cleanMessageText(text);
   const isPersian = isPersianText(clean);
-  const isServerErrorMessage = clean.includes(
-    "مشکلی در ارتباط با سرور به وجود آمد",
+  const isErrorMessage = Boolean(
+    isError ||
+    clean.includes("مشکلی در ارتباط با سرور به وجود آمد") ||
+    clean.includes("Request failed with status") ||
+    clean.includes("NETWORK_ERROR") ||
+    clean.includes("ApiError") ||
+    clean.includes("[VoiceApi:") ||
+    clean.includes("[ChatApi:")
   );
+
+  // Pause playback if popover closes
+  useEffect(() => {
+    if (!isActionsOpen && isPlaying) {
+      pauseTTSAudio();
+      setIsPlaying(false);
+    }
+  }, [isActionsOpen, isPlaying]);
+
+  // Clean up audio on unmount if this message was playing
+  useEffect(() => {
+    return () => {
+      if (isAudioPlayingFor(messageId || clean)) {
+        stopTTSAudio();
+      }
+    };
+  }, [messageId, clean]);
+
+  const defaultBars = [
+    15, 25, 20, 35, 22, 40, 28, 18, 32, 24, 45, 30, 20, 36, 26,
+    16, 30, 42, 22, 34, 18, 28, 38, 20, 32, 18, 26, 35, 22, 30,
+  ];
+  const displayBars = audioData?.waveformBars || defaultBars;
+
+  const handlePlayToggle = async (e) => {
+    e?.stopPropagation();
+    if (isErrorMessage || !clean) return;
+
+    if (isPlaying) {
+      pauseTTSAudio();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      let currentData = audioData;
+      if (!currentData) {
+        setIsLoadingAudio(true);
+        setAudioError(null);
+        currentData = await synthesizeAndDecodeTTS(clean);
+        setAudioData(currentData);
+      }
+
+      setIsLoadingAudio(false);
+      setIsPlaying(true);
+      setAudioError(null);
+
+      const startOffset = currentTime >= (currentData?.duration || 0) ? 0 : currentTime;
+      playTTSAudio(messageId || clean, currentData.audioBuffer, {
+        offset: startOffset,
+        onProgress: (time, ratio) => {
+          setCurrentTime(time);
+          setPlaybackProgress(ratio);
+        },
+        onEnded: () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+          setPlaybackProgress(0);
+        },
+        onStateChange: (playing) => {
+          setIsPlaying(playing);
+        },
+      });
+    } catch (err) {
+      console.error("Failed to play TTS audio:", err);
+      setIsLoadingAudio(false);
+      setIsPlaying(false);
+      setAudioError("خطا در برقراری ارتباط با سرور صوت");
+    }
+  };
+
+  const handleSeek = (e, barIndex, totalBars = 30) => {
+    e.stopPropagation();
+    if (!audioData) return;
+
+    const targetRatio = Math.max(0, Math.min(1, (barIndex + 0.5) / totalBars));
+    const targetTime = targetRatio * audioData.duration;
+    setCurrentTime(targetTime);
+    setPlaybackProgress(targetRatio);
+    setIsPlaying(true);
+    setAudioError(null);
+
+    seekTTSAudio(messageId || clean, audioData.audioBuffer, targetTime, {
+      onProgress: (time, ratio) => {
+        setCurrentTime(time);
+        setPlaybackProgress(ratio);
+      },
+      onEnded: () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setPlaybackProgress(0);
+      },
+      onStateChange: (playing) => {
+        setIsPlaying(playing);
+      },
+    });
+  };
 
   const dir = isPersian ? "rtl" : "ltr";
 
@@ -148,16 +269,14 @@ export const MessageBubble = ({
 
   return (
     <Popover.Root
-      open={!isMine && isActionsOpen}
+      open={isActionsOpen}
       onOpenChange={(open) => {
-        if (!isMine) setIsActionsOpen(open);
+        setIsActionsOpen(open);
       }}
     >
       <Popover.Anchor asChild>
         <div
           onClick={(e) => {
-            if (isMine) return;
-
             if (
               e.target instanceof Element &&
               e.target.closest("button, textarea, input, a, [role='button']")
@@ -167,9 +286,7 @@ export const MessageBubble = ({
 
             setIsActionsOpen((prev) => !prev);
           }}
-          className={`${isMine ? classNames.myBubble : classNames.otherBubble} ${
-            !isMine ? "cursor-pointer" : ""
-          }`}
+          className={`${isMine ? classNames.myBubble : classNames.otherBubble} cursor-pointer`}
         >
           <div className={`${classNames.messageText} ${textClass}`} dir={dir}>
             {formatText(clean)}
@@ -391,136 +508,180 @@ export const MessageBubble = ({
         </div>
       </Popover.Anchor>
 
-      {!isMine && (
-        <Popover.Portal>
-          <Popover.Content
-            dir="ltr"
-            side="bottom"
-            align="end"
-            sideOffset={3}
-            collisionPadding={12}
-            avoidCollisions
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            className={`
-              z-[9999]
-              ${isServerErrorMessage ? "w-[150px]" : "w-[180px]"}
-              min-w-[150px]
-              max-w-[250px]
-              rounded-3xl
-              border border-white/40
-              dark:border-white/10
-              bg-white/75
-              dark:bg-[#182533]/55
-              backdrop-blur-xl
-              backdrop-saturate-150
-              shadow-lg
-              outline-none
-              pl-[2px]
-            `}
-          >
-            {isServerErrorMessage ? (
-              <div
+      <Popover.Portal>
+        <Popover.Content
+          dir="ltr"
+          side="bottom"
+          align={isMine ? "start" : "end"}
+          sideOffset={3}
+          collisionPadding={12}
+          avoidCollisions
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className={`
+            z-[9999]
+            ${isErrorMessage || audioError ? "w-[210px]" : "w-[195px]"}
+            min-w-[150px]
+            max-w-[280px]
+            rounded-3xl
+            border border-white/40
+            dark:border-white/10
+            bg-white/85
+            dark:bg-[#182533]/80
+            backdrop-blur-xl
+            backdrop-saturate-150
+            shadow-lg
+            outline-none
+            py-1
+            px-2
+          `}
+        >
+          {isErrorMessage ? (
+            <div
+              className="
+                flex
+                items-center
+                justify-center
+                gap-1.5
+                min-h-7
+                px-2
+                py-1
+                text-[11px]
+                text-red-500
+                dark:text-red-400
+                font-vazir
+                whitespace-nowrap
+              "
+              dir="rtl"
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" />
+              <span>امکان پخش صدا برای پیام خطا وجود ندارد</span>
+            </div>
+          ) : audioError ? (
+            <div
+              className="
+                flex
+                items-center
+                justify-between
+                gap-2
+                min-h-7
+                px-1
+                py-1
+                w-full
+              "
+              dir="rtl"
+            >
+              <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-red-500 dark:text-red-400 font-vazir truncate">
+                <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" />
+                <span className="truncate">خطا در اتصال به سرور</span>
+              </div>
+              <button
+                type="button"
+                onClick={handlePlayToggle}
+                className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-vazir text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors shrink-0 cursor-pointer shadow-xs active:scale-95"
+                title="تلاش مجدد"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>تلاش مجدد</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2" dir="ltr">
+              {/* Play / Pause / Loading Button */}
+              <button
+                type="button"
+                disabled={isLoadingAudio}
+                onClick={handlePlayToggle}
                 className="
                   flex
                   items-center
                   justify-center
-                  min-h-6
-                  px-1
-                  py-1
-                  text-[10px]
-                  text-neutral-600
-                  dark:text-neutral-300
-                  font-vazir
-                  whitespace-nowrap
+                  w-6
+                  h-6
+                  shrink-0
+                  rounded-full
+                  bg-primery-500
+                  text-white
+                  hover:opacity-90
+                  disabled:opacity-80
+                  transition-all
+                  cursor-pointer
                 "
-                dir="rtl"
+                title={isPlaying ? "توقف" : "پخش صدا"}
+                aria-label={isPlaying ? "توقف" : "پخش صدا"}
               >
-                هیچ صدایی برای پخش وجود ندارد
-              </div>
-            ) : (
-              <div className="flex items-center gap-2" dir="ltr">
-                {/* Play / Pause */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsPlaying((prev) => !prev);
-                  }}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    w-6
-                    h-6
-                    shrink-0
-                    rounded-full
-                    bg-primery-500
-                    text-white
-                    hover:opacity-90
-                    transition
-                  "
-                >
-                  {isPlaying ? (
-                    <Pause size={16} fill="currentColor" />
-                  ) : (
-                    <Play size={16} fill="currentColor" className="ml-0.5" />
-                  )}
-                </button>
+                {isLoadingAudio ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : isPlaying ? (
+                  <Pause size={14} fill="currentColor" />
+                ) : (
+                  <Play size={14} fill="currentColor" className="ml-0.5" />
+                )}
+              </button>
 
-                {/* Fake Waveform */}
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-[1.5px]
-                    flex-1
-                    h-7
-                    cursor-pointer
-                  "
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  {[
-                    12, 20, 16, 25, 18, 30, 22, 14, 28, 20, 32, 24, 17, 27, 21,
-                    13, 24, 30, 18, 26, 15, 22, 29, 17, 23, 14, 20, 27, 18, 24,
-                  ].map((height, index) => (
+              {/* Real Acoustic Waveform (Frequencies of the text) */}
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-[1.5px]
+                  flex-1
+                  h-7
+                  cursor-pointer
+                  py-0.5
+                "
+                title="کلیک برای پرش به این بخش از صدا"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {displayBars.map((height, index) => {
+                  const activeBarsCount = Math.floor(playbackProgress * 30);
+                  const isPassed = isPlaying
+                    ? index <= activeBarsCount
+                    : playbackProgress > 0 && index <= activeBarsCount;
+
+                  return (
                     <div
                       key={index}
+                      onClick={(e) => handleSeek(e, index, 30)}
                       className={`
                         w-[2px]
                         rounded-full
-                        transition-colors
+                        transition-all
+                        duration-75
+                        hover:scale-y-125
                         ${
-                          isPlaying && index < 16
+                          isPassed
                             ? "bg-primery-500"
-                            : "bg-neutral-300 dark:bg-neutral-600"
+                            : "bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400 dark:hover:bg-neutral-500"
                         }
                       `}
                       style={{ height: `${height}%` }}
                     />
-                  ))}
-                </div>
-
-                {/* Voice Duration */}
-                <span
-                  className="
-                    shrink-0
-                    text-[11px]
-                    text-neutral-500
-                    dark:text-neutral-400
-                    tabular-nums
-                    pr-[8px]
-                    pt-[1px]
-                  "
-                >
-                  0:24
-                </span>
+                  );
+                })}
               </div>
-            )}
-          </Popover.Content>
-        </Popover.Portal>
-      )}
+
+              {/* Voice Duration */}
+              <span
+                className="
+                  shrink-0
+                  text-[11px]
+                  text-neutral-500
+                  dark:text-neutral-400
+                  tabular-nums
+                  pr-[6px]
+                  pt-[1px]
+                "
+              >
+                {audioData
+                  ? formatAudioDuration(isPlaying ? currentTime : audioData.duration)
+                  : "0:00"}
+              </span>
+            </div>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
     </Popover.Root>
   );
 };

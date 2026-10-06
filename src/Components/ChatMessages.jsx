@@ -155,6 +155,7 @@ export const ChatMessages = ({
                   time={message.time}
                   createdAt={message.created_at || message.createdAt}
                   isMine={isMine}
+                  isError={message.isError || message.is_error}
                   classNames={classNames}
                   comments={message.comments || []}
                   onDeleteComment={(commentId) =>

@@ -19,6 +19,7 @@ import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
+import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
 import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
 import { toPersianDigits } from "@/utils/dateUtils";
@@ -32,6 +33,7 @@ export const StudentExams = () => {
   const [schedulingExam, setSchedulingExam] = useState(null);
   const [turnWarning, setTurnWarning] = useState("");
 
+  const [activeTab, setActiveTab] = useState("active"); // 'active' | 'past' | 'all'
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortOrder, setSortOrder] = useState("date_desc");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -168,20 +170,16 @@ export const StudentExams = () => {
 
         if (Array.isArray(data) && data.length > 0) {
           const seenIds = new Set();
-          const seenTitles = new Set();
           const mapped = [];
 
           for (const item of data) {
             const key = String(item.id || item.assignment_id);
-            const titleKey = (item.title || "").trim().toLowerCase();
 
-            if (seenIds.has(key) || (titleKey && seenTitles.has(titleKey))) {
+            if (seenIds.has(key)) {
               continue;
             }
 
             seenIds.add(key);
-
-            if (titleKey) seenTitles.add(titleKey);
 
             const topic =
               Array.isArray(item.goals) && item.goals.length > 0
@@ -296,31 +294,53 @@ export const StudentExams = () => {
     return "assigned";
   };
 
+  const examCounts = useMemo(() => {
+    let active = 0;
+    let past = 0;
+    for (const ex of exams) {
+      const timing = checkSlotTiming(ex);
+      if (ex.status === "completed" || timing.status === "passed") {
+        past++;
+      } else {
+        active++;
+      }
+    }
+    return { active, past, all: exams.length };
+  }, [exams, now]);
+
   const displayedExams = useMemo(() => {
     let result = exams.map((exam) => {
       const timing = checkSlotTiming(exam);
 
-      let filterStatus = "upcoming";
+      let timingCategory = "upcoming";
 
       if (exam.status === "completed") {
-        filterStatus = "ended";
+        timingCategory = "ended";
       } else if (
         exam.status === "started" ||
         exam.status === "active" ||
         timing.status === "current"
       ) {
-        filterStatus = "active";
+        timingCategory = "active";
       } else if (timing.status === "passed") {
-        filterStatus = "ended";
+        timingCategory = "ended";
       } else {
-        filterStatus = "upcoming";
+        timingCategory = "upcoming";
       }
 
       return {
         ...exam,
-        filterStatus,
+        timingCategory,
+        filterStatus: timingCategory,
       };
     });
+
+    // Primary Tab filtering: active (ongoing + upcoming) vs past (ended) vs all
+    if (activeTab === "active") {
+      result = result.filter((exam) => exam.timingCategory !== "ended");
+    } else if (activeTab === "past") {
+      result = result.filter((exam) => exam.timingCategory === "ended");
+    }
 
     if (filterStatus !== "all") {
       result = result.filter((exam) => exam.filterStatus === filterStatus);
@@ -347,7 +367,7 @@ export const StudentExams = () => {
     });
 
     return result;
-  }, [exams, filterStatus, sortOrder, now]);
+  }, [exams, activeTab, filterStatus, sortOrder, now]);
 
   const handleStartExam = (exam) => {
     const targetId = exam.assignment_id || exam.id;
@@ -408,8 +428,15 @@ export const StudentExams = () => {
         </div>
       </header>
 
+      {/* Exams Navigation Bar */}
+      <ExamsNavBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        counts={examCounts}
+      />
+
       {/* Content */}
-      <section className="w-full flex-1 min-h-0">
+      <section className="w-full flex-1 min-h-0 flex flex-col">
         <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[105px]">
           <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             {/* Section Header */}
