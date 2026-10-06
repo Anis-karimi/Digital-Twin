@@ -80,6 +80,8 @@ export const TeacherSettings = () => {
 
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
 
   const loadSettings = async () => {
     try {
@@ -104,11 +106,21 @@ export const TeacherSettings = () => {
         setRecordedUrl(data.audio_url);
         setVoiceState("uploaded");
         setHasAudio(true);
+
+        // Get audio duration from API file
+        const audio = new Audio(data.audio_url);
+
+        audio.onloadedmetadata = () => {
+          setAudioDuration(audio.duration);
+        };
       } else {
         setRecordedUrl("");
         setVoiceState("idle");
         setHasAudio(false);
+        setAudioDuration(0);
+        setAudioCurrentTime(0);
       }
+
     } catch (error) {
       console.error("Failed to get user files:", error);
     }
@@ -199,6 +211,8 @@ export const TeacherSettings = () => {
       setIsPlaying(false);
       setWaveform([]);
       setRecordTime(0);
+      setAudioDuration(0);
+      setAudioCurrentTime(0);
       setAudioStatus("");
     } catch (error) {
       console.error("Delete audio error:", error);
@@ -312,6 +326,9 @@ export const TeacherSettings = () => {
       const wavBlob = await convertToWavTarget(blob, 24000);
 
       setRecordedBlob(wavBlob);
+
+      setAudioDuration(recordTime);
+      setAudioCurrentTime(0);
 
       setRecordedUrl(URL.createObjectURL(wavBlob));
 
@@ -439,8 +456,17 @@ export const TeacherSettings = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio(recordedUrl);
 
+      audioRef.current.onloadedmetadata = () => {
+        setAudioDuration(audioRef.current.duration);
+      };
+
+      audioRef.current.ontimeupdate = () => {
+        setAudioCurrentTime(audioRef.current.currentTime);
+      };
+
       audioRef.current.onended = () => {
         setIsPlaying(false);
+        setAudioCurrentTime(audioRef.current.duration);
       };
     }
 
@@ -448,6 +474,11 @@ export const TeacherSettings = () => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      if (audioRef.current.currentTime >= audioRef.current.duration) {
+        audioRef.current.currentTime = 0;
+        setAudioCurrentTime(0);
+      }
+
       audioRef.current.play();
       setIsPlaying(true);
     }
@@ -496,8 +527,9 @@ export const TeacherSettings = () => {
   const sendButton = getSendButtonStyle();
 
   const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const totalSeconds = Math.floor(seconds || 0);
+    const minutes = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
 
     return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
@@ -627,18 +659,39 @@ export const TeacherSettings = () => {
                     {renderVoiceIcon()}
                   </button>
 
-                  <div className="flex items-center gap-[2px] h-[26px] flex-1 min-w-0 overflow-hidden">
-                    {waveform.map((item, index) => (
+                  <div className="relative w-full h-[6px] flex items-center">
+                    {/* Track */}
+                    <div className="absolute w-full h-[3px] bg-neutral-scale300 dark:bg-neutral-scale1000 rounded-full overflow-hidden">
+                      {/* Progress */}
                       <div
-                        key={index}
-                        style={{ height: `${item}px` }}
-                        className="w-[2px] bg-primery-800 dark:bg-primery-90 rounded"
+                        className="absolute left-0 top-0 h-full bg-primery-800 dark:bg-primery-90 rounded-full"
+                        style={{
+                          width:
+                            audioDuration > 0
+                              ? `${(audioCurrentTime / audioDuration) * 100}%`
+                              : "0%",
+                          transition: "width 100ms linear",
+                        }}
                       />
-                    ))}
+                    </div>
+
+                    {/* Knob */}
+                    <div
+                      className="absolute w-[8px] h-[8px] rounded-full bg-primery-800 dark:bg-primery-90 shadow-sm"
+                      style={{
+                        left:
+                          audioDuration > 0
+                            ? `calc(${(audioCurrentTime / audioDuration) * 100}% - 4px)`
+                            : "-4px",
+                        transition: "left 100ms linear",
+                      }}
+                    />
                   </div>
 
-                  <div className="text-primery-1000 dark:text-primery-90 en-caption-4 shrink-0">
-                    {formatTime(recordTime)}
+                  <div className="text-primery-1000 dark:text-primery-90 en-caption-4 shrink-0 tabular-nums">
+                    {voiceState === "recording"
+                      ? formatTime(recordTime)
+                      : `${formatTime(audioCurrentTime)} / ${formatTime(audioDuration)}`}
                   </div>
                 </div>
 

@@ -36,20 +36,100 @@ import {
   getTodayIsoDate,
 } from "@/utils/dateUtils";
 
-export const BLOOM_LEVELS = [
-  { level: 1, name: "یادآوری", desc: "بازشناسی و یادآوری تعاریف، کلیدواژه‌ها و اصول پایه", key: "remember" },
-  { level: 2, name: "درک مفاهیم", desc: "تفسیر، تشریح و توضیح عمیق موضوعات به بیان خود دانشجو", key: "understand" },
-  { level: 3, name: "به‌کارگیری", desc: "استفاده عملی از مفاهیم در حل سناریوها و مسائل عینی", key: "apply" },
-  { level: 4, name: "تحلیل", desc: "کالبدشکافی ساختار، کشف ارتباط اجزا، مقایسه و عیب‌یابی", key: "analyze" },
-  { level: 5, name: "ارزیابی", desc: "نقد فنی، داوری بر اساس معیارها و استدلال نقادانه", key: "evaluate" },
-  { level: 6, name: "آفرینش", desc: "طراحی معماری، خلق راه‌حل نوآورانه و ترکیب مفاهیم", key: "create" },
+export const BLOOM_LEVELS_FA = [
+  {
+    level: 1,
+    name: "یادآوری",
+    desc: "بازشناسی و یادآوری تعاریف، کلیدواژه‌ها و اصول پایه",
+    key: "remember",
+  },
+  {
+    level: 2,
+    name: "درک مفاهیم",
+    desc: "تفسیر، تشریح و توضیح عمیق موضوعات به بیان خود دانشجو",
+    key: "understand",
+  },
+  {
+    level: 3,
+    name: "به‌کارگیری",
+    desc: "استفاده عملی از مفاهیم در حل سناریوها و مسائل عینی",
+    key: "apply",
+  },
+  {
+    level: 4,
+    name: "تحلیل",
+    desc: "کالبدشکافی ساختار، کشف ارتباط اجزا، مقایسه و عیب‌یابی",
+    key: "analyze",
+  },
+  {
+    level: 5,
+    name: "ارزیابی",
+    desc: "نقد فنی، داوری بر اساس معیارها و استدلال نقادانه",
+    key: "evaluate",
+  },
+  {
+    level: 6,
+    name: "آفرینش",
+    desc: "طراحی معماری، خلق راه‌حل نوآورانه و ترکیب مفاهیم",
+    key: "create",
+  },
 ];
 
-export const GOAL_TYPES = [
+export const BLOOM_LEVELS_EN = [
+  {
+    level: 1,
+    name: "Remember",
+    desc: "Recognizing and recalling definitions, keywords, and basic principles",
+    key: "remember",
+  },
+  {
+    level: 2,
+    name: "Understand",
+    desc: "Interpreting, explaining, and providing an in-depth understanding of topics in the student's own words",
+    key: "understand",
+  },
+  {
+    level: 3,
+    name: "Apply",
+    desc: "Applying concepts in practice to solve scenarios and real-world problems",
+    key: "apply",
+  },
+  {
+    level: 4,
+    name: "Analyze",
+    desc: "Breaking down structures, identifying relationships between components, comparing, and troubleshooting",
+    key: "analyze",
+  },
+  {
+    level: 5,
+    name: "Evaluate",
+    desc: "Technical critique, judgment based on criteria, and critical reasoning",
+    key: "evaluate",
+  },
+  {
+    level: 6,
+    name: "Create",
+    desc: "Designing architectures, creating innovative solutions, and combining concepts",
+    key: "create",
+  },
+];
+
+export const GOAL_TYPES_FA = [
   { id: "theoretical", label: "تئوری و مفهومی" },
   { id: "practical", label: "کاربردی و عملی" },
   { id: "analytical", label: "تحلیلی و حل مسئله" },
 ];
+
+export const GOAL_TYPES_EN = [
+  { id: "theoretical", label: "Theoretical and Conceptual" },
+  { id: "practical", label: "Practical and Applied" },
+  { id: "analytical", label: "Analytical and Problem Solving" },
+];
+
+const getListsByLanguage = (isRTL) => ({
+  BLOOM_LEVELS: isRTL ? BLOOM_LEVELS_FA : BLOOM_LEVELS_EN,
+  GOAL_TYPES: isRTL ? GOAL_TYPES_FA : GOAL_TYPES_EN,
+});
 
 // Utility helpers for time and minute math
 const calculateTotalMinutes = (studentCount, durationMinutes, gapMinutes = 5) => {
@@ -104,6 +184,8 @@ export const CreateExamAccordion = ({
   const [isFilesOpen, setIsFilesOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(true);
 
+  const { BLOOM_LEVELS, GOAL_TYPES } = getListsByLanguage(isRTL);
+
   // Initial Goals
   const initialGoalsList = useMemo(() => {
     if (Array.isArray(initialExam?.goals) && initialExam.goals.length > 0) {
@@ -112,7 +194,11 @@ export const CreateExamAccordion = ({
           let bl = 2;
           if (typeof g.bloom_level === "number") bl = g.bloom_level;
           else if (typeof g.bloom_level === "string") {
-            const found = BLOOM_LEVELS.find((b) => b.key === g.bloom_level.toLowerCase() || b.name === g.bloom_level);
+            const found = BLOOM_LEVELS.find(
+              (b) =>
+                b.key === g.bloom_level.toLowerCase() ||
+                b.name === g.bloom_level,
+            );
             if (found) bl = found.level;
           }
           return {
@@ -461,7 +547,8 @@ export const CreateExamAccordion = ({
         .map((g) => {
           if (typeof g === "object" && g !== null) {
             const bKey =
-              BLOOM_LEVELS.find((b) => b.level === (g.bloom_level || 2))?.key || "understand";
+              BLOOM_LEVELS.find((b) => b.level === (g.bloom_level || 2))?.key ||
+              "understand";
             return {
               title: (g.title || "").trim(),
               goal_type: g.goal_type || "theoretical",
