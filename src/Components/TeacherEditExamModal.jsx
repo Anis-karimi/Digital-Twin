@@ -145,7 +145,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
     try {
       await examsApi.updateExam(assignmentId, payload);
       if (onSuccess) {
-        onSuccess(payload);
+        onSuccess({ ...exam, ...payload, id: assignmentId, quiz_id: assignmentId });
       }
       onClose();
     } catch (err) {

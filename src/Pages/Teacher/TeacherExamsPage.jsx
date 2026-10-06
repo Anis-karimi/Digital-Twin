@@ -17,6 +17,7 @@ import "@/styles/fonts.css";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { CreateExamAccordion } from "@/Components/CreateExamAccordion";
+import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
 import { TeacherExamResultsModal } from "@/Components/TeacherExamResultsModal";
 import { jalaliToGregorian, toPersianDigits } from "@/utils/dateUtils";
@@ -156,6 +157,7 @@ export const TeacherExams = () => {
   const [resultsExam, setResultsExam] = useState(null);
 
   const [exams, setExams] = useState([]);
+  const [activeTab, setActiveTab] = useState("active"); // 'active' | 'past' | 'all'
   const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'active' | 'upcoming' | 'ended'
   const [sortOrder, setSortOrder] = useState("date_desc"); // 'date_desc' | 'date_asc' | 'title'
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -163,14 +165,10 @@ export const TeacherExams = () => {
 
   const deduplicateExams = (items) => {
     const seenIds = new Set();
-    const seenTitles = new Set();
     return items.filter((item) => {
-      const idKey = String(item.id || item.quiz_id);
-      const titleKey = (item.title || "").trim().toLowerCase();
+      const idKey = String(item.id || item.quiz_id || item.assignment_id);
       if (seenIds.has(idKey)) return false;
-      if (titleKey && seenTitles.has(titleKey)) return false;
       seenIds.add(idKey);
-      if (titleKey) seenTitles.add(titleKey);
       return true;
     });
   };
@@ -240,12 +238,15 @@ export const TeacherExams = () => {
     loadExams();
   }, []);
 
-  const handleExamCreated = () => {
+  const handleExamCreated = (newExam) => {
     setIsCreatingExam(false);
     setEditingExam(null);
     setSuccessMessage(
       isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست قرار گرفت!" : "New exam created successfully!"
     );
+    if (newExam) {
+      setExams((prev) => deduplicateExams([newExam, ...prev]));
+    }
     loadExams();
     setTimeout(() => {
       setSuccessMessage("");
@@ -260,17 +261,41 @@ export const TeacherExams = () => {
     setResultsExam(exam);
   };
 
-  const handleExamUpdated = () => {
+  const handleExamUpdated = (updatedExam) => {
     setEditingExam(null);
     setIsCreatingExam(false);
     setSuccessMessage(
       isRTL ? "مشخصات آزمون با موفقیت ویرایش شد!" : "Exam updated successfully!"
     );
+    if (updatedExam) {
+      const uId = String(updatedExam.id || updatedExam.quiz_id || updatedExam.assignment_id);
+      setExams((prev) =>
+        prev.map((e) => {
+          const eId = String(e.id || e.quiz_id || e.assignment_id);
+          return eId === uId ? { ...e, ...updatedExam } : e;
+        })
+      );
+    }
     loadExams();
     setTimeout(() => {
       setSuccessMessage("");
     }, 4000);
   };
+
+  // Calculate counts for active, past, and all tabs
+  const examCounts = useMemo(() => {
+    let active = 0;
+    let past = 0;
+    for (const ex of exams) {
+      const timing = getExamTimingState(ex, isRTL);
+      if (timing.status === "ended") {
+        past++;
+      } else {
+        active++;
+      }
+    }
+    return { active, past, all: exams.length };
+  }, [exams, isRTL]);
 
   // Filter & Sort calculation
   const displayedExams = useMemo(() => {
@@ -279,6 +304,14 @@ export const TeacherExams = () => {
       timing: getExamTimingState(exam, isRTL),
     }));
 
+    // Primary Tab Filtering: active (ongoing + upcoming) vs past (ended) vs all
+    if (activeTab === "active") {
+      result = result.filter((e) => e.timing.status !== "ended");
+    } else if (activeTab === "past") {
+      result = result.filter((e) => e.timing.status === "ended");
+    }
+
+    // Secondary Dropdown Filtering
     if (filterStatus !== "all") {
       result = result.filter((e) => e.timing.status === filterStatus);
     }
@@ -297,7 +330,7 @@ export const TeacherExams = () => {
     });
 
     return result;
-  }, [exams, filterStatus, sortOrder, isRTL]);
+  }, [exams, activeTab, filterStatus, sortOrder, isRTL]);
 
   return (
     <main
@@ -348,8 +381,17 @@ export const TeacherExams = () => {
         </div>
       </header>
 
+      {/* Exams Navigation Bar */}
+      {!isCreatingExam && !editingExam && (
+        <ExamsNavBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          counts={examCounts}
+        />
+      )}
+
       {/* Content */}
-      <section className="w-full flex-1 min-h-0">
+      <section className="w-full flex-1 min-h-0 flex flex-col">
         {successMessage && (
           <div className="mx-3.5 mb-3 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center gap-2 text-xs font-vazir">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
