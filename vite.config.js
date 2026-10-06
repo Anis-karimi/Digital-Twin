@@ -75,6 +75,17 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        "/llm-proxy": {
+          target: "http://94.184.177.171:8000",
+          rewrite: (path) => path.replace(/^\/llm-proxy/, ""),
+          changeOrigin: true,
+          secure: false,
+          configure: (proxy) => {
+            proxy.on("error", (err, req) => {
+              console.error(`[Vite LLM Proxy Error -> ${req.url}]:`, err.message);
+            });
+          },
+        },
       },
     },
   };

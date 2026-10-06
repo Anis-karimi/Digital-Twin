@@ -260,7 +260,12 @@ export const QuizQuestionsPage = ({
         [currentQuestionIndex]: true,
       }));
 
-      const exp = await quizApi.explainAnswer(currentQuestion.question);
+      const exp = await quizApi.explainAnswer({
+        question: currentQuestion.question,
+        options: currentQuestion.options,
+        answer: currentQuestion.answer,
+        selectedAnswer: selectedAnswers[currentQuestionIndex],
+      });
 
       setExplanations((prev) => ({
         ...prev,
@@ -589,7 +594,7 @@ export const QuizQuestionsPage = ({
                 </div>
               ) : (
                 <p
-                  className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 ${
+                  className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 whitespace-pre-line ${
                     isPersianText(explanation)
                       ? "fa-body font-vazir text-right"
                       : "en-body font-inter text-left"

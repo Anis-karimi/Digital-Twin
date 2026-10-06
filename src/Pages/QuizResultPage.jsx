@@ -247,7 +247,7 @@ export const QuizResultPage = ({
       };
 
       // 1. Fetch AI explanations for any question missing one
-      const fetchExplanation = async (question) => {
+      const fetchExplanation = async (question, idx) => {
         const existing =
           question.explanation ||
           question.explain ||
@@ -263,7 +263,12 @@ export const QuizResultPage = ({
           const timeoutPromise = new Promise((resolve) =>
             setTimeout(() => resolve(""), 6000)
           );
-          const apiPromise = quizApi.explainAnswer(qText);
+          const apiPromise = quizApi.explainAnswer({
+            question: question.question,
+            options: question.options,
+            answer: question.answer,
+            selectedAnswer: selectedAnswers?.[idx],
+          });
           const res = await Promise.race([apiPromise, timeoutPromise]);
           if (res && typeof res === "string" && res.trim()) {
             question.explanation = res.trim();
@@ -276,7 +281,7 @@ export const QuizResultPage = ({
       };
 
       const explanations = await Promise.all(
-        quizData.map((q) => fetchExplanation(q))
+        quizData.map((q, idx) => fetchExplanation(q, idx))
       );
 
       // 2. Off-screen container for Landscape PDF capture (A4 landscape ratio ~ 1.41)

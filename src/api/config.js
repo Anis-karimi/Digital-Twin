@@ -62,6 +62,14 @@ export const API_CONFIG = {
   /** Flag to toggle live requests to the new backend */
   USE_NEW_BACKEND: import.meta.env.VITE_USE_NEW_BACKEND !== "false",
 
+  /** LLM Base URL for Qwen / Exam / Quiz Explanations */
+  LLM_BASE_URL:
+    import.meta.env.VITE_LLM_BASE_URL || "http://94.184.177.171:8000/v1",
+
+  /** LLM Model name */
+  LLM_MODEL:
+    import.meta.env.VITE_LLM_MODEL || "Qwen/Qwen2.5-7B-Instruct-AWQ",
+
   /** Standard timeout in milliseconds (60s for AI inference / file analysis) */
   REQUEST_TIMEOUT_MS: 60000,
 };

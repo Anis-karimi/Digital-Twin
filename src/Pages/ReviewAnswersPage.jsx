@@ -67,7 +67,7 @@ export const ReviewAnswers = ({
   const [explanations, setExplanations] = useState({});
   const [loadingExplanations, setLoadingExplanations] = useState({});
 
-  const toggleExplanation = async (questionIndex, questionText) => {
+  const toggleExplanation = async (questionIndex, questionItem) => {
     const nextState = !openExplanations[questionIndex];
     setOpenExplanations((prev) => ({
       ...prev,
@@ -77,7 +77,16 @@ export const ReviewAnswers = ({
     if (nextState && !explanations[questionIndex]) {
       try {
         setLoadingExplanations((prev) => ({ ...prev, [questionIndex]: true }));
-        const res = await quizApi.explainAnswer(questionText);
+        const payload =
+          typeof questionItem === "object" && questionItem !== null
+            ? {
+                question: questionItem.question,
+                options: questionItem.options,
+                answer: questionItem.answer,
+                selectedAnswer: selectedAnswers[questionIndex],
+              }
+            : questionItem;
+        const res = await quizApi.explainAnswer(payload);
         setExplanations((prev) => ({
           ...prev,
           [questionIndex]: res || t("noExplanationAvailable"),
@@ -371,7 +380,7 @@ export const ReviewAnswers = ({
               {/* Explain Button */}
               <button
                 type="button"
-                onClick={() => toggleExplanation(questionIndex, question.question)}
+                onClick={() => toggleExplanation(questionIndex, question)}
                 className="w-full h-11 rounded-xl bg-white dark:bg-neutral-scale1300 border border-primery-600 dark:border-sky-400 text-primery-700 dark:text-sky-300 text-xs font-bold transition-all hover:bg-primery-50 dark:hover:bg-sky-950/40 active:scale-98 flex items-center justify-center gap-2 cursor-pointer shadow-xs mt-2"
               >
                 {isLoadingExp ? (
@@ -407,7 +416,7 @@ export const ReviewAnswers = ({
                       </div>
                     ) : (
                       <p
-                        className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 ${
+                        className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 whitespace-pre-line ${
                           isPersianText(explanationText)
                             ? "fa-body font-vazir text-right"
                             : "en-body font-inter text-left"

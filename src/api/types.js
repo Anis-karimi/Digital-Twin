@@ -69,6 +69,10 @@
 /**
  * @typedef {Object} ExplainAnswerRequest
  * @property {string} question The question to analyze
+ * @property {Array<string|Object>} [options] Available options
+ * @property {string|number} [answer] Correct answer
+ * @property {string|number} [selectedAnswer] Student's selected answer
+ * @property {string} [language="fa"] Target language
  */
 
 /**
