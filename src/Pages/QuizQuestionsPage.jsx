@@ -17,6 +17,7 @@ import "@/styles/fonts.css";
 export const QuizQuestionsPage = ({
   isModal = false,
   modalQuizData = null,
+  topic: propTopic = "",
   onFinishQuiz,
   onExitQuiz,
 }) => {
@@ -29,6 +30,13 @@ export const QuizQuestionsPage = ({
   // Retrieve generated questions passed from QuizFirstPage or props
   const quizData = isModal && modalQuizData ? modalQuizData : (location.state?.quizData || []);
   const totalQuestions = quizData.length;
+
+  const quizTopic =
+    propTopic ||
+    location.state?.topic ||
+    modalQuizData?.topic ||
+    sessionStorage.getItem("lastQuizTopic") ||
+    "";
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
@@ -360,6 +368,7 @@ export const QuizQuestionsPage = ({
         totalQuestions,
         selectedAnswers,
         quizData,
+        topic: quizTopic,
       };
 
       if (isModal && onFinishQuiz) {

@@ -84,44 +84,114 @@ function formatOptionsText(options) {
 const explanationCache = new Map();
 
 /**
+ * Checks whether the selected answer is incorrect relative to the correct answer.
+ * @param {string|number} selectedAnswer
+ * @param {string|number} answer
+ * @param {Array} options
+ * @returns {boolean}
+ */
+function checkIfIncorrect(selectedAnswer, answer, options) {
+  if (selectedAnswer === undefined || selectedAnswer === null) return false;
+  const sel = String(selectedAnswer).trim();
+  const ans = String(answer || "").trim();
+  if (!sel || ["unanswered", "بی‌پاسخ", "none", "null", "undefined"].includes(sel.toLowerCase())) {
+    return false;
+  }
+  if (!ans) return false;
+  if (sel.toLowerCase() === ans.toLowerCase()) return false;
+
+  const enLetters = ["a", "b", "c", "d", "e"];
+  const faLetters = ["الف", "ب", "ج", "د", "هـ"];
+  const numLetters = ["1", "2", "3", "4", "5"];
+
+  const getIdx = (v) => {
+    const clean = String(v).toLowerCase().replace(/[\)\.:\-]/g, "").trim();
+    let idx = enLetters.indexOf(clean);
+    if (idx !== -1) return idx;
+    idx = faLetters.indexOf(clean);
+    if (idx !== -1) return idx;
+    idx = numLetters.indexOf(clean);
+    if (idx !== -1) return idx;
+    for (let i = 0; i < 5; i++) {
+      if (
+        clean.startsWith(`گزینه ${faLetters[i]}`) ||
+        clean.startsWith(`گزینه ${numLetters[i]}`) ||
+        clean.startsWith(`گزینه ${enLetters[i]}`)
+      ) {
+        return i;
+      }
+      if (String(v).startsWith(`${enLetters[i]})`) || String(v).startsWith(`${faLetters[i]})`)) {
+        return i;
+      }
+    }
+    if (Array.isArray(options)) {
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        const optText = typeof opt === "object" ? (opt.text || opt.answer || "") : String(opt);
+        if (optText && (v.toLowerCase() === optText.toLowerCase() || optText.toLowerCase().includes(v.toLowerCase()))) {
+          return i;
+        }
+      }
+    }
+    return null;
+  };
+
+  const selIdx = getIdx(sel);
+  const ansIdx = getIdx(ans);
+  if (selIdx !== null && ansIdx !== null) {
+    return selIdx !== ansIdx;
+  }
+  return sel.toLowerCase() !== ans.toLowerCase();
+}
+
+/**
  * Builds the prepared pedagogical prompt for the Qwen LLM server.
- * Instructs the model to output a crisp, fast 2-3 line explanation.
+ * Instructs the model to output scientific reasoning, plus mistake reason ONLY if incorrect.
  * @param {Object} params
  * @returns {{systemPrompt: string, userPrompt: string}}
  */
 function buildExplanationPrompt({ question, options, answer, selectedAnswer }) {
-  const systemPrompt =
-    "شما یک استاد و مشاور آموزشی هستید. وظیفه شما ارائه تحلیلی بسیار کوتاه، روان و آموزنده برای سوال آزمون در حداکثر ۲ الی ۳ خط است.\n" +
-    "قوانین اجباری:\n" +
-    "۱. پاسخ باید حداکثر در ۲ الی ۳ خط کوتاه و مفید (حداکثر ۵۰ الی ۷۰ کلمه) باشد.\n" +
-    "۲. در خط اول دلیل علمی و قطعی درستی گزینه صحیح را مشخص کن.\n" +
-    "۳. در خط دوم نکته کلیدی آموزشی یا تفاوت آن با گزینه انتخابی را ذکر کن.\n" +
-    "۴. از سلام، مقدمه‌چینی، نتیجه‌گیری‌های طولانی و بررسی جداگانه تک‌تک گزینه‌ها اکیداً خودداری کن.\n" +
-    "۵. پاسخ باید کاملاً روان، علمی و به زبان فارسی باشد.";
-
+  const isIncorrect = checkIfIncorrect(selectedAnswer, answer, options);
   const optionsText = formatOptionsText(options);
-
-  const parts = [`سوال: ${question}`];
+  const parts = [`صورت سوال: ${question}`];
 
   if (optionsText) {
     parts.push(`گزینه‌ها:\n${optionsText}`);
   }
 
   if (answer !== undefined && answer !== null && String(answer).trim()) {
-    parts.push(`پاسخ صحیح: ${answer}`);
+    parts.push(`گزینه صحیح: ${answer}`);
   }
 
-  if (
-    selectedAnswer !== undefined &&
-    selectedAnswer !== null &&
-    String(selectedAnswer).trim()
-  ) {
-    parts.push(`پاسخ انتخابی کاربر: ${selectedAnswer}`);
+  if (isIncorrect) {
+    const systemPrompt =
+      "شما یک استاد و تحلیل‌گر آزمون هستید. برای این سوال، فقط و فقط دو بخش زیر را بسیار صریح، کوتاه و علمی بنویس:\n" +
+      "۱. استدلال علمی: دلیل علمی درستی گزینه صحیح در ۱ الی ۲ جمله کوتاه.\n" +
+      "۲. علت اشتباه احتمالی: در ۱ جمله کوتاه توضیح بده چرا گزینه انتخابی کاربر نادرست است یا چه تله مفهومی وجود داشته است.\n" +
+      "قوانین اکید: از هرگونه سلام، مقدمه‌چینی، بررسی سایر گزینه‌ها و بخش‌بندی‌های دیگر اکیداً خودداری کن.";
+
+    if (
+      selectedAnswer !== undefined &&
+      selectedAnswer !== null &&
+      String(selectedAnswer).trim()
+    ) {
+      parts.push(`گزینه انتخابی اشتباه کاربر: ${selectedAnswer}`);
+    }
+
+    parts.push(
+      "فقط استدلال علمی گزینه صحیح و در ادامه علت اشتباه احتمالی کاربر را بنویس:"
+    );
+
+    return { systemPrompt, userPrompt: parts.join("\n\n") };
   }
 
-  parts.push(
-    "لطفاً در حداکثر ۲ الی ۳ خط کوتاه و مفید، دلیل درستی گزینه صحیح و نکته کلیدی را توضیح بده:"
-  );
+  const systemPrompt =
+    "شما یک استاد و تحلیل‌گر آزمون هستید. تنها وظیفه شما بیان استدلال علمی درستی گزینه صحیح است.\n" +
+    "قوانین اکید:\n" +
+    "۱. فقط و فقط استدلال علمی درستی پاسخ صحیح را در ۱ الی ۲ جمله کوتاه، صریح و علمی بنویس.\n" +
+    "۲. از نوشتن هرگونه بخش دیگری (مانند مقدمه، سلام، بررسی سایر گزینه‌ها، علت اشتباه یا نکات اضافی) اکیداً خودداری کن.";
+
+  parts.push("فقط استدلال علمی درستی گزینه صحیح را بنویس:");
 
   return { systemPrompt, userPrompt: parts.join("\n\n") };
 }

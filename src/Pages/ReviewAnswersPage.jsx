@@ -27,6 +27,11 @@ export const ReviewAnswers = ({
   const navigate = useNavigate();
 
   const isHandlingBackRef = useRef(false);
+  const topic =
+    modalReviewData?.topic ||
+    location.state?.topic ||
+    sessionStorage.getItem("lastQuizTopic") ||
+    "";
 
   useEffect(() => {
     if (isModal) {
@@ -47,6 +52,7 @@ export const ReviewAnswers = ({
         state: {
           quizData: location.state?.quizData || [],
           selectedAnswers: location.state?.selectedAnswers || {},
+          topic,
         },
       });
     };
@@ -168,6 +174,7 @@ export const ReviewAnswers = ({
       state: {
         quizData,
         selectedAnswers,
+        topic,
       },
     });
   };

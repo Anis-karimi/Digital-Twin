@@ -30,14 +30,15 @@ export const TelegramQuizBottomSheet = ({
   const [resultData, setResultData] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
+  // Compute clean quiz title (defaults to "کوییز سیستم عامل")
+  const cleanTitle = (courseTitle || "").replace(/گفت‌وگو\s*(با)?\s*/g, "").trim();
+  const quizTitle = cleanTitle ? `کوییز ${cleanTitle}` : (t("osQuiz") || "کوییز سیستم عامل");
+  const [activeTopic, setActiveTopic] = useState(cleanTitle);
+
   // Drag physics state
   const [dragOffset, setDragOffset] = useState(0);
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
-
-  // Compute clean quiz title (defaults to "کوییز سیستم عامل")
-  const cleanTitle = (courseTitle || "").replace(/گفت‌وگو\s*(با)?\s*/g, "").trim();
-  const quizTitle = cleanTitle ? `کوییز ${cleanTitle}` : (t("osQuiz") || "کوییز سیستم عامل");
 
   // Reset internal state if closed completely
   useEffect(() => {
@@ -47,8 +48,9 @@ export const TelegramQuizBottomSheet = ({
       setResultData(null);
       setShowExitConfirm(false);
       setDragOffset(0);
+      setActiveTopic(cleanTitle);
     }
-  }, [isOpen]);
+  }, [isOpen, cleanTitle]);
 
   const handleAttemptClose = () => {
     if (step === "questions") {
@@ -174,8 +176,9 @@ export const TelegramQuizBottomSheet = ({
             <QuizFirstPage
               isModal={true}
               initialTopic={cleanTitle}
-              onStartQuiz={(generatedData) => {
+              onStartQuiz={(generatedData, chosenTopic) => {
                 setQuizData(generatedData);
+                if (chosenTopic) setActiveTopic(chosenTopic);
                 setStep("questions");
               }}
               onClose={handleAttemptClose}
@@ -187,8 +190,12 @@ export const TelegramQuizBottomSheet = ({
             <QuizQuestionsPage
               isModal={true}
               modalQuizData={quizData}
+              topic={activeTopic}
               onFinishQuiz={(evaluatedResult) => {
-                setResultData(evaluatedResult);
+                setResultData({
+                  ...evaluatedResult,
+                  topic: evaluatedResult?.topic || activeTopic,
+                });
                 setStep("result");
               }}
               onExitQuiz={handleAttemptClose}
@@ -217,6 +224,7 @@ export const TelegramQuizBottomSheet = ({
               modalReviewData={{
                 quizData: resultData?.quizData || quizData,
                 selectedAnswers: resultData?.selectedAnswers || {},
+                topic: resultData?.topic || activeTopic,
               }}
               onBackToResult={() => {
                 setStep("result");

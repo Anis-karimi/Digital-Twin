@@ -119,6 +119,14 @@ export const QuizResultPage = ({
     selectedAnswers = {},
   } = stateData;
 
+  const quizTopic =
+    stateData.topic ||
+    stateData.exam?.topic ||
+    stateData.exam?.title ||
+    quizData?.[0]?.topic ||
+    sessionStorage.getItem("lastQuizTopic") ||
+    "";
+
   const totalAnswers = correctCount + incorrectCount;
   const unansweredCount = Math.max(0, totalQuestions - totalAnswers);
 
@@ -327,14 +335,53 @@ export const QuizResultPage = ({
       const titleBox = document.createElement("div");
       titleBox.appendChild(title);
       titleBox.appendChild(subtitle);
+
+      if (quizTopic) {
+        const topicBadge = document.createElement("div");
+        topicBadge.style.display = "inline-flex";
+        topicBadge.style.alignItems = "center";
+        topicBadge.style.gap = "8px";
+        topicBadge.style.marginTop = "8px";
+        topicBadge.style.padding = "5px 14px";
+        topicBadge.style.backgroundColor = "#eff6ff";
+        topicBadge.style.border = "1px solid #bfdbfe";
+        topicBadge.style.borderRadius = "8px";
+
+        const topicLabel = document.createElement("span");
+        topicLabel.textContent = isRTL ? "موضوع آزمون:" : "Exam Topic:";
+        topicLabel.style.fontSize = "13px";
+        topicLabel.style.fontWeight = "700";
+        topicLabel.style.color = "#2563eb";
+        topicLabel.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+
+        const topicText = document.createElement("span");
+        topicText.textContent = quizTopic;
+        topicText.style.fontSize = "13px";
+        topicText.style.fontWeight = "800";
+        topicText.style.color = "#1e293b";
+        topicText.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+
+        topicBadge.appendChild(topicLabel);
+        topicBadge.appendChild(topicText);
+        titleBox.appendChild(topicBadge);
+      }
+
       headerDiv.appendChild(titleBox);
 
+      const metaBox = document.createElement("div");
+      metaBox.style.display = "flex";
+      metaBox.style.flexDirection = "column";
+      metaBox.style.alignItems = isRTL ? "flex-start" : "flex-end";
+      metaBox.style.gap = "4px";
+
       const dateStamp = document.createElement("div");
-      dateStamp.textContent = new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US");
+      dateStamp.textContent = `${isRTL ? "تاریخ آزمون:" : "Date:"} ${new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US")}`;
       dateStamp.style.fontSize = "12px";
       dateStamp.style.color = "#64748b";
       dateStamp.style.fontWeight = "600";
-      headerDiv.appendChild(dateStamp);
+      metaBox.appendChild(dateStamp);
+
+      headerDiv.appendChild(metaBox);
 
       container.appendChild(headerDiv);
 
@@ -703,6 +750,7 @@ export const QuizResultPage = ({
         state: {
           quizData,
           selectedAnswers,
+          topic: quizTopic,
         },
       });
       return;
@@ -793,6 +841,15 @@ export const QuizResultPage = ({
       <section className="flex-1 px-4 py-5 flex flex-col gap-4 overflow-y-auto pb-10">
         {/* Score & Evaluation Hero Card */}
         <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-3xl border border-neutral-scale200 dark:border-neutral-scale1100 p-6 shadow-sm flex flex-col items-center text-center space-y-4 transition-all animate-in fade-in duration-300">
+          {quizTopic && (
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primery-50 dark:bg-primery-950/40 border border-primery-200/60 dark:border-primery-800/40 text-primery-700 dark:text-sky-300 text-xs font-semibold">
+              <span className="text-neutral-500 dark:text-neutral-400 font-normal">
+                {isRTL ? "موضوع آزمون:" : "Quiz Topic:"}
+              </span>
+              <span className="font-bold">{quizTopic}</span>
+            </div>
+          )}
+
           {/* Conic Progress Score Ring */}
           <div
             className="relative w-36 h-36 rounded-full flex items-center justify-center p-2.5 shadow-inner transition-transform hover:scale-105 duration-300"

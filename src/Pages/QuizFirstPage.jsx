@@ -137,8 +137,11 @@ export const QuizFirstPage = ({
         throw new Error("No quiz questions were generated.");
       }
 
+      const currentTopic = topic.trim();
+      sessionStorage.setItem("lastQuizTopic", currentTopic);
+
       if (isModal && onStartQuiz) {
-        onStartQuiz(rawQuiz);
+        onStartQuiz(rawQuiz, currentTopic);
         return;
       }
 
@@ -147,6 +150,7 @@ export const QuizFirstPage = ({
         replace: true,
         state: {
           quizData: rawQuiz,
+          topic: currentTopic,
         },
       });
     } catch (err) {
