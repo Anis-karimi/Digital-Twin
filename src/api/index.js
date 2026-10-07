@@ -24,6 +24,7 @@ export { chatHistoryApi, getChatHistory, saveChatMessage, saveConversationTurn, 
 export { authApi, getCurrentUserProfile, login, logout, updateProfile } from "./new/auth.api";
 export { examsApi, getTeacherExams, saveGeneratedQuiz, submitQuizAnswers, getQuizResults } from "./new/exams.api";
 export { navigationApi, getLessonTabs, getAvailableCourses, requestJoinCourse } from "./new/navigation.api";
+export { biometricsApi, enrollStudentFace, verifyStudentFace, calibrateGaze, calibrateNeutralBaseline, sendBiometricTelemetry, getStudentBiometricProfile, logExamDistraction } from "./new/biometrics.api";
 
 // Unified API Object
 import { adminApi } from "./existing/admin.api";
@@ -40,6 +41,7 @@ import { chatHistoryApi } from "./new/chatHistory.api";
 import { authApi } from "./new/auth.api";
 import { examsApi } from "./new/exams.api";
 import { navigationApi } from "./new/navigation.api";
+import { biometricsApi } from "./new/biometrics.api";
 
 export const api = {
   // Active backend services
@@ -58,6 +60,7 @@ export const api = {
   auth: authApi,
   exams: examsApi,
   navigation: navigationApi,
+  biometrics: biometricsApi,
 };
 
 export default api;

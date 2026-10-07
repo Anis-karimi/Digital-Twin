@@ -16,6 +16,7 @@ import { TeacherExams } from "@/Pages/Teacher/TeacherExamsPage";
 import { StudentHome } from "@/Pages/Student/StudentHome";
 import { StudentNotification } from "@/Pages/Student/StudentNotification";
 import { StudentSettings } from "@/Pages/Student/StudentSettings";
+import { StudentBiometricsPage } from "@/Pages/Student/StudentBiometricsPage";
 import { StudentExams } from "@/Pages/Student/StudentExamsPage";
 import { StudentExamPage } from "@/Pages/Student/StudentExamPage";
 import { StudentExamResultPage } from "@/Pages/Student/StudentExamResultPage";
@@ -135,6 +136,14 @@ function App() {
               <Route path="/Students" element={<StudentsRoute />} />
 
               <Route path="/StudentSettings" element={<StudentSettings />} />
+              <Route
+                path="/StudentSettings/Biometrics"
+                element={<StudentBiometricsPage />}
+              />
+              <Route
+                path="/studentsettings/biometrics"
+                element={<StudentBiometricsPage />}
+              />
               <Route path="/StudentExams" element={<StudentExams />} />
               <Route
                 path="/studentexams"

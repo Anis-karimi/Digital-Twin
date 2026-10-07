@@ -1,15 +1,23 @@
+import { useRef, useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ScanFace } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
 import LogOut from "@/assets/icons/Log_Out.svg";
 import Language from "@/assets/icons/Language.svg";
 import PaintBrush from "@/assets/icons/paint-brush.svg";
-import { useRef, useState, useEffect, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { adminApi, userApi } from "@/api";
 
 const settingsItems = [
+  {
+    id: "biometrics",
+    title: "احراز هویت و کالیبراسیون چهره",
+    subtitle: "ثبت چهره، کالیبراسیون نگاه و مبنای احساسات",
+    path: "/StudentSettings/Biometrics",
+    icon: <ScanFace className="w-[23px] h-[23px] text-indigo-500 dark:text-indigo-400" />,
+  },
   {
     id: "theme",
     titleKey: "theme",
@@ -202,7 +210,7 @@ export const StudentSettings = () => {
                   className={`flex items-center gap-3.5 w-full ${
                     isRTL ? "flex-row text-right" : "flex-row text-left"
                   }`}
-                  aria-label={`${t(item.titleKey)}, ${t(item.subtitleKey)}`}
+                  aria-label={`${item.title || t(item.titleKey)}, ${item.subtitle || t(item.subtitleKey)}`}
                 >
                   <div className="w-[24px] h-[24px] shrink-0 flex items-center justify-center">
                     {item.icon}
@@ -217,14 +225,14 @@ export const StudentSettings = () => {
                         isRTL ? "fa-body" : "en-body"
                       }`}
                     >
-                      {t(item.titleKey)}
+                      {item.title || t(item.titleKey)}
                     </div>
                     <div
                       className={`w-full truncate text-neutral-scale1100 dark:text-neutral-scale300 ${
                         isRTL ? "fa-caption-2" : "en-caption-2"
                       }`}
                     >
-                      {t(item.subtitleKey)}
+                      {item.subtitle || t(item.subtitleKey)}
                     </div>
                   </div>
                 </Link>

@@ -644,21 +644,24 @@ html {
 @keyframes chat-bubble-enter-right {
   0% {
     opacity: 0;
-    transform: translateX(40px) scale(0.95);
+    transform: translateX(70px) scale(0.96);
+    filter: blur(4px);
   }
   70% {
-    opacity: 0.96;
-    transform: translateX(-3px) scale(1.008);
+    opacity: 1;
+    transform: translateX(-4px) scale(1.008);
+    filter: blur(0px);
   }
   100% {
     opacity: 1;
     transform: translateX(0) scale(1);
+    filter: blur(0px);
   }
 }
 
 .chat-bubble-enter-right {
-  animation: chat-bubble-enter-right 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  animation: chat-bubble-enter-right 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
 }
 
 /* Authentic Chat Message Bubbles: sharp bottom-left for AI question, stretched bottom-right for student response */

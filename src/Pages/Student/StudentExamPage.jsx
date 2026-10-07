@@ -9,17 +9,21 @@ import {
   Award,
   Sparkles,
   AlertCircle,
+  AlertTriangle,
   BookOpen,
   Mic,
   PhoneOff,
   Volume2,
   VolumeX,
   UserCheck,
+  ScanFace,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
+import { biometricsApi } from "@/api/new/biometrics.api";
+import { useBiometricTelemetry } from "@/features/biometrics/hooks/useBiometricTelemetry";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
@@ -31,7 +35,7 @@ export const StudentExamPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isRTL, t } = useContext(AppContext);
+  const { isRTL, t, currentUser } = useContext(AppContext);
 
   const passedExam = location.state?.exam;
   const examDurationMinutes = passedExam?.duration ? Number(passedExam.duration) : 10;
@@ -80,6 +84,98 @@ export const StudentExamPage = () => {
   const [micStream, setMicStream] = useState(null);
   const [showExitModal, setShowExitModal] = useState(false);
 
+  // Student identifier for biometrics telemetry
+  const studentId = String(
+    currentUser?.id ||
+    currentUser?.student_id ||
+    currentUser?.username ||
+    "20000000-0000-4000-8000-000000000105"
+  );
+
+  // Biometrics & Distraction Proctoring State
+  const [isDistracted, setIsDistracted] = useState(false);
+  const [distractionCount, setDistractionCount] = useState(0);
+  const distractionTimerRef = useRef(null);
+  const lastDistractionLogTimeRef = useRef(0);
+
+  // Capture low-res frame from videoRef for background 1 FPS telemetry
+  const captureExamFrameBlob = useCallback((quality = 0.65, width = 320, height = 240) => {
+    return new Promise((resolve) => {
+      const video = videoRef.current;
+      if (!video || !video.videoWidth || !video.videoHeight || video.readyState < 2) {
+        return resolve(null);
+      }
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(null);
+        ctx.drawImage(video, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => resolve(blob),
+          "image/jpeg",
+          quality
+        );
+      } catch (err) {
+        console.warn("Failed to capture exam frame blob:", err);
+        resolve(null);
+      }
+    });
+  }, []);
+
+  const handleTelemetryUpdate = useCallback((data) => {
+    if (!data) return;
+    const isFocused = data.is_focused ?? (data.attention_score >= 45);
+    const attention = data.attention_score ?? 100;
+
+    if (!isFocused || attention < 45) {
+      if (!distractionTimerRef.current) {
+        distractionTimerRef.current = setTimeout(() => {
+          setIsDistracted(true);
+          setDistractionCount((prev) => prev + 1);
+
+          // Rate limit distraction logging to once every 4 seconds
+          const now = Date.now();
+          if (now - lastDistractionLogTimeRef.current > 4000) {
+            lastDistractionLogTimeRef.current = now;
+            biometricsApi.logExamDistraction(sessionId || id, studentId, {
+              attention_score: attention,
+              gaze_direction: data.gaze_direction || "Unfocused",
+              dominant_emotion: data.dominant_emotion || "neutral",
+              stress_score: data.stress_score || 0,
+            }).catch((e) => console.warn("Distraction log error:", e));
+          }
+        }, 1800); // Trigger after ~2 seconds of looking away
+      }
+    } else {
+      if (distractionTimerRef.current) {
+        clearTimeout(distractionTimerRef.current);
+        distractionTimerRef.current = null;
+      }
+      setIsDistracted(false);
+    }
+  }, [sessionId, id, studentId]);
+
+  const {
+    telemetry: biometricTelemetry,
+  } = useBiometricTelemetry({
+    intervalMs: 1000,
+    userId: studentId,
+    captureFrameBlob: captureExamFrameBlob,
+    onTelemetryUpdate: handleTelemetryUpdate,
+    enabled: !cameraLoading && !cameraError && !isCompleted,
+  });
+
+  useEffect(() => {
+    return () => {
+      if (distractionTimerRef.current) {
+        clearTimeout(distractionTimerRef.current);
+        distractionTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const concatUint8 = (a, b) => {
     const out = new Uint8Array(a.byteLength + b.byteLength);
     out.set(a, 0);
@@ -90,6 +186,7 @@ export const StudentExamPage = () => {
   // TTS & Live Word-by-Word State for Question Box
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
   const [isBufferingTTS, setIsBufferingTTS] = useState(false);
+  const [hasFinishedCurrentQuestion, setHasFinishedCurrentQuestion] = useState(false);
   const [spokenWordCount, setSpokenWordCount] = useState(0);
   const [ttsVoiceLevel, setTtsVoiceLevel] = useState(0);
   const ttsIntervalRef = useRef(null);
@@ -122,6 +219,8 @@ export const StudentExamPage = () => {
     setIsSpeakingQuestion(false);
     setIsBufferingTTS(false);
     setTtsVoiceLevel(0);
+    setHasFinishedCurrentQuestion(true);
+    setSpokenWordCount((prev) => Math.max(prev, questionWords.length));
 
     if (ttsAbortControllerRef.current) {
       try {
@@ -155,12 +254,16 @@ export const StudentExamPage = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-  }, []);
+  }, [questionWords.length]);
 
   const playQuestionTTS = useCallback(
-    async (text) => {
+    async (text, isReplay = false) => {
       if (!text) return;
       stopQuestionTTS();
+
+      if (!isReplay || !answerText.trim()) {
+        setHasFinishedCurrentQuestion(false);
+      }
 
       const words = text.split(/\s+/).filter(Boolean);
       if (words.length === 0) return;
@@ -400,12 +503,13 @@ export const StudentExamPage = () => {
         }
       }
     },
-    [isQuestionRTL, stopQuestionTTS]
+    [isQuestionRTL, stopQuestionTTS, answerText]
   );
 
   // Auto-play TTS and sync word-by-word reveal whenever a new question is loaded
   useEffect(() => {
     if (currentQuestion && !isCompleted && !loading) {
+      setHasFinishedCurrentQuestion(false);
       playQuestionTTS(currentQuestion);
       // Auto-align voice input language with question language (fa for Persian, en for English)
       setVoiceLang(isQuestionRTL ? "fa" : "en");
@@ -414,6 +518,13 @@ export const StudentExamPage = () => {
       stopQuestionTTS();
     };
   }, [currentQuestion, isCompleted, isQuestionRTL, loading, playQuestionTTS, stopQuestionTTS]);
+
+  // True while the AI examiner is actively buffering or reading the current question
+  const isBotReading = Boolean(
+    currentQuestion &&
+    !hasFinishedCurrentQuestion &&
+    (isSpeakingQuestion || isBufferingTTS || !spokenWordCount || spokenWordCount < questionWords.length)
+  );
 
   const startWebcam = useCallback(async () => {
     try {
@@ -771,6 +882,7 @@ export const StudentExamPage = () => {
         } else {
           const nextQ = res.next_question;
           const qText = typeof nextQ === "string" ? nextQ : nextQ?.text || nextQ?.question || "";
+          setHasFinishedCurrentQuestion(false);
           setCurrentQuestion(qText);
           setCurrentTurnIndex((prev) => (res.next_question?.turn_index || prev + 1));
           setCurrentDifficulty(res.next_question?.difficulty ?? 0.5);
@@ -781,6 +893,7 @@ export const StudentExamPage = () => {
         if (currentTurnIndex >= 3) {
           handleFinishExam("submitted");
         } else {
+          setHasFinishedCurrentQuestion(false);
           setCurrentTurnIndex((prev) => prev + 1);
           setAnswerText("");
           setCurrentQuestion(
@@ -854,14 +967,14 @@ export const StudentExamPage = () => {
           </div>
         )}
 
-        {/* Authentic Frosted / Bokeh Blur Layer over Webcam Feed */}
-        <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[12px] pointer-events-none transition-all duration-500" />
+        {/* Subtle dark tint layer for contrast without blurring webcam feed */}
+        <div className="absolute inset-0 bg-slate-950/20 pointer-events-none transition-all duration-500" />
 
         {/* Ambient Vignette Gradient Shadow for Contrast & Depth */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/75 pointer-events-none" />
       </div>
 
-      {/* ================= 2. Top Bar (Exit Button & Timer) ================= */}
+      {/* ================= 2. Top Bar (Exit Button, Biometric Status & Timer) ================= */}
       <header className="relative z-20 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between max-w-xl mx-auto">
         {/* Hang up / Exit Button */}
         <button
@@ -874,12 +987,68 @@ export const StudentExamPage = () => {
           <PhoneOff className="w-4 h-4" />
         </button>
 
-        {/* Minimalist Floating Timer Pill */}
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-amber-300 font-mono text-xs font-bold shadow-lg">
-          <Clock3 className="w-3.5 h-3.5 text-amber-400" />
-          <span>{formatTimer(remainingSeconds)}</span>
+        <div className="flex items-center gap-2">
+          {/* Biometric Proctoring Status Indicator */}
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-medium transition-all ${
+              isDistracted
+                ? "bg-amber-500/30 border-amber-400 text-amber-200 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                : biometricTelemetry?.is_focused
+                ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-300"
+                : "bg-black/50 border-white/15 text-slate-300"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isDistracted
+                  ? "bg-amber-400 animate-ping"
+                  : biometricTelemetry?.is_focused
+                  ? "bg-emerald-400"
+                  : "bg-sky-400"
+              }`}
+            />
+            <span className="text-[11px] font-mono">
+              {isDistracted
+                ? (isRTL ? "عدم تمرکز" : "Distracted")
+                : biometricTelemetry
+                ? `${isRTL ? "توجه" : "Attn"}: ${Math.round(biometricTelemetry.attention_score || 95)}%`
+                : (isRTL ? "پایش فعال" : "Monitoring")}
+            </span>
+          </div>
+
+          {/* Minimalist Floating Timer Pill */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-amber-300 font-mono text-xs font-bold shadow-lg">
+            <Clock3 className="w-3.5 h-3.5 text-amber-400" />
+            <span>{formatTimer(remainingSeconds)}</span>
+          </div>
         </div>
       </header>
+
+      {/* Liquid-Glass Distraction Warning Banner */}
+      {isDistracted && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 pointer-events-none">
+          <div className="relative overflow-hidden rounded-2xl bg-amber-500/25 backdrop-blur-2xl border-2 border-amber-400/90 p-3.5 shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center gap-3 text-right">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/30 border border-amber-400 flex items-center justify-center shrink-0 animate-bounce text-amber-300">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-black text-amber-200">
+                {isRTL ? "⚠️ اخطار عدم تمرکز در آزمون" : "⚠️ Attention Warning"}
+              </h4>
+              <p className="text-xs text-amber-100/90 mt-0.5 leading-relaxed font-medium">
+                {isRTL
+                  ? "لطفاً نگاه خود را به صفحه آزمون معطوف فرمایید. انحراف نگاه ثبت می‌شود."
+                  : "Please refocus your gaze on the exam window. Looking away is recorded."}
+              </p>
+            </div>
+            {distractionCount > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 font-mono border border-amber-500/50 font-bold shrink-0">
+                {isRTL ? `اخطار ${distractionCount}` : `Warning ${distractionCount}`}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ================= 3. Main Body / Floating Call Stage ================= */}
       <section className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between px-3.5 py-2 overflow-y-auto max-w-xl mx-auto">
@@ -1066,7 +1235,9 @@ export const StudentExamPage = () => {
                     : Math.min(95, Math.max(65, 76 + (currentTurnIndex - 1) * 4))
                 }
                 stress={
-                  recording
+                  biometricTelemetry?.stress_score !== undefined
+                    ? Math.round(biometricTelemetry.stress_score)
+                    : recording
                     ? 54
                     : isSubmitting
                     ? 76
@@ -1077,7 +1248,18 @@ export const StudentExamPage = () => {
                     : 28
                 }
                 composure={
-                  recording
+                  biometricTelemetry?.attention_score !== undefined
+                    ? Math.round(
+                        Math.max(
+                          15,
+                          Math.min(
+                            100,
+                            biometricTelemetry.attention_score * 0.6 +
+                              (100 - (biometricTelemetry.stress_score || 30)) * 0.4
+                          )
+                        )
+                      )
+                    : recording
                     ? 74
                     : isSubmitting
                     ? 68
@@ -1109,16 +1291,16 @@ export const StudentExamPage = () => {
               >
                 {/* Liquid Glass Question Box */}
                 <div
-                  className="w-full chat-bubble-ai p-3.5 sm:p-4 shadow-[0_12px_36px_0_rgba(0,0,0,0.55)] flex flex-col gap-2.5 transition-all relative overflow-hidden"
+                  className="w-full chat-bubble-ai p-3.5 sm:p-4 flex flex-col gap-2.5 transition-all relative overflow-hidden"
                   style={{
                     borderRadius: "24px",
                     background:
-                      "linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(56, 189, 248, 0.08) 100%), rgba(15, 23, 42, 0.72)",
-                    backdropFilter: "blur(24px) saturate(190%)",
-                    WebkitBackdropFilter: "blur(24px) saturate(190%)",
-                    border: "1px solid rgba(255, 255, 255, 0.22)",
+                      "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(56, 189, 248, 0.08) 100%), rgba(15, 23, 42, 0.22)",
+                    backdropFilter: "blur(14px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(14px) saturate(180%)",
+                    border: "1px solid rgba(255, 255, 255, 0.28)",
                     boxShadow:
-                      "0 12px 40px -4px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.35)",
+                      "0 12px 36px -4px rgba(0, 0, 0, 0.35), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2)",
                   }}
                 >
                   {/* Glossy Liquid Glass Top Sheen */}
@@ -1150,7 +1332,7 @@ export const StudentExamPage = () => {
                         if (isSpeakingQuestion || isBufferingTTS) {
                           stopQuestionTTS();
                         } else {
-                          playQuestionTTS(currentQuestion);
+                          playQuestionTTS(currentQuestion, true);
                         }
                       }}
                       className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
@@ -1167,7 +1349,7 @@ export const StudentExamPage = () => {
                   {/* Synchronized Word-by-Word Question Text (Auto LTR for English regardless of app language) */}
                   <div
                     dir={isQuestionRTL ? "rtl" : "ltr"}
-                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 ${
+                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
                       isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
                     }`}
                   >
@@ -1188,7 +1370,7 @@ export const StudentExamPage = () => {
                             key={idx}
                             className={`inline-block me-1.5 transition-all duration-150 ${
                               isCurrent
-                                ? "text-sky-300 font-bold scale-105"
+                                ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
                                 : isVisible
                                 ? "text-white opacity-100"
                                 : "opacity-0 translate-y-0.5"
@@ -1208,105 +1390,113 @@ export const StudentExamPage = () => {
               </VoiceBeam>
             </div>
 
-            {/* Bottom Section: Response Field Box + Controls Row Below (Enters from Right) */}
-            <div
-              key={`student-ans-${currentTurnIndex}`}
-              className="w-full max-w-[360px] mx-auto flex flex-col gap-3 chat-bubble-enter-right"
-            >
-              {/* Dedicated Student Response Field (Bottom-Right corner stretched/pointed) */}
-              <div className="relative w-full">
-                <VoiceBeam
-                  type="default"
-                  scale={0.8}
-                  reach={0.65}
-                  spread={0.85}
-                  bend={0}
-                  strokeOpacity={0.85}
-                  innerOpacity={0.25}
-                  bloomOpacity={0.9}
-                  idle={0}
-                  stream={micStream}
-                  level={recording ? 0.85 : 0}
-                  processing={isSubmitting}
-                  className="w-full chat-bubble-student"
-                  style={{ borderRadius: "24px" }}
-                >
-                  <div
-                    className="w-full chat-bubble-student p-3.5 shadow-[0_12px_36px_0_rgba(0,0,0,0.55)] transition-all relative overflow-hidden"
-                    style={{
-                      borderRadius: "24px",
-                      background:
-                        "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(139, 92, 246, 0.06) 100%), rgba(15, 23, 42, 0.72)",
-                      backdropFilter: "blur(24px) saturate(190%)",
-                      WebkitBackdropFilter: "blur(24px) saturate(190%)",
-                      border: "1px solid rgba(255, 255, 255, 0.22)",
-                      boxShadow:
-                        "0 12px 40px -4px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.3)",
-                    }}
+            {/* Bottom Section: Response Field Box + Controls Row Below (Enters from Right after Bot finishes reading) */}
+            {!isBotReading && (
+              <div
+                key={`student-ans-${currentTurnIndex}`}
+                className="w-full max-w-[360px] mx-auto flex flex-col gap-3 chat-bubble-enter-right"
+              >
+                {/* Dedicated Student Response Field (Bottom-Right corner stretched/pointed) */}
+                <div className="relative w-full">
+                  <VoiceBeam
+                    type="default"
+                    scale={0.8}
+                    reach={0.65}
+                    spread={0.85}
+                    bend={0}
+                    strokeOpacity={0.85}
+                    innerOpacity={0.25}
+                    bloomOpacity={0.9}
+                    idle={0}
+                    stream={micStream}
+                    level={recording ? 0.85 : 0}
+                    processing={isSubmitting}
+                    className="w-full chat-bubble-student"
+                    style={{ borderRadius: "24px" }}
                   >
-                    <textarea
-                      dir={isAnswerRTL ? "rtl" : "ltr"}
-                      rows={2}
-                      value={answerText}
-                      onChange={(e) => setAnswerText(e.target.value)}
-                      placeholder={
-                        isQuestionRTL
-                          ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
-                          : "Type response here or speak with mic..."
-                      }
-                      className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none resize-none leading-relaxed ${
-                        isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
-                      }`}
-                    />
-                  </div>
-                </VoiceBeam>
-              </div>
+                    <div
+                      className="w-full chat-bubble-student p-3.5 transition-all relative overflow-hidden"
+                      style={{
+                        borderRadius: "24px",
+                        background:
+                          "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(139, 92, 246, 0.08) 100%), rgba(15, 23, 42, 0.22)",
+                        backdropFilter: "blur(14px) saturate(180%)",
+                        WebkitBackdropFilter: "blur(14px) saturate(180%)",
+                        border: "1px solid rgba(255, 255, 255, 0.28)",
+                        boxShadow:
+                          "0 12px 36px -4px rgba(0, 0, 0, 0.35), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2)",
+                      }}
+                    >
+                      {/* Glossy Liquid Glass Top Sheen */}
+                      <div className="absolute top-0 inset-x-0 h-[40%] bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none rounded-t-[23px]" />
 
-              {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
-              <div className="w-full flex items-center justify-between px-2">
-                {/* Left Spacer to keep mic in exact mathematical center */}
-                <div className="w-11 h-11 shrink-0" />
+                      {/* Ambient Fluid Violet Glow */}
+                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/15 rounded-full blur-2xl pointer-events-none" />
 
-                {/* Center: Morphing Mic -> ThinkingOrb Button */}
-                <div className="flex items-center justify-center">
-                  <VoiceMicButton
-                    recording={recording}
-                    recordingOrbState="listening"
-                    orbSize={64}
-                    orbColor="#38bdf8"
-                    voiceLang={voiceLang}
-                    onLanguageChange={setVoiceLang}
-                    onStartRecording={startRecording}
-                    onStopRecording={stopRecording}
-                    disabled={isSubmitting || isCompleted}
-                    isRTL={isRTL}
-                    className="w-12 h-12 relative shrink-0 flex items-center justify-center"
-                    buttonClassName="w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md"
-                    badgeClassName="-top-1 -right-1"
-                    iconClassName="!w-4 !h-4 text-sky-300"
-                  />
+                      <textarea
+                        dir={isAnswerRTL ? "rtl" : "ltr"}
+                        rows={2}
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder={
+                          isQuestionRTL
+                            ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
+                            : "Type response here or speak with mic..."
+                        }
+                        className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-300/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
+                          isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
+                        }`}
+                      />
+                    </div>
+                  </VoiceBeam>
                 </div>
 
-                {/* Right: Sleek Compact Send Button */}
-                <button
-                  type="button"
-                  disabled={!answerText.trim() || isSubmitting}
-                  onClick={handleSubmitAnswer}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-lg shrink-0 ${
-                    !answerText.trim() || isSubmitting
-                      ? "bg-white/10 text-slate-500 border border-white/10 cursor-not-allowed opacity-40 scale-90"
-                      : "bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 text-white shadow-emerald-500/30 hover:scale-105 active:scale-95 ring-2 ring-emerald-400/25"
-                  }`}
-                  title={isRTL ? "ارسال پاسخ و سوال بعد" : "Submit answer & next"}
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <Send className="w-4 h-4 text-white -rotate-12 translate-x-[-1px]" />
-                  )}
-                </button>
+                {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
+                <div className="w-full flex items-center justify-between px-2">
+                  {/* Left Spacer to keep mic in exact mathematical center */}
+                  <div className="w-11 h-11 shrink-0" />
+
+                  {/* Center: Morphing Mic -> ThinkingOrb Button */}
+                  <div className="flex items-center justify-center">
+                    <VoiceMicButton
+                      recording={recording}
+                      recordingOrbState="listening"
+                      orbSize={64}
+                      orbColor="#38bdf8"
+                      voiceLang={voiceLang}
+                      onLanguageChange={setVoiceLang}
+                      onStartRecording={startRecording}
+                      onStopRecording={stopRecording}
+                      disabled={isSubmitting || isCompleted}
+                      isRTL={isRTL}
+                      className="w-12 h-12 relative shrink-0 flex items-center justify-center"
+                      buttonClassName="w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-md"
+                      badgeClassName="-top-1 -right-1"
+                      iconClassName="!w-4 !h-4 text-sky-300"
+                    />
+                  </div>
+
+                  {/* Right: Sleek Compact Send Button */}
+                  <button
+                    type="button"
+                    disabled={!answerText.trim() || isSubmitting}
+                    onClick={handleSubmitAnswer}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-lg shrink-0 ${
+                      !answerText.trim() || isSubmitting
+                        ? "bg-white/10 text-slate-500 border border-white/10 cursor-not-allowed opacity-40 scale-90"
+                        : "bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 text-white shadow-emerald-500/30 hover:scale-105 active:scale-95 ring-2 ring-emerald-400/25"
+                    }`}
+                    title={isRTL ? "ارسال پاسخ و سوال بعد" : "Submit answer & next"}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <Send className="w-4 h-4 text-white -rotate-12 translate-x-[-1px]" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </section>
