@@ -49,6 +49,8 @@ export const TelegramQuizBottomSheet = ({
       setShowExitConfirm(false);
       setDragOffset(0);
       setActiveTopic(cleanTitle);
+    } else if (cleanTitle) {
+      sessionStorage.setItem("lastQuizTopic", cleanTitle);
     }
   }, [isOpen, cleanTitle]);
 

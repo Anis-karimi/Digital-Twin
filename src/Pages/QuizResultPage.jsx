@@ -124,8 +124,16 @@ export const QuizResultPage = ({
     stateData.exam?.topic ||
     stateData.exam?.title ||
     quizData?.[0]?.topic ||
-    sessionStorage.getItem("lastQuizTopic") ||
+    (typeof window !== "undefined" && sessionStorage.getItem("lastQuizTopic")) ||
     "";
+
+  const effectiveTopic =
+    (quizTopic && String(quizTopic).trim()) ||
+    (stateData?.topic && String(stateData.topic).trim()) ||
+    (stateData?.exam?.topic && String(stateData.exam.topic).trim()) ||
+    (stateData?.exam?.title && String(stateData.exam.title).trim()) ||
+    (typeof window !== "undefined" && sessionStorage.getItem("lastQuizTopic")?.trim()) ||
+    (isRTL ? "ارائه سیستم‌های عامل" : "Operating Systems Presentation");
 
   const totalAnswers = correctCount + incorrectCount;
   const unansweredCount = Math.max(0, totalQuestions - totalAnswers);
@@ -216,48 +224,6 @@ export const QuizResultPage = ({
         return rawAnswer.charAt(0).toUpperCase();
       };
 
-      // Lucide icon vector renderer for HTML5 Canvas (guarantees pixel-perfect rendering in html2canvas)
-      const createLucideIconCanvas = (type, color) => {
-        const iconCanvas = document.createElement("canvas");
-        iconCanvas.width = 28;
-        iconCanvas.height = 28;
-        iconCanvas.style.width = "14px";
-        iconCanvas.style.height = "14px";
-        iconCanvas.style.display = "block";
-        iconCanvas.style.flexShrink = "0";
-        if (isRTL) {
-          iconCanvas.style.marginLeft = "5px";
-          iconCanvas.style.marginRight = "0";
-        } else {
-          iconCanvas.style.marginRight = "5px";
-          iconCanvas.style.marginLeft = "0";
-        }
-        const ctx = iconCanvas.getContext("2d");
-        if (ctx) {
-          ctx.scale(28 / 24, 28 / 24);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2.8;
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.beginPath();
-          if (type === "check") {
-            ctx.moveTo(20, 6);
-            ctx.lineTo(9, 17);
-            ctx.lineTo(4, 12);
-          } else if (type === "x") {
-            ctx.moveTo(18, 6);
-            ctx.lineTo(6, 18);
-            ctx.moveTo(6, 6);
-            ctx.lineTo(18, 18);
-          } else {
-            ctx.moveTo(5, 12);
-            ctx.lineTo(19, 12);
-          }
-          ctx.stroke();
-        }
-        return iconCanvas;
-      };
-
       // 1. Fetch AI explanations for any question missing one
       const fetchExplanation = async (question, idx) => {
         const existing =
@@ -296,209 +262,224 @@ export const QuizResultPage = ({
         quizData.map((q, idx) => fetchExplanation(q, idx))
       );
 
-      // 2. Off-screen container for Landscape PDF capture (A4 landscape ratio ~ 1.41)
-      const container = document.createElement("div");
-      container.style.position = "absolute";
-      container.style.left = "-10000px";
-      container.style.top = "0";
-      container.style.width = "1120px";
-      container.style.background = "#ffffff";
-      container.style.padding = "35px 40px";
-      container.style.boxSizing = "border-box";
-      container.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-      container.style.color = "#0f172a";
-      container.dir = isRTL ? "rtl" : "ltr";
+      // Helper: Create Header for Page (Full header for page 1, compact for subsequent pages)
+      const createHeader = (isFirstPage, pageNum, totalPages) => {
+        const headerDiv = document.createElement("div");
+        headerDiv.style.display = "flex";
+        headerDiv.style.justifyContent = "space-between";
+        headerDiv.style.alignItems = "center";
+        headerDiv.style.marginBottom = isFirstPage ? "14px" : "12px";
+        headerDiv.style.paddingBottom = isFirstPage ? "10px" : "8px";
+        headerDiv.style.borderBottom = "2px solid #e2e8f0";
+        headerDiv.dir = isRTL ? "rtl" : "ltr";
 
-      // 3. Header
-      const headerDiv = document.createElement("div");
-      headerDiv.style.display = "flex";
-      headerDiv.style.justifyContent = "space-between";
-      headerDiv.style.alignItems = "center";
-      headerDiv.style.marginBottom = "20px";
-      headerDiv.style.paddingBottom = "15px";
-      headerDiv.style.borderBottom = "2px solid #e2e8f0";
+        if (isFirstPage) {
+          const titleBox = document.createElement("div");
 
-      const title = document.createElement("h1");
-      title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
-      title.style.fontSize = "24px";
-      title.style.margin = "0";
-      title.style.fontWeight = "800";
-      title.style.color = "#0f172a";
-      title.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          const title = document.createElement("h1");
+          title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+          title.style.fontSize = "22px";
+          title.style.margin = "0";
+          title.style.fontWeight = "800";
+          title.style.color = "#0f172a";
+          title.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          titleBox.appendChild(title);
 
-      const subtitle = document.createElement("div");
-      subtitle.textContent = t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
-      subtitle.style.fontSize = "12px";
-      subtitle.style.color = "#64748b";
-      subtitle.style.marginTop = "4px";
+          const subtitle = document.createElement("div");
+          subtitle.textContent = t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
+          subtitle.style.fontSize = "11.5px";
+          subtitle.style.color = "#64748b";
+          subtitle.style.marginTop = "3px";
+          titleBox.appendChild(subtitle);
 
-      const titleBox = document.createElement("div");
-      titleBox.appendChild(title);
-      titleBox.appendChild(subtitle);
+          const topicBadge = document.createElement("div");
+          topicBadge.style.display = "inline-block";
+          topicBadge.style.marginTop = "6px";
+          topicBadge.style.padding = "4px 12px";
+          topicBadge.style.backgroundColor = "#eff6ff";
+          topicBadge.style.border = "1.5px solid #bfdbfe";
+          topicBadge.style.borderRadius = "6px";
+          topicBadge.style.fontSize = "12px";
+          topicBadge.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          topicBadge.style.textAlign = isRTL ? "right" : "left";
+          topicBadge.innerHTML = `<span style="color:#2563eb;font-weight:700;margin-${isRTL ? "left" : "right"}:6px;">${isRTL ? "موضوع آزمون: " : "Quiz Topic: "}</span><strong style="color:#0f172a;font-weight:800;">${effectiveTopic}</strong>`;
+          titleBox.appendChild(topicBadge);
 
-      if (quizTopic) {
-        const topicBadge = document.createElement("div");
-        topicBadge.style.display = "inline-flex";
-        topicBadge.style.alignItems = "center";
-        topicBadge.style.gap = "8px";
-        topicBadge.style.marginTop = "8px";
-        topicBadge.style.padding = "5px 14px";
-        topicBadge.style.backgroundColor = "#eff6ff";
-        topicBadge.style.border = "1px solid #bfdbfe";
-        topicBadge.style.borderRadius = "8px";
+          headerDiv.appendChild(titleBox);
 
-        const topicLabel = document.createElement("span");
-        topicLabel.textContent = isRTL ? "موضوع آزمون:" : "Exam Topic:";
-        topicLabel.style.fontSize = "13px";
-        topicLabel.style.fontWeight = "700";
-        topicLabel.style.color = "#2563eb";
-        topicLabel.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          const metaBox = document.createElement("div");
+          metaBox.style.display = "flex";
+          metaBox.style.flexDirection = "column";
+          metaBox.style.alignItems = isRTL ? "flex-start" : "flex-end";
+          metaBox.style.gap = "4px";
 
-        const topicText = document.createElement("span");
-        topicText.textContent = quizTopic;
-        topicText.style.fontSize = "13px";
-        topicText.style.fontWeight = "800";
-        topicText.style.color = "#1e293b";
-        topicText.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          const dateStamp = document.createElement("div");
+          dateStamp.textContent = `${isRTL ? "تاریخ آزمون: " : "Date: "}${new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US")}`;
+          dateStamp.style.fontSize = "11.5px";
+          dateStamp.style.color = "#64748b";
+          dateStamp.style.fontWeight = "600";
+          metaBox.appendChild(dateStamp);
 
-        topicBadge.appendChild(topicLabel);
-        topicBadge.appendChild(topicText);
-        titleBox.appendChild(topicBadge);
-      }
+          if (totalPages > 1) {
+            const pageStamp = document.createElement("div");
+            pageStamp.textContent = `${isRTL ? "صفحه" : "Page"} 1 ${isRTL ? "از" : "of"} ${totalPages}`;
+            pageStamp.style.fontSize = "11px";
+            pageStamp.style.color = "#94a3b8";
+            pageStamp.style.fontWeight = "600";
+            metaBox.appendChild(pageStamp);
+          }
 
-      headerDiv.appendChild(titleBox);
+          headerDiv.appendChild(metaBox);
+        } else {
+          const miniTitleBox = document.createElement("div");
+          miniTitleBox.style.display = "flex";
+          miniTitleBox.style.alignItems = "center";
+          miniTitleBox.style.gap = "10px";
 
-      const metaBox = document.createElement("div");
-      metaBox.style.display = "flex";
-      metaBox.style.flexDirection = "column";
-      metaBox.style.alignItems = isRTL ? "flex-start" : "flex-end";
-      metaBox.style.gap = "4px";
+          const miniTitle = document.createElement("h2");
+          miniTitle.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+          miniTitle.style.fontSize = "15px";
+          miniTitle.style.margin = "0";
+          miniTitle.style.fontWeight = "800";
+          miniTitle.style.color = "#0f172a";
+          miniTitle.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          miniTitleBox.appendChild(miniTitle);
 
-      const dateStamp = document.createElement("div");
-      dateStamp.textContent = `${isRTL ? "تاریخ آزمون:" : "Date:"} ${new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US")}`;
-      dateStamp.style.fontSize = "12px";
-      dateStamp.style.color = "#64748b";
-      dateStamp.style.fontWeight = "600";
-      metaBox.appendChild(dateStamp);
+          const miniTopicBadge = document.createElement("div");
+          miniTopicBadge.style.display = "inline-block";
+          miniTopicBadge.style.padding = "3px 10px";
+          miniTopicBadge.style.backgroundColor = "#eff6ff";
+          miniTopicBadge.style.border = "1px solid #bfdbfe";
+          miniTopicBadge.style.borderRadius = "6px";
+          miniTopicBadge.style.fontSize = "11px";
+          miniTopicBadge.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+          miniTopicBadge.innerHTML = `<span style="color:#2563eb;font-weight:700;margin-${isRTL ? "left" : "right"}:4px;">${isRTL ? "موضوع:" : "Topic:"}</span><strong style="color:#0f172a;font-weight:800;">${effectiveTopic}</strong>`;
+          miniTitleBox.appendChild(miniTopicBadge);
 
-      headerDiv.appendChild(metaBox);
+          headerDiv.appendChild(miniTitleBox);
 
-      container.appendChild(headerDiv);
+          const miniMetaBox = document.createElement("div");
+          miniMetaBox.style.display = "flex";
+          miniMetaBox.style.alignItems = "center";
+          miniMetaBox.style.gap = "12px";
 
-      // 4. Summary cards grid in Landscape
-      const summary = document.createElement("div");
-      summary.style.display = "grid";
-      summary.style.gridTemplateColumns = "repeat(4, 1fr)";
-      summary.style.gap = "14px";
-      summary.style.marginBottom = "24px";
-      summary.dir = isRTL ? "rtl" : "ltr";
+          const miniPageStamp = document.createElement("div");
+          miniPageStamp.textContent = `${isRTL ? "صفحه" : "Page"} ${pageNum} ${isRTL ? "از" : "of"} ${totalPages}`;
+          miniPageStamp.style.fontSize = "11.5px";
+          miniPageStamp.style.color = "#334155";
+          miniPageStamp.style.fontWeight = "700";
+          miniMetaBox.appendChild(miniPageStamp);
 
-      const summaryCards = [
-        {
-          label: t("totalQuestions") || "کل سوالات",
-          value: totalQuestions,
-          bg: "#f8fafc",
-          border: "#cbd5e1",
-          color: "#334155",
-        },
-        {
-          label: t("correctCount") || "پاسخ‌های صحیح",
-          value: correctCount,
-          bg: "#f0fdf4",
-          border: "#86efac",
-          color: "#15803d",
-        },
-        {
-          label: t("incorrectCount") || "پاسخ‌های نادرست",
-          value: incorrectCount,
-          bg: "#fef2f2",
-          border: "#fca5a5",
-          color: "#b91c1c",
-        },
-        {
-          label: t("accuracyRate") || "درصد موفقیت",
-          value: `${correctPercentage}%`,
-          bg: "#eff6ff",
-          border: "#93c5fd",
-          color: "#1d4ed8",
-        },
-      ];
+          headerDiv.appendChild(miniMetaBox);
+        }
 
-      summaryCards.forEach((c) => {
-        const card = document.createElement("div");
-        card.style.background = c.bg;
-        card.style.border = `1.5px solid ${c.border}`;
-        card.style.borderRadius = "12px";
-        card.style.padding = "12px 16px";
-        card.style.textAlign = isRTL ? "right" : "left";
+        return headerDiv;
+      };
 
-        const lbl = document.createElement("div");
-        lbl.textContent = c.label;
-        lbl.style.fontSize = "11px";
-        lbl.style.color = "#64748b";
-        lbl.style.fontWeight = "600";
-        lbl.style.marginBottom = "4px";
+      // Helper: Summary Cards
+      const createSummaryCards = () => {
+        const summary = document.createElement("div");
+        summary.style.display = "grid";
+        summary.style.gridTemplateColumns = "repeat(4, 1fr)";
+        summary.style.gap = "10px";
+        summary.style.marginBottom = "14px";
+        summary.dir = isRTL ? "rtl" : "ltr";
 
-        const val = document.createElement("div");
-        val.textContent = String(c.value);
-        val.style.fontSize = "22px";
-        val.style.fontWeight = "800";
-        val.style.color = c.color;
+        const summaryCards = [
+          {
+            label: t("totalQuestions") || "کل سوالات",
+            value: totalQuestions,
+            bg: "#f8fafc",
+            border: "#cbd5e1",
+            color: "#334155",
+          },
+          {
+            label: t("correctCount") || "پاسخ‌های صحیح",
+            value: correctCount,
+            bg: "#f0fdf4",
+            border: "#86efac",
+            color: "#15803d",
+          },
+          {
+            label: t("incorrectCount") || "پاسخ‌های نادرست",
+            value: incorrectCount,
+            bg: "#fef2f2",
+            border: "#fca5a5",
+            color: "#b91c1c",
+          },
+          {
+            label: t("accuracyRate") || "درصد موفقیت",
+            value: `${correctPercentage}%`,
+            bg: "#eff6ff",
+            border: "#93c5fd",
+            color: "#1d4ed8",
+          },
+        ];
 
-        card.appendChild(lbl);
-        card.appendChild(val);
-        summary.appendChild(card);
-      });
+        summaryCards.forEach((c) => {
+          const card = document.createElement("div");
+          card.style.background = c.bg;
+          card.style.border = `1.5px solid ${c.border}`;
+          card.style.borderRadius = "10px";
+          card.style.padding = "8px 14px";
+          card.style.textAlign = isRTL ? "right" : "left";
 
-      container.appendChild(summary);
+          const lbl = document.createElement("div");
+          lbl.textContent = c.label;
+          lbl.style.fontSize = "10.5px";
+          lbl.style.color = "#64748b";
+          lbl.style.fontWeight = "600";
+          lbl.style.marginBottom = "2px";
 
-      // 5. 5-Column Landscape Table
-      const table = document.createElement("table");
-      table.style.width = "100%";
-      table.style.borderCollapse = "separate";
-      table.style.borderSpacing = "0";
-      table.style.tableLayout = "fixed";
-      table.style.fontSize = "11px";
-      table.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-      table.dir = isRTL ? "rtl" : "ltr";
-      table.style.borderRadius = "8px";
-      table.style.overflow = "hidden";
-      table.style.border = "1px solid #cbd5e1";
+          const val = document.createElement("div");
+          val.textContent = String(c.value);
+          val.style.fontSize = "18px";
+          val.style.fontWeight = "800";
+          val.style.color = c.color;
 
-      const thead = document.createElement("thead");
-      const headerRow = document.createElement("tr");
+          card.appendChild(lbl);
+          card.appendChild(val);
+          summary.appendChild(card);
+        });
 
-      const columnDefs = [
-        { title: t("question") || "سوال", width: "29%", align: isRTL ? "right" : "left" },
-        { title: t("yourAnswer") || "پاسخ شما", width: "15%", align: isRTL ? "right" : "left" },
-        { title: t("correctAnswer") || "پاسخ صحیح", width: "15%", align: isRTL ? "right" : "left" },
-        { title: t("result") || "نتیجه", width: "11%", align: "center" },
-        { title: t("explainAnswer") || "شرح پاسخ (AI)", width: "30%", align: isRTL ? "right" : "left" },
-      ];
+        return summary;
+      };
 
-      columnDefs.forEach((col) => {
-        const th = document.createElement("th");
-        th.textContent = col.title;
-        th.style.width = col.width;
-        th.style.borderBottom = "2px solid #cbd5e1";
-        th.style.borderRight = "1px solid #e2e8f0";
-        th.style.padding = "10px 12px";
-        th.style.background = "#f1f5f9";
-        th.style.color = "#1e293b";
-        th.style.fontWeight = "700";
-        th.style.textAlign = col.align;
-        th.style.verticalAlign = "middle";
-        th.style.fontSize = "11.5px";
-        headerRow.appendChild(th);
-      });
+      // Helper: Table Header Row
+      const createTableHeader = () => {
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
 
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+        const columnDefs = [
+          { title: t("question") || "سوال", width: "30%", align: isRTL ? "right" : "left" },
+          { title: t("yourAnswer") || "پاسخ شما", width: "15%", align: isRTL ? "right" : "left" },
+          { title: t("correctAnswer") || "پاسخ صحیح", width: "15%", align: isRTL ? "right" : "left" },
+          { title: t("result") || "نتیجه", width: "11%", align: "center" },
+          { title: t("explainAnswer") || "توضیح هوش مصنوعی", width: "29%", align: isRTL ? "right" : "left" },
+        ];
 
-      // Table Body
-      const tbody = document.createElement("tbody");
+        columnDefs.forEach((col) => {
+          const th = document.createElement("th");
+          th.textContent = col.title;
+          th.style.width = col.width;
+          th.style.borderBottom = "2px solid #cbd5e1";
+          th.style.borderRight = "1px solid #e2e8f0";
+          th.style.padding = "7px 10px";
+          th.style.background = "#f1f5f9";
+          th.style.color = "#1e293b";
+          th.style.fontWeight = "700";
+          th.style.textAlign = col.align;
+          th.style.verticalAlign = "middle";
+          th.style.fontSize = "11px";
+          headerRow.appendChild(th);
+        });
 
-      quizData.forEach((question, index) => {
+        thead.appendChild(headerRow);
+        return thead;
+      };
+
+      // Helper: Build Table Row Element
+      const createRow = (question, index) => {
         const options = (question.options || []).map((opt, optIndex) => ({
           letter: getOptionLetter(opt, optIndex),
           text: getOptionText(opt),
@@ -532,26 +513,28 @@ export const QuizResultPage = ({
 
         // 1. Question Cell
         const tdQ = document.createElement("td");
-        tdQ.style.width = "29%";
-        tdQ.style.padding = "10px 12px";
+        tdQ.style.width = "30%";
+        tdQ.style.padding = "7px 10px";
         tdQ.style.borderBottom = "1px solid #e2e8f0";
         tdQ.style.borderRight = "1px solid #e2e8f0";
         tdQ.style.verticalAlign = "top";
-        tdQ.style.lineHeight = "1.6";
+        tdQ.style.lineHeight = "1.5";
         tdQ.style.fontWeight = "500";
         tdQ.style.color = "#0f172a";
+        tdQ.style.fontSize = "10.5px";
         tdQ.textContent = questionText;
         row.appendChild(tdQ);
 
         // 2. Your Answer Cell
         const tdYour = document.createElement("td");
         tdYour.style.width = "15%";
-        tdYour.style.padding = "10px 12px";
+        tdYour.style.padding = "7px 10px";
         tdYour.style.borderBottom = "1px solid #e2e8f0";
         tdYour.style.borderRight = "1px solid #e2e8f0";
         tdYour.style.verticalAlign = "top";
-        tdYour.style.lineHeight = "1.5";
+        tdYour.style.lineHeight = "1.45";
         tdYour.style.fontWeight = "600";
+        tdYour.style.fontSize = "10.5px";
         tdYour.style.color = isCorrect ? "#15803d" : isUnanswered ? "#64748b" : "#b91c1c";
         tdYour.textContent = selectedAnswerText;
         row.appendChild(tdYour);
@@ -559,90 +542,62 @@ export const QuizResultPage = ({
         // 3. Correct Answer Cell
         const tdCorrect = document.createElement("td");
         tdCorrect.style.width = "15%";
-        tdCorrect.style.padding = "10px 12px";
+        tdCorrect.style.padding = "7px 10px";
         tdCorrect.style.borderBottom = "1px solid #e2e8f0";
         tdCorrect.style.borderRight = "1px solid #e2e8f0";
         tdCorrect.style.verticalAlign = "top";
-        tdCorrect.style.lineHeight = "1.5";
+        tdCorrect.style.lineHeight = "1.45";
         tdCorrect.style.fontWeight = "600";
+        tdCorrect.style.fontSize = "10.5px";
         tdCorrect.style.color = "#15803d";
         tdCorrect.textContent = correctAnswerText;
         row.appendChild(tdCorrect);
 
-        // 4. Result Cell with Check/Cross Badge
+        // 4. Result Cell with Check/Cross Badge (Native Unicode guaranteed rendering)
         const tdResult = document.createElement("td");
         tdResult.style.width = "11%";
-        tdResult.style.padding = "10px 6px";
+        tdResult.style.padding = "7px 6px";
         tdResult.style.borderBottom = "1px solid #e2e8f0";
         tdResult.style.borderRight = "1px solid #e2e8f0";
         tdResult.style.verticalAlign = "middle";
         tdResult.style.textAlign = "center";
 
         const badge = document.createElement("div");
-        badge.style.display = "inline-flex";
-        badge.style.alignItems = "center";
-        badge.style.justifyContent = "center";
-        badge.style.height = "26px";
+        badge.style.display = "inline-block";
+        badge.style.textAlign = "center";
+        badge.style.height = "24px";
+        badge.style.lineHeight = "22px";
         badge.style.padding = "0 10px";
         badge.style.borderRadius = "9999px";
-        badge.style.verticalAlign = "middle";
         badge.style.boxSizing = "border-box";
-        badge.style.lineHeight = "normal";
         badge.style.whiteSpace = "nowrap";
-        badge.dir = isRTL ? "rtl" : "ltr";
 
-        let iconType = "x";
-        let iconColor = "#b91c1c";
-        let labelText = isRTL ? "نادرست" : "Incorrect";
+        const iconSymbol = isCorrect ? "✓" : isUnanswered ? "−" : "✕";
+        const iconColor = isCorrect ? "#15803d" : isUnanswered ? "#4b5563" : "#b91c1c";
+        const bgColor = isCorrect ? "#dcfce7" : isUnanswered ? "#f3f4f6" : "#fee2e2";
+        const borderColor = isCorrect ? "#22c55e" : isUnanswered ? "#9ca3af" : "#ef4444";
+        const labelText = isCorrect
+          ? (isRTL ? "درست" : "Correct")
+          : isUnanswered
+          ? (isRTL ? "بی‌پاسخ" : "Unanswered")
+          : (isRTL ? "نادرست" : "Incorrect");
 
-        if (isCorrect) {
-          badge.style.background = "#dcfce7";
-          badge.style.border = "1.5px solid #22c55e";
-          iconType = "check";
-          iconColor = "#15803d";
-          labelText = isRTL ? "درست" : "Correct";
-        } else if (isUnanswered) {
-          badge.style.background = "#f3f4f6";
-          badge.style.border = "1.5px solid #9ca3af";
-          iconType = "minus";
-          iconColor = "#4b5563";
-          labelText = isRTL ? "بی‌پاسخ" : "Unanswered";
-        } else {
-          badge.style.background = "#fee2e2";
-          badge.style.border = "1.5px solid #ef4444";
-          iconType = "x";
-          iconColor = "#b91c1c";
-          labelText = isRTL ? "نادرست" : "Incorrect";
-        }
+        badge.style.backgroundColor = bgColor;
+        badge.style.border = `1.5px solid ${borderColor}`;
 
-        const iconEl = createLucideIconCanvas(iconType, iconColor);
+        badge.innerHTML = `<span style="font-size:13px;font-weight:900;color:${iconColor};margin-${isRTL ? "left" : "right"}:4px;display:inline-block;vertical-align:middle;line-height:1;">${iconSymbol}</span><span style="font-size:11px;font-weight:700;color:${iconColor};display:inline-block;vertical-align:middle;line-height:1;font-family:${isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif"};">${labelText}</span>`;
 
-        const textSpan = document.createElement("span");
-        textSpan.style.display = "inline-flex";
-        textSpan.style.alignItems = "center";
-        textSpan.style.justifyContent = "center";
-        textSpan.style.lineHeight = "1";
-        textSpan.style.fontSize = "11.5px";
-        textSpan.style.fontWeight = "700";
-        textSpan.style.color = iconColor;
-        textSpan.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-        textSpan.style.position = "relative";
-        textSpan.style.top = isRTL ? "-1px" : "0px";
-        textSpan.textContent = labelText;
-
-        badge.appendChild(iconEl);
-        badge.appendChild(textSpan);
         tdResult.appendChild(badge);
         row.appendChild(tdResult);
 
         // 5. AI Explanation Cell
         const tdExp = document.createElement("td");
-        tdExp.style.width = "30%";
-        tdExp.style.padding = "10px 12px";
+        tdExp.style.width = "29%";
+        tdExp.style.padding = "7px 10px";
         tdExp.style.borderBottom = "1px solid #e2e8f0";
         tdExp.style.verticalAlign = "top";
-        tdExp.style.lineHeight = "1.65";
-        tdExp.style.fontSize = "10.5px";
+        tdExp.style.lineHeight = "1.55";
+        tdExp.style.fontSize = "10px";
         tdExp.style.color = "#1e293b";
         tdExp.style.wordBreak = "break-word";
         tdExp.dir = isRTL ? "rtl" : "ltr";
@@ -659,54 +614,134 @@ export const QuizResultPage = ({
         tdExp.innerHTML = markdownToCleanHtml(expContent, { isRTL });
         row.appendChild(tdExp);
 
-        tbody.appendChild(row);
-      });
+        return row;
+      };
 
-      table.appendChild(tbody);
-      container.appendChild(table);
+      // Measure row heights inside a detached hidden table
+      const measureContainer = document.createElement("div");
+      measureContainer.style.position = "absolute";
+      measureContainer.style.left = "-10000px";
+      measureContainer.style.top = "0";
+      measureContainer.style.width = "1120px";
+      measureContainer.style.visibility = "hidden";
+      measureContainer.dir = isRTL ? "rtl" : "ltr";
 
-      document.body.appendChild(container);
+      const measureTable = document.createElement("table");
+      measureTable.style.width = "100%";
+      measureTable.style.tableLayout = "fixed";
+      measureTable.appendChild(createTableHeader());
+
+      const measureTbody = document.createElement("tbody");
+      const builtRows = quizData.map((q, idx) => createRow(q, idx));
+      builtRows.forEach((r) => measureTbody.appendChild(r));
+      measureTable.appendChild(measureTbody);
+      measureContainer.appendChild(measureTable);
+      document.body.appendChild(measureContainer);
 
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await new Promise((resolve) => setTimeout(resolve, 60));
 
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
+      // Partition rows across pages without slicing any row in half
+      const pagesRows = [];
+      let currentPage = [];
+      let currentHeight = 0;
+      const MAX_PAGE1_HEIGHT = 540; // Max table rows height on Page 1 (with header & summary)
+      const MAX_PAGE_OTHER_HEIGHT = 650; // Max table rows height on subsequent pages
+
+      builtRows.forEach((row) => {
+        const rHeight = row.offsetHeight || 80;
+        const limit = pagesRows.length === 0 ? MAX_PAGE1_HEIGHT : MAX_PAGE_OTHER_HEIGHT;
+
+        if (currentHeight + rHeight > limit && currentPage.length > 0) {
+          pagesRows.push(currentPage);
+          currentPage = [row];
+          currentHeight = rHeight;
+        } else {
+          currentPage.push(row);
+          currentHeight += rHeight;
+        }
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      if (currentPage.length > 0) {
+        pagesRows.push(currentPage);
+      }
+
+      document.body.removeChild(measureContainer);
+
+      const totalPdfPages = pagesRows.length;
+
+      // Initialize jsPDF in Landscape A4 (297mm x 210mm)
       const pdf = new jsPDF({
         orientation: "landscape",
         unit: "mm",
         format: "a4",
       });
 
-      const pageWidth = 297;
-      const pageHeight = 210;
-      const margin = 10;
-      const usableWidth = pageWidth - margin * 2;
-      const usableHeight = pageHeight - margin * 2;
-      const imageHeight = (canvas.height * usableWidth) / canvas.width;
+      for (let p = 0; p < totalPdfPages; p++) {
+        const pageContainer = document.createElement("div");
+        pageContainer.style.position = "absolute";
+        pageContainer.style.left = "-10000px";
+        pageContainer.style.top = "0";
+        pageContainer.style.width = "1120px";
+        pageContainer.style.minHeight = "790px";
+        pageContainer.style.background = "#ffffff";
+        pageContainer.style.padding = "24px 32px";
+        pageContainer.style.boxSizing = "border-box";
+        pageContainer.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        pageContainer.style.color = "#0f172a";
+        pageContainer.dir = isRTL ? "rtl" : "ltr";
 
-      let heightLeft = imageHeight;
-      let position = margin;
+        // 1. Page Header
+        pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
 
-      pdf.addImage(imgData, "PNG", margin, position, usableWidth, imageHeight);
-      heightLeft -= usableHeight;
+        // 2. Summary cards (only on page 1)
+        if (p === 0) {
+          pageContainer.appendChild(createSummaryCards());
+        }
 
-      while (heightLeft > 0) {
-        position = margin - (imageHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", margin, position, usableWidth, imageHeight);
-        heightLeft -= usableHeight;
+        // 3. Table with repeated headers and specific page rows
+        const pageTable = document.createElement("table");
+        pageTable.style.width = "100%";
+        pageTable.style.borderCollapse = "separate";
+        pageTable.style.borderSpacing = "0";
+        pageTable.style.tableLayout = "fixed";
+        pageTable.style.fontSize = "11px";
+        pageTable.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        pageTable.dir = isRTL ? "rtl" : "ltr";
+        pageTable.style.borderRadius = "8px";
+        pageTable.style.overflow = "hidden";
+        pageTable.style.border = "1px solid #cbd5e1";
+
+        pageTable.appendChild(createTableHeader());
+
+        const pageTbody = document.createElement("tbody");
+        pagesRows[p].forEach((r) => pageTbody.appendChild(r));
+        pageTable.appendChild(pageTbody);
+        pageContainer.appendChild(pageTable);
+
+        document.body.appendChild(pageContainer);
+
+        const canvas = await html2canvas(pageContainer, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+
+        document.body.removeChild(pageContainer);
+
+        if (p > 0) {
+          pdf.addPage();
+        }
+
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = 285;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, "PNG", 6, 6, imgWidth, Math.min(imgHeight, 198));
       }
 
-      document.body.removeChild(container);
       pdf.save("quiz-result.pdf");
       setStatusMessage(t("pdfDownloadedSuccess"));
     } catch (err) {
@@ -841,12 +876,12 @@ export const QuizResultPage = ({
       <section className="flex-1 px-4 py-5 flex flex-col gap-4 overflow-y-auto pb-10">
         {/* Score & Evaluation Hero Card */}
         <div className="w-full bg-white dark:bg-neutral-scale1300 rounded-3xl border border-neutral-scale200 dark:border-neutral-scale1100 p-6 shadow-sm flex flex-col items-center text-center space-y-4 transition-all animate-in fade-in duration-300">
-          {quizTopic && (
+          {effectiveTopic && (
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primery-50 dark:bg-primery-950/40 border border-primery-200/60 dark:border-primery-800/40 text-primery-700 dark:text-sky-300 text-xs font-semibold">
               <span className="text-neutral-500 dark:text-neutral-400 font-normal">
                 {isRTL ? "موضوع آزمون:" : "Quiz Topic:"}
               </span>
-              <span className="font-bold">{quizTopic}</span>
+              <span className="font-bold">{effectiveTopic}</span>
             </div>
           )}
 
