@@ -25,6 +25,7 @@ import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
+import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -424,8 +425,8 @@ export const StudentExamPage = () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
         },
       });
       cameraStreamRef.current = stream;
@@ -813,16 +814,20 @@ export const StudentExamPage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="relative w-full md:w-[420px] h-dvh mx-auto overflow-hidden bg-slate-950 text-white flex flex-col select-none"
+      className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 text-white flex flex-col select-none"
     >
       {/* ================= 1. Full-Screen Live Webcam Video Layer ================= */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+      <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-slate-950">
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="w-full h-full object-cover scale-x-[-1]"
+          style={{
+            transform: "scaleX(-1)",
+            transformOrigin: "center center",
+          }}
+          className="w-full h-full object-cover"
         />
 
         {/* Fallback if camera permission is denied */}
@@ -849,15 +854,15 @@ export const StudentExamPage = () => {
           </div>
         )}
 
-        {/* 2. Frosted Blur Layer over Webcam Feed (Reduced blur) */}
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] transition-all duration-500 pointer-events-none" />
+        {/* Authentic Frosted / Bokeh Blur Layer over Webcam Feed */}
+        <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[12px] pointer-events-none transition-all duration-500" />
 
-        {/* Vignette Gradient Shadow for Contrast & Depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/75 pointer-events-none" />
+        {/* Ambient Vignette Gradient Shadow for Contrast & Depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/75 pointer-events-none" />
       </div>
 
-      {/* ================= 2. Top Bar (Only Exit Button & Timer) ================= */}
-      <header className="relative z-20 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between">
+      {/* ================= 2. Top Bar (Exit Button & Timer) ================= */}
+      <header className="relative z-20 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between max-w-xl mx-auto">
         {/* Hang up / Exit Button */}
         <button
           type="button"
@@ -877,22 +882,17 @@ export const StudentExamPage = () => {
       </header>
 
       {/* ================= 3. Main Body / Floating Call Stage ================= */}
-      <section className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between px-3.5 py-2 overflow-y-auto">
+      <section className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between px-3.5 py-2 overflow-y-auto max-w-xl mx-auto">
         {loading ? (
-          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/80 backdrop-blur-2xl border border-white/20 p-8 flex flex-col items-center justify-center text-center gap-4 shadow-2xl">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-sky-500/20 border-2 border-sky-400 flex items-center justify-center animate-pulse">
-                <Brain className="w-8 h-8 text-sky-400 animate-bounce" />
-              </div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-slate-900">
-                <Sparkles className="w-3 h-3 text-white" />
-              </span>
+          <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/20 p-8 flex flex-col items-center justify-center text-center gap-5 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative flex items-center justify-center p-2" style={{ transform: "scale(1.15)" }}>
+              <ThinkingOrb state="connecting" size={64} theme="dark" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <h3 className="text-sm font-bold text-white font-vazir">
                 {isRTL ? "در حال برقراری تماس با استاد هوش مصنوعی..." : "Connecting to AI Examiner..."}
               </h3>
-              <p className="text-xs text-slate-400 font-vazir">
+              <p className="text-xs text-slate-300 font-vazir leading-relaxed">
                 {isRTL ? "جلسه آزمون شفاهی در حال آماده‌سازی است." : "Oral exam room is being initialized."}
               </p>
             </div>
@@ -903,13 +903,34 @@ export const StudentExamPage = () => {
               <AlertCircle className="w-6 h-6" />
             </div>
             <p className="text-xs text-rose-200 leading-relaxed font-vazir">{error}</p>
-            <button
-              type="button"
-              onClick={() => navigate("/StudentExams")}
-              className="mt-2 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
-            >
-              {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams"}
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full">
+              <button
+                type="button"
+                onClick={() => navigate("/StudentExams")}
+                className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
+              >
+                {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setSessionId("demo-oral-exam");
+                  const defaultQ =
+                    passedExam?.topic
+                      ? isRTL
+                        ? `سلام! به آزمون شفاهی خوش آمدید. لطفاً در خصوص مبحث «${passedExam.topic}»، مفاهیم کلیدی و نحوه پیاده‌سازی آن را به طور خلاصه شرح دهید.`
+                        : `Welcome to the oral exam. Regarding "${passedExam.topic}", please explain the key concepts and their implementation.`
+                      : isRTL
+                      ? "سلام! به آزمون شفاهی خوش آمدید. لطفاً تفاوت میان فرآیند (Process) و ریسه (Thread) را در سیستم‌های عامل توضیح دهید و بگویید اشتراک منابع چگونه بین آن‌ها مدیریت می‌شود؟"
+                      : "Welcome to the oral exam. Please explain the difference between a process and a thread in modern operating systems, and how resource sharing is handled.";
+                  setCurrentQuestion(defaultQ);
+                }}
+                className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-sky-600/90 hover:bg-sky-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
+              >
+                {isRTL ? "ورود به محیط آزمایشی (دمو)" : "Enter Demo Room"}
+              </button>
+            </div>
           </div>
         ) : isCompleted ? (
           /* ================= Complete Result View ================= */
@@ -1035,7 +1056,37 @@ export const StudentExamPage = () => {
           </div>
         ) : (
           /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
-          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3.5 sm:gap-4 py-2 my-auto">
+          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3 sm:gap-3.5 py-1 my-auto">
+            {/* Real-Time Assessment Indicators: 3 Liquid Gauges (Certainty, Stress, Composure) */}
+            <div className="w-full max-w-[360px] mx-auto animate-in fade-in-50 duration-500">
+              <LiquidGaugesTrio
+                certainty={
+                  lastMastery !== null
+                    ? lastMastery
+                    : Math.min(95, Math.max(65, 76 + (currentTurnIndex - 1) * 4))
+                }
+                stress={
+                  recording
+                    ? 54
+                    : isSubmitting
+                    ? 76
+                    : currentDifficulty > 0.6
+                    ? 72
+                    : currentDifficulty > 0.35
+                    ? 45
+                    : 28
+                }
+                composure={
+                  recording
+                    ? 74
+                    : isSubmitting
+                    ? 68
+                    : 88
+                }
+                isRTL={isRTL}
+              />
+            </div>
+
             {/* Upper Box: Live Question Chat Message Blob (Enters from Left) */}
             <div
               key={`bot-q-${currentTurnIndex}`}
@@ -1054,14 +1105,30 @@ export const StudentExamPage = () => {
                 level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
                 processing={isBufferingTTS}
                 className="w-full chat-bubble-ai"
-                style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
+                style={{ borderRadius: "24px" }}
               >
+                {/* Liquid Glass Question Box */}
                 <div
-                  className="w-full chat-bubble-ai bg-[#161615] backdrop-blur-xl border border-white/15 p-3.5 sm:p-4 shadow-2xl flex flex-col gap-2.5 transition-all"
-                  style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
+                  className="w-full chat-bubble-ai p-3.5 sm:p-4 shadow-[0_12px_36px_0_rgba(0,0,0,0.55)] flex flex-col gap-2.5 transition-all relative overflow-hidden"
+                  style={{
+                    borderRadius: "24px",
+                    background:
+                      "linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(56, 189, 248, 0.08) 100%), rgba(15, 23, 42, 0.72)",
+                    backdropFilter: "blur(24px) saturate(190%)",
+                    WebkitBackdropFilter: "blur(24px) saturate(190%)",
+                    border: "1px solid rgba(255, 255, 255, 0.22)",
+                    boxShadow:
+                      "0 12px 40px -4px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.35)",
+                  }}
                 >
+                  {/* Glossy Liquid Glass Top Sheen */}
+                  <div className="absolute top-0 inset-x-0 h-[40%] bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none rounded-t-[23px]" />
+
+                  {/* Ambient Fluid Cyan Glow in background */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
+
                   {/* Chat Blob Header: Turn Tag + Difficulty + Replay Button (No Logo) */}
-                  <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
                       <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
@@ -1100,7 +1167,7 @@ export const StudentExamPage = () => {
                   {/* Synchronized Word-by-Word Question Text (Auto LTR for English regardless of app language) */}
                   <div
                     dir={isQuestionRTL ? "rtl" : "ltr"}
-                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text ${
+                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 ${
                       isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
                     }`}
                   >
@@ -1139,38 +1206,6 @@ export const StudentExamPage = () => {
                   </div>
                 </div>
               </VoiceBeam>
-
-              {/* Authentic chat bubble tail at bottom-left corner (Seamless, unified, zero-leak) */}
-              <div className="absolute bottom-0 -left-[8px] w-[16px] h-[16px] pointer-events-none z-20">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  className="w-full h-full overflow-visible"
-                >
-                  {/* Tail fill */}
-                  <path
-                    d="M8.5,0 C8.5,5 2.5,11 1,14 C2,15.5 5,15.5 8.5,15.5 L8.5,0 Z"
-                    fill="#161615"
-                  />
-                  {/* Erase the box's inner 1px left border line without leaking below or above */}
-                  <rect
-                    x="8"
-                    y="0.5"
-                    width="1"
-                    height="14.5"
-                    fill="#161615"
-                  />
-                  {/* Outer border stroke seamlessly joining bottom & left box borders */}
-                  <path
-                    d="M8.5,0 C8.5,5 2.5,11 1,14 C2,15.5 5,15.5 8.5,15.5"
-                    fill="none"
-                    stroke="rgba(255, 255, 255, 0.15)"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
             </div>
 
             {/* Bottom Section: Response Field Box + Controls Row Below (Enters from Right) */}
@@ -1194,11 +1229,20 @@ export const StudentExamPage = () => {
                   level={recording ? 0.85 : 0}
                   processing={isSubmitting}
                   className="w-full chat-bubble-student"
-                  style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
+                  style={{ borderRadius: "24px" }}
                 >
                   <div
-                    className="w-full chat-bubble-student bg-[#161615] backdrop-blur-xl border border-white/15 p-3.5 shadow-2xl transition-all"
-                    style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
+                    className="w-full chat-bubble-student p-3.5 shadow-[0_12px_36px_0_rgba(0,0,0,0.55)] transition-all relative overflow-hidden"
+                    style={{
+                      borderRadius: "24px",
+                      background:
+                        "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(139, 92, 246, 0.06) 100%), rgba(15, 23, 42, 0.72)",
+                      backdropFilter: "blur(24px) saturate(190%)",
+                      WebkitBackdropFilter: "blur(24px) saturate(190%)",
+                      border: "1px solid rgba(255, 255, 255, 0.22)",
+                      boxShadow:
+                        "0 12px 40px -4px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.3)",
+                    }}
                   >
                     <textarea
                       dir={isAnswerRTL ? "rtl" : "ltr"}
@@ -1216,38 +1260,6 @@ export const StudentExamPage = () => {
                     />
                   </div>
                 </VoiceBeam>
-
-                {/* Authentic chat bubble tail at bottom-right corner (Seamless, unified, zero-leak) */}
-                <div className="absolute bottom-0 -right-[8px] w-[16px] h-[16px] pointer-events-none z-20">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    className="w-full h-full overflow-visible"
-                  >
-                    {/* Tail fill */}
-                    <path
-                      d="M7.5,0 C7.5,5 13.5,11 15,14 C14,15.5 11,15.5 7.5,15.5 L7.5,0 Z"
-                      fill="#161615"
-                    />
-                    {/* Erase the box's inner 1px right border line without leaking below or above */}
-                    <rect
-                      x="7"
-                      y="0.5"
-                      width="1"
-                      height="14.5"
-                      fill="#161615"
-                    />
-                    {/* Outer border stroke seamlessly joining bottom & right box borders */}
-                    <path
-                      d="M7.5,0 C7.5,5 13.5,11 15,14 C14,15.5 11,15.5 7.5,15.5"
-                      fill="none"
-                      stroke="rgba(255, 255, 255, 0.15)"
-                      strokeWidth="1"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
               </div>
 
               {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
