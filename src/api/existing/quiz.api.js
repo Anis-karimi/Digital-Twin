@@ -80,30 +80,35 @@ function formatOptionsText(options) {
     .join("\n");
 }
 
+// In-memory cache for fast reuse of already retrieved explanations
+const explanationCache = new Map();
+
 /**
  * Builds the prepared pedagogical prompt for the Qwen LLM server.
+ * Instructs the model to output a crisp, fast 2-3 line explanation.
  * @param {Object} params
  * @returns {{systemPrompt: string, userPrompt: string}}
  */
 function buildExplanationPrompt({ question, options, answer, selectedAnswer }) {
   const systemPrompt =
-    "شما یک استاد دانشگاه و متخصص آموزشی با تجربه و مسلط هستید.\n" +
-    "وظیفه شما تحلیل دقیق و تشریحی سوال آزمون و ارائه یک پاسخنامه تحلیلی، مستدل، آموزنده و جامع به زبان فارسی است.\n" +
-    "پاسخ باید ساختاریافته، بسیار روان، علمی و با رعایت نکات نگارشی فارسی باشد.";
+    "شما یک استاد و مشاور آموزشی هستید. وظیفه شما ارائه تحلیلی بسیار کوتاه، روان و آموزنده برای سوال آزمون در حداکثر ۲ الی ۳ خط است.\n" +
+    "قوانین اجباری:\n" +
+    "۱. پاسخ باید حداکثر در ۲ الی ۳ خط کوتاه و مفید (حداکثر ۵۰ الی ۷۰ کلمه) باشد.\n" +
+    "۲. در خط اول دلیل علمی و قطعی درستی گزینه صحیح را مشخص کن.\n" +
+    "۳. در خط دوم نکته کلیدی آموزشی یا تفاوت آن با گزینه انتخابی را ذکر کن.\n" +
+    "۴. از سلام، مقدمه‌چینی، نتیجه‌گیری‌های طولانی و بررسی جداگانه تک‌تک گزینه‌ها اکیداً خودداری کن.\n" +
+    "۵. پاسخ باید کاملاً روان، علمی و به زبان فارسی باشد.";
 
   const optionsText = formatOptionsText(options);
 
-  const parts = [
-    "لطفاً سوال آزمون چهارگزینه‌ای زیر را به شکل کامل و جامع تشریح و تحلیل کنید:\n",
-    `**صورت سوال:**\n${question}\n`,
-  ];
+  const parts = [`سوال: ${question}`];
 
   if (optionsText) {
-    parts.push(`**گزینه‌ها:**\n${optionsText}\n`);
+    parts.push(`گزینه‌ها:\n${optionsText}`);
   }
 
   if (answer !== undefined && answer !== null && String(answer).trim()) {
-    parts.push(`**پاسخ صحیح اعلام‌شده:** ${answer}\n`);
+    parts.push(`پاسخ صحیح: ${answer}`);
   }
 
   if (
@@ -111,33 +116,14 @@ function buildExplanationPrompt({ question, options, answer, selectedAnswer }) {
     selectedAnswer !== null &&
     String(selectedAnswer).trim()
   ) {
-    parts.push(`**پاسخ انتخابی دانشجو:** ${selectedAnswer}\n`);
+    parts.push(`پاسخ انتخابی کاربر: ${selectedAnswer}`);
   }
 
   parts.push(
-    "لطفاً پاسخ را در قالبی کاملاً ساختاریافته و با عناوین زیر ارائه دهید:\n\n" +
-      "۱. **پاسخ صحیح و استدلال علمی:**\n" +
-      "گزینه یا پاسخ درست را مشخص کرده و منطق علمی و مستدل پشت آن را به طور کامل توضیح دهید.\n\n" +
-      "۲. **تحلیل و رد سایر گزینه‌ها:**\n" +
-      "سایر گزینه‌ها را به تفکیک بررسی کنید و علت نادرست بودن یا تله مفهومی آن‌ها را مشخص کنید.\n\n" +
-      "۳. **نکته کلیدی آموزشی:**\n" +
-      "یک جمع‌بندی مفهومی یا نکته مهم امتحانی مرتبط با این مبحث برای یادگیری عمیق‌تر ارائه دهید."
+    "لطفاً در حداکثر ۲ الی ۳ خط کوتاه و مفید، دلیل درستی گزینه صحیح و نکته کلیدی را توضیح بده:"
   );
 
-  if (
-    selectedAnswer !== undefined &&
-    selectedAnswer !== null &&
-    answer !== undefined &&
-    answer !== null &&
-    String(selectedAnswer).trim() !== String(answer).trim()
-  ) {
-    parts.push(
-      "\n۴. **علت اشتباه احتمالی دانشجو:**\n" +
-        "دلیل انتخاب این گزینه نادرست توسط دانشجو و کج‌فهمی رایج در این زمینه را توضیح دهید."
-    );
-  }
-
-  return { systemPrompt, userPrompt: parts.join("\n") };
+  return { systemPrompt, userPrompt: parts.join("\n\n") };
 }
 
 /**
@@ -169,6 +155,12 @@ export async function explainAnswer(questionData) {
     return "متن سوال نامعتبر است.";
   }
 
+  // Check in-memory cache
+  const cacheKey = `${question}::${String(answer || "").trim()}::${String(selectedAnswer || "").trim()}`;
+  if (explanationCache.has(cacheKey)) {
+    return explanationCache.get(cacheKey);
+  }
+
   const { systemPrompt, userPrompt } = buildExplanationPrompt({
     question,
     options,
@@ -191,13 +183,15 @@ export async function explainAnswer(questionData) {
           selected_answer: selectedAnswer,
           language,
         }),
-        timeout: 45000,
+        timeout: 15000,
       },
       "json"
     );
 
     if (data?.explanation && typeof data.explanation === "string" && data.explanation.trim()) {
-      return data.explanation.trim();
+      const res = data.explanation.trim();
+      explanationCache.set(cacheKey, res);
+      return res;
     }
   } catch (backendError) {
     console.warn(
@@ -227,17 +221,19 @@ export async function explainAnswer(questionData) {
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.3,
-          max_tokens: 1500,
+          temperature: 0.2,
+          max_tokens: 250,
         }),
-        timeout: 45000,
+        timeout: 15000,
       },
       "json"
     );
 
     const content = llmData?.choices?.[0]?.message?.content;
     if (content && typeof content === "string" && content.trim()) {
-      return content.trim();
+      const res = content.trim();
+      explanationCache.set(cacheKey, res);
+      return res;
     }
   } catch (llmError) {
     console.error("[QuizApi] Direct LLM request failed:", llmError.message);

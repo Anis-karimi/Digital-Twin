@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
+import { FormattedMarkdown } from "@/Components/Common/FormattedMarkdown";
 import "@/styles/fonts.css";
 
 export const ReviewAnswers = ({
@@ -87,6 +88,9 @@ export const ReviewAnswers = ({
               }
             : questionItem;
         const res = await quizApi.explainAnswer(payload);
+        if (questionItem && typeof questionItem === "object") {
+          questionItem.explanation = res;
+        }
         setExplanations((prev) => ({
           ...prev,
           [questionIndex]: res || t("noExplanationAvailable"),
@@ -415,16 +419,11 @@ export const ReviewAnswers = ({
                         <span>{t("gettingExplanation")}</span>
                       </div>
                     ) : (
-                      <p
-                        className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 whitespace-pre-line ${
-                          isPersianText(explanationText)
-                            ? "fa-body font-vazir text-right"
-                            : "en-body font-inter text-left"
-                        }`}
-                        dir={isPersianText(explanationText) ? "rtl" : "ltr"}
-                      >
-                        {explanationText}
-                      </p>
+                      <FormattedMarkdown
+                        content={explanationText}
+                        className="pt-1"
+                        isRTL={isPersianText(explanationText)}
+                      />
                     )}
                   </div>
                 </div>

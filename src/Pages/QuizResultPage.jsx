@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { markdownToCleanHtml } from "@/utils/markdownUtils";
 import "@/styles/fonts.css";
 
 export const QuizResultPage = ({
@@ -214,11 +215,14 @@ export const QuizResultPage = ({
         iconCanvas.height = 28;
         iconCanvas.style.width = "14px";
         iconCanvas.style.height = "14px";
-        iconCanvas.style.verticalAlign = "middle";
+        iconCanvas.style.display = "block";
+        iconCanvas.style.flexShrink = "0";
         if (isRTL) {
           iconCanvas.style.marginLeft = "5px";
+          iconCanvas.style.marginRight = "0";
         } else {
           iconCanvas.style.marginRight = "5px";
+          iconCanvas.style.marginLeft = "0";
         }
         const ctx = iconCanvas.getContext("2d");
         if (ctx) {
@@ -261,7 +265,7 @@ export const QuizResultPage = ({
         if (!qText) return "";
         try {
           const timeoutPromise = new Promise((resolve) =>
-            setTimeout(() => resolve(""), 6000)
+            setTimeout(() => resolve(""), 15000)
           );
           const apiPromise = quizApi.explainAnswer({
             question: question.question,
@@ -521,19 +525,22 @@ export const QuizResultPage = ({
         // 4. Result Cell with Check/Cross Badge
         const tdResult = document.createElement("td");
         tdResult.style.width = "11%";
-        tdResult.style.padding = "10px 8px";
+        tdResult.style.padding = "10px 6px";
         tdResult.style.borderBottom = "1px solid #e2e8f0";
         tdResult.style.borderRight = "1px solid #e2e8f0";
         tdResult.style.verticalAlign = "middle";
         tdResult.style.textAlign = "center";
 
         const badge = document.createElement("div");
-        badge.style.display = "inline-block";
-        badge.style.padding = "4px 10px";
+        badge.style.display = "inline-flex";
+        badge.style.alignItems = "center";
+        badge.style.justifyContent = "center";
+        badge.style.height = "26px";
+        badge.style.padding = "0 10px";
         badge.style.borderRadius = "9999px";
         badge.style.verticalAlign = "middle";
         badge.style.boxSizing = "border-box";
-        badge.style.lineHeight = "1";
+        badge.style.lineHeight = "normal";
         badge.style.whiteSpace = "nowrap";
         badge.dir = isRTL ? "rtl" : "ltr";
 
@@ -564,13 +571,16 @@ export const QuizResultPage = ({
         const iconEl = createLucideIconCanvas(iconType, iconColor);
 
         const textSpan = document.createElement("span");
-        textSpan.style.display = "inline-block";
-        textSpan.style.verticalAlign = "middle";
+        textSpan.style.display = "inline-flex";
+        textSpan.style.alignItems = "center";
+        textSpan.style.justifyContent = "center";
         textSpan.style.lineHeight = "1";
         textSpan.style.fontSize = "11.5px";
         textSpan.style.fontWeight = "700";
         textSpan.style.color = iconColor;
         textSpan.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        textSpan.style.position = "relative";
+        textSpan.style.top = isRTL ? "-1px" : "0px";
         textSpan.textContent = labelText;
 
         badge.appendChild(iconEl);
@@ -588,6 +598,8 @@ export const QuizResultPage = ({
         tdExp.style.fontSize = "10.5px";
         tdExp.style.color = "#1e293b";
         tdExp.style.wordBreak = "break-word";
+        tdExp.dir = isRTL ? "rtl" : "ltr";
+        tdExp.style.textAlign = isRTL ? "right" : "left";
 
         const expContent =
           (explanations[index] || "").trim() ||
@@ -597,7 +609,7 @@ export const QuizResultPage = ({
                 ? `گزینه صحیح (${correctAnswer}) است.`
                 : `The correct option is (${correctAnswer}).`));
 
-        tdExp.textContent = expContent;
+        tdExp.innerHTML = markdownToCleanHtml(expContent, { isRTL });
         row.appendChild(tdExp);
 
         tbody.appendChild(row);

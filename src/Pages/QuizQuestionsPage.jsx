@@ -11,6 +11,7 @@ import {
   Check,
   Award,
 } from "lucide-react";
+import { FormattedMarkdown } from "@/Components/Common/FormattedMarkdown";
 import "@/styles/fonts.css";
 
 export const QuizQuestionsPage = ({
@@ -266,6 +267,13 @@ export const QuizQuestionsPage = ({
         answer: currentQuestion.answer,
         selectedAnswer: selectedAnswers[currentQuestionIndex],
       });
+
+      if (currentQuestion && typeof currentQuestion === "object") {
+        currentQuestion.explanation = exp;
+      }
+      if (quizData[currentQuestionIndex]) {
+        quizData[currentQuestionIndex].explanation = exp;
+      }
 
       setExplanations((prev) => ({
         ...prev,
@@ -593,16 +601,11 @@ export const QuizQuestionsPage = ({
                   <span>{t("gettingExplanation")}</span>
                 </div>
               ) : (
-                <p
-                  className={`text-xs sm:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200 pt-1 whitespace-pre-line ${
-                    isPersianText(explanation)
-                      ? "fa-body font-vazir text-right"
-                      : "en-body font-inter text-left"
-                  }`}
-                  dir={isPersianText(explanation) ? "rtl" : "ltr"}
-                >
-                  {explanation}
-                </p>
+                <FormattedMarkdown
+                  content={explanation}
+                  className="pt-1"
+                  isRTL={isPersianText(explanation)}
+                />
               )}
             </div>
           </div>
