@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { markdownToCleanHtml } from "@/utils/markdownUtils";
+import { markdownToCleanHtml } from "@/utils/markdownUtils.js";
 import "@/styles/fonts.css";
 
 export const QuizResultPage = ({

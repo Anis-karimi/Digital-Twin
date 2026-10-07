@@ -1,5 +1,5 @@
 import React from "react";
-import { parseMarkdownBlocks } from "@/utils/markdownUtils";
+import { parseMarkdownBlocks } from "@/utils/markdownUtils.js";
 import { isPersianText } from "@/utils/textUtils";
 
 /**
@@ -7,7 +7,7 @@ import { isPersianText } from "@/utils/textUtils";
  * @param {string} text
  * @returns {React.ReactNode[]}
  */
-export function renderInlineMarkdown(text) {
+function renderInlineMarkdown(text) {
   if (!text) return [];
 
   // Match: `code`, **bold**, __bold__, *italic*, _italic_

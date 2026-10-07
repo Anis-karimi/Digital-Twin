@@ -168,75 +168,75 @@ export async function explainAnswer(questionData) {
     selectedAnswer,
   });
 
-  // 1. Primary Strategy: Call the Core Backend /api/v1/quiz/explain-answer
-  try {
-    const backendUrl = `${API_CONFIG.NEW_BACKEND_URL}/quiz/explain-answer`;
-    const data = await httpRequest(
-      backendUrl,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          options,
-          answer,
-          selected_answer: selectedAnswer,
-          language,
-        }),
-        timeout: 15000,
-      },
-      "json"
-    );
+  // 1. Primary Strategy: Call Core Backend endpoints via reverse proxy/gateway
+  const backendEndpoints = ["/quiz/explain-answer", "/quizzes/explain-answer"];
+  for (const endpoint of backendEndpoints) {
+    try {
+      const backendUrl = `${API_CONFIG.NEW_BACKEND_URL}${endpoint}`;
+      const data = await httpRequest(
+        backendUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question,
+            options,
+            answer,
+            selected_answer: selectedAnswer,
+            language,
+          }),
+          timeout: 60000,
+        },
+        "json"
+      );
 
-    if (data?.explanation && typeof data.explanation === "string" && data.explanation.trim()) {
-      const res = data.explanation.trim();
-      explanationCache.set(cacheKey, res);
-      return res;
+      if (data?.explanation && typeof data.explanation === "string" && data.explanation.trim()) {
+        const res = data.explanation.trim();
+        if (!res.startsWith("در حال حاضر امکان دریافت تحلیل")) {
+          explanationCache.set(cacheKey, res);
+        }
+        return res;
+      }
+    } catch (backendError) {
+      console.warn(`[QuizApi] Backend ${endpoint} failed:`, backendError.message);
     }
-  } catch (backendError) {
-    console.warn(
-      "[QuizApi] Core backend explain-answer failed, attempting direct LLM fallback:",
-      backendError.message
-    );
   }
 
-  // 2. Direct Strategy: Query the Qwen LLM server (http://94.184.177.171:8000/v1)
+  // 2. Fallback: Only if running via Vite dev proxy on localhost:5173
   try {
     const isBrowser = typeof window !== "undefined";
     const isDev = isBrowser && window.location.port === "5173";
 
-    // Use Vite proxy in dev to avoid browser CORS/Mixed Content restrictions
-    const directUrl = isDev
-      ? "/llm-proxy/v1/chat/completions"
-      : `${API_CONFIG.LLM_BASE_URL}/chat/completions`;
+    if (isDev) {
+      const directUrl = "/llm-proxy/v1/chat/completions";
+      const llmData = await httpRequest(
+        directUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: API_CONFIG.LLM_MODEL || "Qwen/Qwen2.5-7B-Instruct-AWQ",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.2,
+            max_tokens: 250,
+          }),
+          timeout: 60000,
+        },
+        "json"
+      );
 
-    const llmData = await httpRequest(
-      directUrl,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: API_CONFIG.LLM_MODEL || "Qwen/Qwen2.5-7B-Instruct-AWQ",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.2,
-          max_tokens: 250,
-        }),
-        timeout: 15000,
-      },
-      "json"
-    );
-
-    const content = llmData?.choices?.[0]?.message?.content;
-    if (content && typeof content === "string" && content.trim()) {
-      const res = content.trim();
-      explanationCache.set(cacheKey, res);
-      return res;
+      const content = llmData?.choices?.[0]?.message?.content;
+      if (content && typeof content === "string" && content.trim()) {
+        const res = content.trim();
+        explanationCache.set(cacheKey, res);
+        return res;
+      }
     }
   } catch (llmError) {
-    console.error("[QuizApi] Direct LLM request failed:", llmError.message);
+    console.error("[QuizApi] Dev LLM proxy request failed:", llmError.message);
   }
 
   return "در حال حاضر امکان ارتباط با سرور تحلیل هوش مصنوعی وجود ندارد. لطفاً دقایقی دیگر تلاش فرمایید.";
