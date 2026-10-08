@@ -51,14 +51,11 @@ function detectClientFace(video, canvas) {
   let skinCount = 0;
   let sumX = 0;
   let sumY = 0;
-  let minX = sw;
-  let maxX = 0;
-  let minY = sh;
-  let maxY = 0;
+  let sumSqX = 0;
 
   // Scan central/upper 85% where student's head is positioned
-  const maxScanY = Math.floor(sh * 0.85);
   const minScanY = Math.floor(sh * 0.08);
+  const maxScanY = Math.floor(sh * 0.85);
 
   for (let y = minScanY; y < maxScanY; y++) {
     for (let x = 0; x < sw; x++) {
@@ -76,10 +73,7 @@ function detectClientFace(video, canvas) {
         skinCount++;
         sumX += x;
         sumY += y;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
+        sumSqX += x * x;
       }
     }
   }
@@ -90,23 +84,27 @@ function detectClientFace(video, canvas) {
     return null;
   }
 
+  // 1. Centroid (Center of Mass)
   const cx = sumX / skinCount;
   const cy = sumY / skinCount;
 
-  // Human head aspect ratio (~1 : 1.3)
-  const spreadX = Math.max(sw * 0.22, Math.min(sw * 0.55, (maxX - minX) * 0.95));
-  const spreadH = Math.max(sh * 0.30, Math.min(sh * 0.70, spreadX * 1.3));
+  // 2. Variance & standard deviation (immune to noise & outliers)
+  const varX = Math.max(1, (sumSqX / skinCount) - (cx * cx));
+  const stdX = Math.sqrt(varX);
 
-  const normW = spreadX / sw;
-  const normH = spreadH / sh;
-  const normCenterX = cx / sw;
-  const normCenterY = cy / sh;
+  // 3. Stably bounded face width and height
+  const faceW = Math.max(sw * 0.28, Math.min(sw * 0.52, stdX * 2.75));
+  const faceH = faceW * 1.30; // Anthropometric head aspect ratio
+
+  // 4. Centered head box
+  const faceX = cx - faceW / 2;
+  const faceY = cy - faceH * 0.42;
 
   return {
-    normX: Math.max(0, normCenterX - normW / 2),
-    normY: Math.max(0, normCenterY - normH / 2),
-    normW: Math.min(1.0, normW),
-    normH: Math.min(1.0, normH),
+    normX: Math.max(0, Math.min(1.0 - faceW / sw, faceX / sw)),
+    normY: Math.max(0, Math.min(1.0 - faceH / sh, faceY / sh)),
+    normW: faceW / sw,
+    normH: faceH / sh,
   };
 }
 
@@ -158,6 +156,9 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     onCalibrationComplete: () => {
       loadProfile();
+      setTimeout(() => {
+        setCurrentStep(3);
+      }, 1400);
     },
   });
 
@@ -173,6 +174,9 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     onCalibrationComplete: () => {
       loadProfile();
+      setTimeout(() => {
+        setCurrentStep(4);
+      }, 1400);
     },
   });
 
@@ -290,18 +294,30 @@ export function StudentBiometricsPage() {
 
           setFaceBox((prev) => {
             if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
-            // Smooth jitter with EMA filter
+
+            const dx = Math.abs(targetX - prev.x);
+            const dy = Math.abs(targetY - prev.y);
+            const dw = Math.abs(targetW - prev.width);
+            const dh = Math.abs(targetH - prev.height);
+
+            // Deadband: Ignore micro-jitter (< 3px movement or < 3.5px size change)
+            const smoothX = dx < 3.0 ? prev.x : prev.x * 0.82 + targetX * 0.18;
+            const smoothY = dy < 3.0 ? prev.y : prev.y * 0.82 + targetY * 0.18;
+            const smoothW = dw < 3.5 ? prev.width : prev.width * 0.90 + targetW * 0.10;
+            const smoothH = dh < 3.5 ? prev.height : prev.height * 0.90 + targetH * 0.10;
+
             return {
-              x: prev.x * 0.35 + targetX * 0.65,
-              y: prev.y * 0.35 + targetY * 0.65,
-              width: prev.width * 0.35 + targetW * 0.65,
-              height: prev.height * 0.35 + targetH * 0.65,
+              x: smoothX,
+              y: smoothY,
+              width: smoothW,
+              height: smoothH,
             };
           });
           setFaceStatus("face_locked");
         } else if (isMounted) {
           noFaceCounter++;
-          if (noFaceCounter >= 2) {
+          // Generous hold: do not drop box unless face is absent for at least 8 frames (~400ms)
+          if (noFaceCounter >= 8) {
             setFaceBox(null);
             setFaceStatus("no_face");
           }
@@ -348,7 +364,7 @@ export function StudentBiometricsPage() {
         await loadProfile();
         setTimeout(() => {
           setCurrentStep(2);
-        }, 1600);
+        }, 1500);
       } else {
         setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.");
         autoEnrollTriggeredRef.current = false;
@@ -371,38 +387,55 @@ export function StudentBiometricsPage() {
     setFaceBox(null);
   };
 
-  // Automatic Scanning Progress (Only runs while face is actively locked on)
+  // Automatic Scanning Progress (Sequentially triggers enrollment once face is locked)
   useEffect(() => {
     if (currentStep !== 1 || enrollStatus.success || isLoading) return;
 
     let timer = null;
 
-    if (faceStatus === "face_locked" && faceBox) {
-      // 200ms lock-on stabilization phase before scan line sweeps
-      const lockTimeout = setTimeout(() => {
-        timer = setInterval(() => {
-          setScanProgress((prev) => {
-            if (prev >= 100) {
-              if (!autoEnrollTriggeredRef.current) {
-                autoEnrollTriggeredRef.current = true;
-                handleEnrollFace();
-              }
-              return 100;
+    if (faceStatus === "face_locked") {
+      // Smooth automatic scan progress filling to 100% in ~1.1s
+      timer = setInterval(() => {
+        setScanProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(timer);
+            if (!autoEnrollTriggeredRef.current) {
+              autoEnrollTriggeredRef.current = true;
+              handleEnrollFace();
             }
-            return prev + 5; // Reaches 100% in ~1.0s
-          });
-        }, 50);
-      }, 200);
+            return 100;
+          }
+          return prev + 4; // Reaches 100% in ~1.1s smoothly
+        });
+      }, 45);
 
       return () => {
-        clearTimeout(lockTimeout);
         if (timer) clearInterval(timer);
       };
     } else {
       setScanProgress(0);
       autoEnrollTriggeredRef.current = false;
     }
-  }, [faceStatus, faceBox, currentStep, enrollStatus.success, isLoading]);
+  }, [faceStatus, currentStep, enrollStatus.success, isLoading]);
+
+  // Automatic Sequential Wizard Flow: Auto-start gaze & neutral calibrations without manual button presses
+  useEffect(() => {
+    if (currentStep === 2 && !isGazeCalibrated && !isGazeCalibrating) {
+      const timer = setTimeout(() => {
+        startGazeCalibration();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, isGazeCalibrated, isGazeCalibrating, startGazeCalibration]);
+
+  useEffect(() => {
+    if (currentStep === 3 && !isNeutralCalibrated && !isNeutralCalibrating) {
+      const timer = setTimeout(() => {
+        startNeutralCalibration();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, isNeutralCalibrated, isNeutralCalibrating, startNeutralCalibration]);
 
   const isStepDone = (stepId) => {
     if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
