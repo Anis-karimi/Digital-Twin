@@ -96,9 +96,9 @@ export function useBiometricCamera(options = {}) {
     setIsActive(false);
   }, [stream, videoRef]);
 
-  // Capture current frame as Blob (JPEG downscaled for minimal payload)
+  // Capture current frame as Blob (JPEG downscaled for minimal payload while preserving aspect ratio)
   const captureFrameBlob = useCallback(
-    (quality = 0.75, targetWidth = 320, targetHeight = 240) => {
+    (quality = 0.85, targetWidth = 640, targetHeight = 480) => {
       return new Promise((resolve) => {
         const video = videoRef.current;
         if (!video || video.readyState < 2) {
@@ -110,13 +110,21 @@ export function useBiometricCamera(options = {}) {
         }
 
         const canvas = offscreenCanvasRef.current;
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+
+        // Maintain natural webcam aspect ratio up to targetWidth/targetHeight bounds
+        const scale = Math.min(1.0, Math.min(targetWidth / vw, targetHeight / vh));
+        const finalW = Math.max(160, Math.round(vw * scale));
+        const finalH = Math.max(120, Math.round(vh * scale));
+
+        canvas.width = finalW;
+        canvas.height = finalH;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return resolve(null);
 
-        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+        ctx.drawImage(video, 0, 0, finalW, finalH);
         canvas.toBlob((blob) => resolve(blob), "image/jpeg", quality);
       });
     },

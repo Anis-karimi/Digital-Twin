@@ -215,6 +215,15 @@ export async function requestWithFallback(endpoint, options = {}, fallbackData =
     const url = `${API_CONFIG.NEW_BACKEND_URL}${endpoint}`;
     return await httpRequest(url, { ...options, headers });
   } catch (err) {
+    // If the server explicitly returned a 4xx error (e.g. 400 Bad Request, 403 Forbidden),
+    // NEVER swallow it with fallback mock data! Propagate the real error to the caller.
+    if (err.status && err.status >= 400 && err.status < 500) {
+      const detail = err.data?.detail || err.data?.message || err.message;
+      const apiErr = new Error(detail);
+      apiErr.status = err.status;
+      apiErr.data = err.data;
+      throw apiErr;
+    }
     console.warn(`[NewBackend] ${endpoint} request failed. Using local fallback:`, err.message);
     return typeof fallbackData === "function" ? fallbackData(err) : fallbackData;
   }

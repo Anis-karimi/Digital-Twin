@@ -156,9 +156,6 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     onCalibrationComplete: () => {
       loadProfile();
-      setTimeout(() => {
-        setCurrentStep(3);
-      }, 1400);
     },
   });
 
@@ -174,9 +171,6 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     onCalibrationComplete: () => {
       loadProfile();
-      setTimeout(() => {
-        setCurrentStep(4);
-      }, 1400);
     },
   });
 
@@ -359,12 +353,9 @@ export function StudentBiometricsPage() {
       if (res?.status === "enrolled" || res?.user_id) {
         setEnrollStatus({
           success: true,
-          message: "چهره و بردار اصالت با موفقیت ثبت شد.",
+          message: "چهره و بردار اصالت با موفقیت تایید شد ✓",
         });
         await loadProfile();
-        setTimeout(() => {
-          setCurrentStep(2);
-        }, 1500);
       } else {
         setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.");
         autoEnrollTriggeredRef.current = false;
@@ -381,20 +372,21 @@ export function StudentBiometricsPage() {
 
   const handleRescanFace = () => {
     setEnrollStatus({ success: false, message: "" });
+    setProfileStatus((prev) => (prev ? { ...prev, face_enrolled: false } : null));
     setScanProgress(0);
     autoEnrollTriggeredRef.current = false;
     setFaceStatus("no_face");
     setFaceBox(null);
   };
 
-  // Automatic Scanning Progress (Sequentially triggers enrollment once face is locked)
+  // Automatic Scanning Progress (Sequentially samples face stability over ~2s before enrolling)
   useEffect(() => {
     if (currentStep !== 1 || enrollStatus.success || isLoading) return;
 
     let timer = null;
 
     if (faceStatus === "face_locked") {
-      // Smooth automatic scan progress filling to 100% in ~1.1s
+      // Sequential accumulation: ~2 seconds of stable face lock
       timer = setInterval(() => {
         setScanProgress((prev) => {
           if (prev >= 100) {
@@ -405,9 +397,9 @@ export function StudentBiometricsPage() {
             }
             return 100;
           }
-          return prev + 4; // Reaches 100% in ~1.1s smoothly
+          return prev + 2.5;
         });
-      }, 45);
+      }, 50);
 
       return () => {
         if (timer) clearInterval(timer);
@@ -417,25 +409,6 @@ export function StudentBiometricsPage() {
       autoEnrollTriggeredRef.current = false;
     }
   }, [faceStatus, currentStep, enrollStatus.success, isLoading]);
-
-  // Automatic Sequential Wizard Flow: Auto-start gaze & neutral calibrations without manual button presses
-  useEffect(() => {
-    if (currentStep === 2 && !isGazeCalibrated && !isGazeCalibrating) {
-      const timer = setTimeout(() => {
-        startGazeCalibration();
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep, isGazeCalibrated, isGazeCalibrating, startGazeCalibration]);
-
-  useEffect(() => {
-    if (currentStep === 3 && !isNeutralCalibrated && !isNeutralCalibrating) {
-      const timer = setTimeout(() => {
-        startNeutralCalibration();
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep, isNeutralCalibrated, isNeutralCalibrating, startNeutralCalibration]);
 
   const isStepDone = (stepId) => {
     if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
@@ -671,8 +644,48 @@ export function StudentBiometricsPage() {
         </div>
       </header>
 
-      {/* ================= 4 Face ID Corner Brackets (Fly from Screen Edges onto Face) ================= */}
+      {/* ================= 4 Face ID Corner Brackets & Synchronized Dotted Frame ================= */}
       <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
+        {/* Dynamic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
+        {faceBox && isLockedOnFace && (
+          <div
+            className="absolute rounded-[22px] pointer-events-none bracket-smooth-transition"
+            style={{
+              top: `${Math.round(faceBox.y)}px`,
+              left: `${Math.round(faceBox.x)}px`,
+              width: `${Math.round(faceBox.width)}px`,
+              height: `${Math.round(faceBox.height)}px`,
+              filter: bracketFilter,
+            }}
+          >
+            {/* Delicate Guide Dotted Line & Face Tracking Box */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+              viewBox={`0 0 ${Math.round(faceBox.width)} ${Math.round(faceBox.height)}`}
+              fill="none"
+            >
+              <rect
+                x="3"
+                y="3"
+                width={Math.round(faceBox.width) - 6}
+                height={Math.round(faceBox.height) - 6}
+                rx="20"
+                stroke={isEnrolledSuccess ? "rgba(52, 211, 153, 0.45)" : "rgba(56, 189, 248, 0.35)"}
+                strokeWidth="1.5"
+                strokeDasharray="4 6"
+              />
+              {/* Optical Alignment Center Ticks */}
+              <path
+                d={`M ${Math.round(faceBox.width / 2)} 4 V 14 M ${Math.round(faceBox.width / 2)} ${Math.round(faceBox.height - 14)} V ${Math.round(faceBox.height - 4)} M 4 ${Math.round(faceBox.height / 2)} H 14 M ${Math.round(faceBox.width - 14)} ${Math.round(faceBox.height / 2)} H ${Math.round(faceBox.width - 4)}`}
+                stroke={isEnrolledSuccess ? "#34d399" : "#38bdf8"}
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="opacity-80"
+              />
+            </svg>
+          </div>
+        )}
+
         {/* Top-Left Corner Bracket */}
         <div
           className="absolute bracket-smooth-transition"
@@ -754,7 +767,7 @@ export function StudentBiometricsPage() {
         </div>
       </div>
 
-      {/* ================= 3. Center: Biometric Face Viewport & Auto Scanner ================= */}
+      {/* ================= 3. Center: Biometric Face Viewport & Feedback ================= */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pointer-events-none">
         {/* Global Error Banner */}
         {errorMsg && (
@@ -764,58 +777,8 @@ export function StudentBiometricsPage() {
           </div>
         )}
 
-        {/* Dynamic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
-        {faceBox && isLockedOnFace ? (
-          <div
-            className="absolute rounded-[22px] pointer-events-none transition-all duration-200"
-            style={{
-              top: `${Math.round(faceBox.y)}px`,
-              left: `${Math.round(faceBox.x)}px`,
-              width: `${Math.round(faceBox.width)}px`,
-              height: `${Math.round(faceBox.height)}px`,
-              filter: bracketFilter,
-            }}
-          >
-            {/* Delicate Guide Dotted Line & Face Tracking Box */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-              viewBox={`0 0 ${Math.round(faceBox.width)} ${Math.round(faceBox.height)}`}
-              fill="none"
-            >
-              <rect
-                x="3"
-                y="3"
-                width={Math.round(faceBox.width) - 6}
-                height={Math.round(faceBox.height) - 6}
-                rx="20"
-                stroke={isEnrolledSuccess ? "rgba(52, 211, 153, 0.45)" : "rgba(56, 189, 248, 0.35)"}
-                strokeWidth="1.5"
-                strokeDasharray="4 6"
-              />
-              {/* Optical Alignment Center Ticks */}
-              <path
-                d={`M ${Math.round(faceBox.width / 2)} 4 V 14 M ${Math.round(faceBox.width / 2)} ${Math.round(faceBox.height - 14)} V ${Math.round(faceBox.height - 4)} M 4 ${Math.round(faceBox.height / 2)} H 14 M ${Math.round(faceBox.width - 14)} ${Math.round(faceBox.height / 2)} H ${Math.round(faceBox.width - 4)}`}
-                stroke={isEnrolledSuccess ? "#34d399" : "#38bdf8"}
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="opacity-80"
-              />
-            </svg>
-
-            {/* Sweeping Laser Scan Line (animates smoothly across face as progress increases) */}
-            {scanProgress > 0 && !isEnrolledSuccess && (
-              <div
-                className="absolute inset-x-2 h-[2.5px] bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_16px_#38bdf8] pointer-events-none transition-all duration-75"
-                style={{
-                  top: `${Math.min(94, Math.max(6, scanProgress))}%`,
-                }}
-              >
-                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-12 h-2.5 bg-sky-400/40 blur-sm rounded-full" />
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Subtle Waiting Guide in Center when waiting for face */
+        {/* Subtle Waiting Guide in Center when waiting for face */}
+        {(!faceBox || !isLockedOnFace) && (
           <div className="relative flex items-center justify-center pointer-events-none">
             <div className="relative flex items-center justify-center w-[230px] h-[280px] rounded-[24px] border border-dashed border-white/20 transition-all duration-500 scale-95 opacity-40">
               <span className="text-[11px] text-white/50 font-vazir text-center px-4">
@@ -975,7 +938,12 @@ export function StudentBiometricsPage() {
             <button
               key={s.id}
               type="button"
-              onClick={() => setCurrentStep(s.id)}
+              disabled={s.id > currentStep && !isStepDone(s.id - 1)}
+              onClick={() => {
+                if (s.id <= currentStep || isStepDone(s.id - 1)) {
+                  setCurrentStep(s.id);
+                }
+              }}
               className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                 currentStep === s.id
                   ? "w-7 bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.7)]"
@@ -1003,72 +971,139 @@ export function StudentBiometricsPage() {
 
           {/* Step 1 Action Button */}
           {currentStep === 1 && (
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={enrollStatus.success ? handleRescanFace : handleEnrollFace}
-              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>در حال ثبت...</span>
-                </>
-              ) : (
-                <>
-                  <img
-                    src="/face_logo.png"
-                    alt="Face"
-                    className="w-4 h-4 object-contain brightness-0 invert"
-                  />
-                  <span>{enrollStatus.success ? "اسکن مجدد چهره" : "اسکن هوشمند چهره"}</span>
-                </>
-              )}
-            </button>
+            isStepDone(1) ? (
+              <div className="flex-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRescanFace}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  title="اسکن مجدد چهره"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>مرحله بعد: کالیبراسیون نگاه</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={handleEnrollFace}
+                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>در حال احراز و ثبت چهره...</span>
+                  </>
+                ) : (
+                  <>
+                    <img
+                      src="/face_logo.png"
+                      alt="Face"
+                      className="w-4 h-4 object-contain brightness-0 invert"
+                    />
+                    <span>
+                      {scanProgress > 0
+                        ? `در حال اسکن خودکار (${Math.round(scanProgress)}%)...`
+                        : "در انتظار موقعیت چهره..."}
+                    </span>
+                  </>
+                )}
+              </button>
+            )
           )}
 
           {/* Step 2 Action Button */}
           {currentStep === 2 && (
-            <button
-              type="button"
-              disabled={isGazeCalibrating || !isCameraActive}
-              onClick={startGazeCalibration}
-              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              {isGazeCalibrating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>کالیبراسیون در حال اجرا...</span>
-                </>
-              ) : (
-                <>
-                  <Target className="w-4 h-4" />
-                  <span>شروع کالیبراسیون نگاه</span>
-                </>
-              )}
-            </button>
+            isStepDone(2) ? (
+              <div className="flex-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={startGazeCalibration}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  title="کالیبراسیون مجدد نگاه"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(3)}
+                  className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>مرحله بعد: مبنای خنثی احساسات</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isGazeCalibrating || !isCameraActive}
+                onClick={startGazeCalibration}
+                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {isGazeCalibrating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>کالیبراسیون در حال اجرا...</span>
+                  </>
+                ) : (
+                  <>
+                    <Target className="w-4 h-4" />
+                    <span>شروع کالیبراسیون نگاه</span>
+                  </>
+                )}
+              </button>
+            )
           )}
 
           {/* Step 3 Action Button */}
           {currentStep === 3 && (
-            <button
-              type="button"
-              disabled={isNeutralCalibrating || !isCameraActive}
-              onClick={startNeutralCalibration}
-              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              {isNeutralCalibrating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>ضبط مبنا ({neutralCountdown}s)...</span>
-                </>
-              ) : (
-                <>
-                  <Smile className="w-4 h-4" />
-                  <span>شروع ضبط خنثی (۳ ثانیه)</span>
-                </>
-              )}
-            </button>
+            isStepDone(3) ? (
+              <div className="flex-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={startNeutralCalibration}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  title="ضبط مجدد مبنای خنثی"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(4)}
+                  className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>مرحله بعد: تایید نهایی</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isNeutralCalibrating || !isCameraActive}
+                onClick={startNeutralCalibration}
+                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {isNeutralCalibrating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>ضبط مبنا ({neutralCountdown}s)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Smile className="w-4 h-4" />
+                    <span>شروع ضبط خنثی (۳ ثانیه)</span>
+                  </>
+                )}
+              </button>
+            )
           )}
 
           {/* Step 4 Action Button */}
@@ -1086,7 +1121,7 @@ export function StudentBiometricsPage() {
           {/* Next Step */}
           <button
             type="button"
-            disabled={currentStep === 4}
+            disabled={currentStep === 4 || !isStepDone(currentStep)}
             onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
             className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
             title="مرحله بعد"
