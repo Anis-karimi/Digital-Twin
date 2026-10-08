@@ -16,11 +16,12 @@ const BASE_PREFIX = "/biometrics";
  * @param {string} [livenessMode="balanced"]
  * @returns {Promise<Object>}
  */
-export async function enrollStudentFace(userId, imageBlob, livenessMode = "balanced") {
+export async function enrollStudentFace(userId, imageBlob, livenessMode = "balanced", detector = "opencv") {
   const formData = new FormData();
   formData.append("user_id", String(userId).trim());
   formData.append("file", imageBlob, "face_enroll.jpg");
   formData.append("liveness_mode", livenessMode);
+  formData.append("detector", detector);
 
   return requestWithFallback(
     `${BASE_PREFIX}/enroll`,

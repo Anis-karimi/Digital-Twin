@@ -52,7 +52,9 @@ export function StudentBiometricsPage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   // Auto-scan & Face centering detection state
-  const [faceStatus, setFaceStatus] = useState("detecting"); // "detecting" | "face_centered" | "no_face"
+  const containerRef = useRef(null);
+  const [faceBox, setFaceBox] = useState(null); // { x, y, width, height } in px
+  const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked"
   const [scanProgress, setScanProgress] = useState(0); // 0 to 100
   const autoEnrollTriggeredRef = useRef(false);
 
@@ -116,64 +118,135 @@ export function StudentBiometricsPage() {
     loadProfile();
   }, [studentId]);
 
-  // Real-time automatic face presence & centering analyzer
+  // Real-time automatic face presence & tracking analyzer
   useEffect(() => {
-    if (!isCameraActive || currentStep !== 1 || enrollStatus.success) return;
+    if (!isCameraActive || currentStep !== 1 || enrollStatus.success) {
+      setFaceBox(null);
+      setFaceStatus("no_face");
+      return;
+    }
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 120;
-    canvas.height = 120;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-
-    let consecutiveFaces = 0;
-    let consecutiveNoFaces = 0;
-
-    const interval = setInterval(() => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2) return;
-
+    let isMounted = true;
+    let nativeDetector = null;
+    if (typeof window !== "undefined" && "FaceDetector" in window) {
       try {
-        ctx.drawImage(video, 0, 0, 120, 120);
-        // Sample center bounding area (where the face sits)
-        const frameData = ctx.getImageData(30, 20, 60, 80).data;
-        let sum = 0;
-        let sumSq = 0;
-        const totalPixels = frameData.length / 4;
-
-        for (let i = 0; i < frameData.length; i += 4) {
-          const luma = 0.299 * frameData[i] + 0.587 * frameData[i + 1] + 0.114 * frameData[i + 2];
-          sum += luma;
-          sumSq += luma * luma;
-        }
-
-        const mean = sum / totalPixels;
-        const variance = sumSq / totalPixels - mean * mean;
-        const stdDev = Math.sqrt(Math.max(0, variance));
-
-        // Real face has high facial feature contrast (stdDev > 16.5) and balanced lighting
-        const hasFace = stdDev >= 16.5 && mean > 25 && mean < 235;
-
-        if (hasFace) {
-          consecutiveFaces++;
-          consecutiveNoFaces = 0;
-          if (consecutiveFaces >= 2) {
-            setFaceStatus("face_centered");
-          }
-        } else {
-          consecutiveNoFaces++;
-          consecutiveFaces = 0;
-          if (consecutiveNoFaces >= 3) {
-            setFaceStatus("no_face");
-            setScanProgress(0);
-          }
-        }
-      } catch {
-        setFaceStatus("face_centered");
+        nativeDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+      } catch (e) {
+        nativeDetector = null;
       }
-    }, 180);
+    }
 
-    return () => clearInterval(interval);
-  }, [isCameraActive, currentStep, enrollStatus.success, videoRef]);
+    let isBusy = false;
+    let noFaceCounter = 0;
+
+    const detectCycle = async () => {
+      if (!isMounted || isBusy) return;
+      const video = videoRef.current;
+      const container = containerRef.current;
+      if (!video || video.readyState < 2 || !container) return;
+
+      isBusy = true;
+      try {
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        const cw = container.clientWidth || 360;
+        const ch = container.clientHeight || 640;
+
+        // Container aspect-fit/cover calculation for scaleX(-1) mirrored video
+        const scale = Math.max(cw / vw, ch / vh);
+        const renderedW = vw * scale;
+        const renderedH = vh * scale;
+        const offsetX = (cw - renderedW) / 2;
+        const offsetY = (ch - renderedH) / 2;
+
+        let detectedBox = null;
+
+        // 1. Try Native Browser FaceDetector (instant 30 FPS client-side tracking)
+        if (nativeDetector) {
+          try {
+            const faces = await nativeDetector.detect(video);
+            if (faces && faces.length > 0) {
+              const bb = faces[0].boundingBox;
+              if (bb && bb.width > 20 && bb.height > 20) {
+                // In mirrored mode, horizontal X is inverted:
+                const mirroredX = vw - (bb.x + bb.width);
+                detectedBox = {
+                  x: offsetX + mirroredX * scale,
+                  y: offsetY + bb.y * scale,
+                  w: bb.width * scale,
+                  h: bb.height * scale,
+                };
+              }
+            }
+          } catch {
+            // Fallback to server telemetry
+          }
+        }
+
+        // 2. If Native Detector not present or found nothing, run Server Telemetry Pulse
+        if (!detectedBox) {
+          const blob = await captureFrameBlob(0.65, 320, 240);
+          if (blob && isMounted) {
+            const telem = await biometricsApi.sendBiometricTelemetry(studentId, blob, "opencv");
+            if (telem?.face_detected && telem?.face_box?.length === 4) {
+              const [fx, fy, fw, fh] = telem.face_box;
+              const normX = fx / 320.0;
+              const normY = fy / 240.0;
+              const normW = fw / 320.0;
+              const normH = fh / 240.0;
+
+              const mirroredNormX = 1.0 - (normX + normW);
+              detectedBox = {
+                x: offsetX + mirroredNormX * renderedW,
+                y: offsetY + normY * renderedH,
+                w: normW * renderedW,
+                h: normH * renderedH,
+              };
+            }
+          }
+        }
+
+        if (detectedBox && isMounted) {
+          noFaceCounter = 0;
+          // Apply padding around face for comfortable, stylish framing
+          const padX = detectedBox.w * 0.16;
+          const padY = detectedBox.h * 0.20;
+          const targetX = Math.max(8, detectedBox.x - padX);
+          const targetY = Math.max(68, detectedBox.y - padY);
+          const targetW = Math.min(cw - 16, detectedBox.w + padX * 2);
+          const targetH = Math.min(ch - 140, detectedBox.h + padY * 2);
+
+          setFaceBox((prev) => {
+            if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
+            // Smooth jitter with EMA filter
+            return {
+              x: prev.x * 0.35 + targetX * 0.65,
+              y: prev.y * 0.35 + targetY * 0.65,
+              width: prev.width * 0.35 + targetW * 0.65,
+              height: prev.height * 0.35 + targetH * 0.65,
+            };
+          });
+          setFaceStatus("face_locked");
+        } else if (isMounted) {
+          noFaceCounter++;
+          if (noFaceCounter >= 2) {
+            setFaceBox(null);
+            setFaceStatus("no_face");
+          }
+        }
+      } catch (err) {
+        console.warn("Face tracker pulse:", err);
+      } finally {
+        isBusy = false;
+      }
+    };
+
+    const interval = setInterval(detectCycle, nativeDetector ? 100 : 350);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isCameraActive, currentStep, enrollStatus.success, studentId]);
 
   // Automatic Face Enrollment Action
   const handleEnrollFace = async () => {
@@ -181,17 +254,20 @@ export function StudentBiometricsPage() {
     setErrorMsg("");
     setIsLoading(true);
     try {
-      const blob = await captureFrameBlob(0.85, 640, 480);
+      const blob = await captureFrameBlob(0.9, 640, 480);
       if (!blob) {
         throw new Error("خطا در تصویر دوربین. لطفاً دسترسی دوربین را بررسی فرمایید.");
       }
-      const res = await biometricsApi.enrollStudentFace(studentId, blob, "balanced");
+      const res = await biometricsApi.enrollStudentFace(studentId, blob, "balanced", "opencv");
       if (res?.status === "enrolled" || res?.user_id) {
         setEnrollStatus({
           success: true,
           message: "چهره و بردار اصالت با موفقیت ثبت شد.",
         });
         await loadProfile();
+        setTimeout(() => {
+          setCurrentStep(2);
+        }, 1600);
       } else {
         setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.");
         autoEnrollTriggeredRef.current = false;
@@ -210,19 +286,19 @@ export function StudentBiometricsPage() {
     setEnrollStatus({ success: false, message: "" });
     setScanProgress(0);
     autoEnrollTriggeredRef.current = false;
-    setFaceStatus("face_centered");
+    setFaceStatus("no_face");
+    setFaceBox(null);
   };
 
-  // Automatic Scanning Progress (Apple Face ID style with Face Lock-On Phase)
+  // Automatic Scanning Progress (Only runs while face is actively locked on)
   useEffect(() => {
     if (currentStep !== 1 || enrollStatus.success || isLoading) return;
 
     let timer = null;
-    let lockTimeout = null;
 
-    if (faceStatus === "face_centered") {
-      // 320ms Lock-On Phase: The box first snaps and restricts tightly around the person's face
-      lockTimeout = setTimeout(() => {
+    if (faceStatus === "face_locked" && faceBox) {
+      // 200ms lock-on stabilization phase before scan line sweeps
+      const lockTimeout = setTimeout(() => {
         timer = setInterval(() => {
           setScanProgress((prev) => {
             if (prev >= 100) {
@@ -232,20 +308,20 @@ export function StudentBiometricsPage() {
               }
               return 100;
             }
-            return prev + 4; // Fills in ~1.25s
+            return prev + 5; // Reaches 100% in ~1.0s
           });
         }, 50);
-      }, 320);
+      }, 200);
+
+      return () => {
+        clearTimeout(lockTimeout);
+        if (timer) clearInterval(timer);
+      };
     } else {
-      setScanProgress((prev) => Math.max(0, prev - 10));
+      setScanProgress(0);
       autoEnrollTriggeredRef.current = false;
     }
-
-    return () => {
-      if (lockTimeout) clearTimeout(lockTimeout);
-      if (timer) clearInterval(timer);
-    };
-  }, [faceStatus, currentStep, enrollStatus.success, isLoading]);
+  }, [faceStatus, faceBox, currentStep, enrollStatus.success, isLoading]);
 
   const isStepDone = (stepId) => {
     if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
@@ -258,43 +334,70 @@ export function StudentBiometricsPage() {
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
   const isEnrolledSuccess = currentStep === 1 && enrollStatus.success;
   const isDoneFinal = currentStep === 4 && (profileStatus?.ready_for_exam || isStepDone(1));
-  const isLockedOnFace = currentStep === 1 ? (faceStatus === "face_centered" || isEnrolledSuccess) : isCameraActive;
+  const isLockedOnFace = (faceStatus === "face_locked" && faceBox) || isEnrolledSuccess;
 
   // Dynamic coordinates: When idle/no face, 4 corner brackets stay at the far screen corners.
-  // When face is detected, they smoothly travel inward and tightly lock around the student's face.
-  const bracketPositions = {
-    topLeft: {
-      top: isLockedOnFace ? "calc(44% - 155px)" : "76px",
-      left: isLockedOnFace ? "calc(50% - 125px)" : "16px",
-    },
-    topRight: {
-      top: isLockedOnFace ? "calc(44% - 155px)" : "76px",
-      right: isLockedOnFace ? "calc(50% - 125px)" : "16px",
-    },
-    bottomLeft: {
-      bottom: isLockedOnFace ? "calc(56% - 155px)" : "120px",
-      left: isLockedOnFace ? "calc(50% - 125px)" : "16px",
-    },
-    bottomRight: {
-      bottom: isLockedOnFace ? "calc(56% - 155px)" : "120px",
-      right: isLockedOnFace ? "calc(50% - 125px)" : "16px",
-    },
-  };
+  // When face is detected, they dynamically adjust their position, width, and height to frame the face!
+  const bracketSize = 56;
+  const cw = containerRef.current?.clientWidth || 360;
+  const ch = containerRef.current?.clientHeight || 640;
+
+  let bracketPositions;
+  if (isLockedOnFace && faceBox) {
+    bracketPositions = {
+      topLeft: {
+        top: `${Math.round(faceBox.y)}px`,
+        left: `${Math.round(faceBox.x)}px`,
+      },
+      topRight: {
+        top: `${Math.round(faceBox.y)}px`,
+        left: `${Math.round(faceBox.x + faceBox.width - bracketSize)}px`,
+      },
+      bottomLeft: {
+        top: `${Math.round(faceBox.y + faceBox.height - bracketSize)}px`,
+        left: `${Math.round(faceBox.x)}px`,
+      },
+      bottomRight: {
+        top: `${Math.round(faceBox.y + faceBox.height - bracketSize)}px`,
+        left: `${Math.round(faceBox.x + faceBox.width - bracketSize)}px`,
+      },
+    };
+  } else {
+    bracketPositions = {
+      topLeft: {
+        top: "76px",
+        left: "16px",
+      },
+      topRight: {
+        top: "76px",
+        left: `${Math.max(16, cw - 16 - bracketSize)}px`,
+      },
+      bottomLeft: {
+        top: `${Math.max(120, ch - 120 - bracketSize)}px`,
+        left: "16px",
+      },
+      bottomRight: {
+        top: `${Math.max(120, ch - 120 - bracketSize)}px`,
+        left: `${Math.max(16, cw - 16 - bracketSize)}px`,
+      },
+    };
+  }
 
   const bracketStroke = isEnrolledSuccess
     ? "#34d399"
-    : faceStatus === "face_centered"
+    : isLockedOnFace
     ? "#38bdf8"
-    : "rgba(255, 255, 255, 0.45)";
+    : "rgba(255, 255, 255, 0.4)";
 
   const bracketFilter = isEnrolledSuccess
-    ? "drop-shadow(0 0 10px rgba(52, 211, 153, 0.85))"
-    : faceStatus === "face_centered"
-    ? "drop-shadow(0 0 8px rgba(56, 189, 248, 0.75))"
-    : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.25))";
+    ? "drop-shadow(0 0 12px rgba(52, 211, 153, 0.9))"
+    : isLockedOnFace
+    ? "drop-shadow(0 0 10px rgba(56, 189, 248, 0.85))"
+    : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.2))";
 
   return (
     <main
+      ref={containerRef}
       className="relative w-full md:w-[360px] h-dvh mx-auto overflow-hidden bg-black text-white flex flex-col justify-between select-none shadow-2xl"
       dir={isRTL ? "rtl" : "ltr"}
     >
@@ -547,123 +650,117 @@ export function StudentBiometricsPage() {
           </div>
         )}
 
-        {/* Organic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
-        <div className="relative flex items-center justify-center">
+        {/* Dynamic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
+        {faceBox && isLockedOnFace ? (
           <div
-            className={`relative flex items-center justify-center w-[250px] h-[310px] transition-all duration-500 ${
-              isEnrolledSuccess
-                ? "scale-100"
-                : faceStatus === "face_centered"
-                ? "scale-[0.99] drop-shadow-[0_0_20px_rgba(56,189,248,0.35)]"
-                : "scale-[1.03]"
-            }`}
+            className="absolute rounded-[22px] pointer-events-none transition-all duration-200"
+            style={{
+              top: `${Math.round(faceBox.y)}px`,
+              left: `${Math.round(faceBox.x)}px`,
+              width: `${Math.round(faceBox.width)}px`,
+              height: `${Math.round(faceBox.height)}px`,
+              filter: bracketFilter,
+            }}
           >
-            {/* Delicate Guide Dotted Line & Facial Landmarks */}
+            {/* Delicate Guide Dotted Line & Face Tracking Box */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-              viewBox="0 0 250 310"
+              viewBox={`0 0 ${Math.round(faceBox.width)} ${Math.round(faceBox.height)}`}
               fill="none"
             >
-              {/* Subtle Dotted Rect Guide */}
               <rect
-                x="4"
-                y="4"
-                width="242"
-                height="302"
+                x="3"
+                y="3"
+                width={Math.round(faceBox.width) - 6}
+                height={Math.round(faceBox.height) - 6}
                 rx="20"
-                stroke={
-                  isEnrolledSuccess
-                    ? "rgba(52, 211, 153, 0.35)"
-                    : faceStatus === "face_centered"
-                    ? "rgba(56, 189, 248, 0.22)"
-                    : "rgba(255, 255, 255, 0.12)"
-                }
+                stroke={isEnrolledSuccess ? "rgba(52, 211, 153, 0.45)" : "rgba(56, 189, 248, 0.35)"}
                 strokeWidth="1.5"
                 strokeDasharray="4 6"
-                className="transition-colors duration-500"
               />
-
               {/* Optical Alignment Center Ticks */}
               <path
-                d="M 125 4 V 14 M 125 296 V 306 M 4 155 H 14 M 236 155 H 246"
-                stroke={
-                  isEnrolledSuccess
-                    ? "#34d399"
-                    : faceStatus === "face_centered"
-                    ? "#38bdf8"
-                    : "rgba(255, 255, 255, 0.2)"
-                }
+                d={`M ${Math.round(faceBox.width / 2)} 4 V 14 M ${Math.round(faceBox.width / 2)} ${Math.round(faceBox.height - 14)} V ${Math.round(faceBox.height - 4)} M 4 ${Math.round(faceBox.height / 2)} H 14 M ${Math.round(faceBox.width - 14)} ${Math.round(faceBox.height / 2)} H ${Math.round(faceBox.width - 4)}`}
+                stroke={isEnrolledSuccess ? "#34d399" : "#38bdf8"}
                 strokeWidth="2"
                 strokeLinecap="round"
-                className="transition-colors duration-300 opacity-70"
+                className="opacity-80"
               />
-
-              {/* Facial Landmarks (Eyes & Soft Smile Notch) */}
-              {faceStatus === "face_centered" && !isEnrolledSuccess && (
-                <g className="animate-face-lock">
-                  {/* Eye Crosshairs */}
-                  <circle cx="85" cy="115" r="2.5" fill="#38bdf8" className="animate-pulse" />
-                  <circle cx="165" cy="115" r="2.5" fill="#38bdf8" className="animate-pulse" />
-                  <path d="M 80 115 H 90 M 85 110 V 120" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
-                  <path d="M 160 115 H 170 M 165 110 V 120" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
-                  {/* Soft Smile Notch */}
-                  <path d="M 116 220 Q 125 226 134 220" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
-                </g>
-              )}
             </svg>
 
-            {/* Step 3: Circular Neutral Countdown Indicator */}
-            {currentStep === 3 && isNeutralCalibrating && (
-              <div className="flex flex-col items-center justify-center animate-pulse pointer-events-none">
-                <span className="text-5xl font-black font-vazir text-sky-400 drop-shadow-[0_0_24px_rgba(56,189,248,0.9)]">
-                  {neutralCountdown}
-                </span>
-                <span className="text-xs text-sky-200 mt-1.5 font-vazir bg-black/60 px-3 py-0.5 rounded-full backdrop-blur-md border border-white/10">
-                  ثانیه
-                </span>
-              </div>
-            )}
-
-            {/* Step 1 Ultimate Biometric Success Checkmark Animation */}
-            {isEnrolledSuccess && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                {/* Shockwave 1 */}
-                <div className="absolute w-20 h-20 rounded-full border-2 border-emerald-400 animate-shockwave-1 shadow-[0_0_35px_rgba(52,211,153,0.85)]" />
-
-                {/* Shockwave 2 */}
-                <div className="absolute w-20 h-20 rounded-full border-2 border-teal-300 animate-shockwave-2 shadow-[0_0_45px_rgba(45,212,191,0.65)]" />
-
-                {/* Starburst Sparkle Rays (8 particles flashing outward 360°) */}
-                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_#34d399] animate-starburst-particle"
-                    style={{ "--angle": `${angle}deg` }}
-                  />
-                ))}
-
-                {/* Core Spring Glass Badge */}
-                <div className="relative animate-check-badge w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600/40 via-teal-500/30 to-emerald-400/50 border-2 border-emerald-300 flex items-center justify-center shadow-[0_0_50px_rgba(52,211,153,0.9),inset_0_1.5px_3px_rgba(255,255,255,0.85)] backdrop-blur-md">
-                  {/* Self-Drawing SVG Checkmark */}
-                  <svg
-                    className="w-12 h-12"
-                    viewBox="0 0 48 48"
-                    fill="none"
-                  >
-                    <path
-                      d="M 12 24 L 21 33 L 36 15"
-                      stroke="#ecfdf5"
-                      strokeWidth="4.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="animate-check-draw drop-shadow-[0_0_12px_rgba(236,253,245,0.95)]"
-                    />
-                  </svg>
-                </div>
+            {/* Sweeping Laser Scan Line (animates smoothly across face as progress increases) */}
+            {scanProgress > 0 && !isEnrolledSuccess && (
+              <div
+                className="absolute inset-x-2 h-[2.5px] bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_16px_#38bdf8] pointer-events-none transition-all duration-75"
+                style={{
+                  top: `${Math.min(94, Math.max(6, scanProgress))}%`,
+                }}
+              >
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-12 h-2.5 bg-sky-400/40 blur-sm rounded-full" />
               </div>
             )}
           </div>
-        </div>
+        ) : (
+          /* Subtle Waiting Guide in Center when waiting for face */
+          <div className="relative flex items-center justify-center pointer-events-none">
+            <div className="relative flex items-center justify-center w-[230px] h-[280px] rounded-[24px] border border-dashed border-white/20 transition-all duration-500 scale-95 opacity-40">
+              <span className="text-[11px] text-white/50 font-vazir text-center px-4">
+                صورت خود را در این کادر قرار دهید
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Circular Neutral Countdown Indicator */}
+        {currentStep === 3 && isNeutralCalibrating && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center animate-pulse pointer-events-none">
+            <span className="text-5xl font-black font-vazir text-sky-400 drop-shadow-[0_0_24px_rgba(56,189,248,0.9)]">
+              {neutralCountdown}
+            </span>
+            <span className="text-xs text-sky-200 mt-1.5 font-vazir bg-black/60 px-3 py-0.5 rounded-full backdrop-blur-md border border-white/10">
+              ثانیه
+            </span>
+          </div>
+        )}
+
+        {/* Step 1 Ultimate Biometric Success Checkmark Animation */}
+        {isEnrolledSuccess && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* Shockwave 1 */}
+            <div className="absolute w-20 h-20 rounded-full border-2 border-emerald-400 animate-shockwave-1 shadow-[0_0_35px_rgba(52,211,153,0.85)]" />
+
+            {/* Shockwave 2 */}
+            <div className="absolute w-20 h-20 rounded-full border-2 border-teal-300 animate-shockwave-2 shadow-[0_0_45px_rgba(45,212,191,0.65)]" />
+
+            {/* Starburst Sparkle Rays (8 particles flashing outward 360°) */}
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+              <div
+                key={i}
+                className="absolute w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_#34d399] animate-starburst-particle"
+                style={{ "--angle": `${angle}deg` }}
+              />
+            ))}
+
+            {/* Core Spring Glass Badge */}
+            <div className="relative animate-check-badge w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600/40 via-teal-500/30 to-emerald-400/50 border-2 border-emerald-300 flex items-center justify-center shadow-[0_0_50px_rgba(52,211,153,0.9),inset_0_1.5px_3px_rgba(255,255,255,0.85)] backdrop-blur-md">
+              {/* Self-Drawing SVG Checkmark */}
+              <svg
+                className="w-12 h-12"
+                viewBox="0 0 48 48"
+                fill="none"
+              >
+                <path
+                  d="M 12 24 L 21 33 L 36 15"
+                  stroke="#ecfdf5"
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-check-draw drop-shadow-[0_0_12px_rgba(236,253,245,0.95)]"
+                />
+              </svg>
+            </div>
+          </div>
+        )}
 
         {/* ================= Modern Liquid Glass Dynamic Biometrics Island ================= */}
         <div className="mt-8 transition-all duration-300 pointer-events-none">
