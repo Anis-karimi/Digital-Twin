@@ -34,6 +34,82 @@ const WIZARD_STEPS = [
   { id: 4, title: "۴. تایید نهایی", short: "تایید نهایی" },
 ];
 
+// Pure client-side, zero-network fast face & head detector using canvas chrominance clustering
+function detectClientFace(video, canvas) {
+  if (!video || video.readyState < 2) return null;
+  const sw = 96;
+  const sh = 72;
+  canvas.width = sw;
+  canvas.height = sh;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  ctx.drawImage(video, 0, 0, sw, sh);
+  const imgData = ctx.getImageData(0, 0, sw, sh);
+  const data = imgData.data;
+
+  let skinCount = 0;
+  let sumX = 0;
+  let sumY = 0;
+  let minX = sw;
+  let maxX = 0;
+  let minY = sh;
+  let maxY = 0;
+
+  // Scan central/upper 85% where student's head is positioned
+  const maxScanY = Math.floor(sh * 0.85);
+  const minScanY = Math.floor(sh * 0.08);
+
+  for (let y = minScanY; y < maxScanY; y++) {
+    for (let x = 0; x < sw; x++) {
+      const idx = (y * sw + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      // Robust skin color condition in YCbCr & RGB space
+      const Y = 0.299 * r + 0.587 * g + 0.114 * b;
+      const Cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+      const Cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+
+      if (Y > 35 && Cb >= 75 && Cb <= 135 && Cr >= 130 && Cr <= 180 && r > g && g > b) {
+        skinCount++;
+        sumX += x;
+        sumY += y;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Require human skin presence (>2.5% of pixels)
+  const totalPixels = sw * sh;
+  if (skinCount < totalPixels * 0.025) {
+    return null;
+  }
+
+  const cx = sumX / skinCount;
+  const cy = sumY / skinCount;
+
+  // Human head aspect ratio (~1 : 1.3)
+  const spreadX = Math.max(sw * 0.22, Math.min(sw * 0.55, (maxX - minX) * 0.95));
+  const spreadH = Math.max(sh * 0.30, Math.min(sh * 0.70, spreadX * 1.3));
+
+  const normW = spreadX / sw;
+  const normH = spreadH / sh;
+  const normCenterX = cx / sw;
+  const normCenterY = cy / sh;
+
+  return {
+    normX: Math.max(0, normCenterX - normW / 2),
+    normY: Math.max(0, normCenterY - normH / 2),
+    normW: Math.min(1.0, normW),
+    normH: Math.min(1.0, normH),
+  };
+}
+
 export function StudentBiometricsPage() {
   const navigate = useNavigate();
   const { currentUser, isRTL } = useContext(AppContext);
@@ -57,6 +133,7 @@ export function StudentBiometricsPage() {
   const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked"
   const [scanProgress, setScanProgress] = useState(0); // 0 to 100
   const autoEnrollTriggeredRef = useRef(false);
+  const offscreenCanvasRef = useRef(null);
 
   // 1. Live Camera Hook
   const {
@@ -126,6 +203,10 @@ export function StudentBiometricsPage() {
       return;
     }
 
+    if (!offscreenCanvasRef.current && typeof document !== "undefined") {
+      offscreenCanvasRef.current = document.createElement("canvas");
+    }
+
     let isMounted = true;
     let nativeDetector = null;
     if (typeof window !== "undefined" && "FaceDetector" in window) {
@@ -152,7 +233,7 @@ export function StudentBiometricsPage() {
         const cw = container.clientWidth || 360;
         const ch = container.clientHeight || 640;
 
-        // Container aspect-fit/cover calculation for scaleX(-1) mirrored video
+        // Container aspect-cover calculation for scaleX(-1) mirrored video
         const scale = Math.max(cw / vw, ch / vh);
         const renderedW = vw * scale;
         const renderedH = vh * scale;
@@ -161,7 +242,7 @@ export function StudentBiometricsPage() {
 
         let detectedBox = null;
 
-        // 1. Try Native Browser FaceDetector (instant 30 FPS client-side tracking)
+        // 1. Try Native Browser FaceDetector (instant hardware-accelerated tracking)
         if (nativeDetector) {
           try {
             const faces = await nativeDetector.detect(video);
@@ -179,36 +260,27 @@ export function StudentBiometricsPage() {
               }
             }
           } catch {
-            // Fallback to server telemetry
+            // Fallback to client canvas tracker
           }
         }
 
-        // 2. If Native Detector not present or found nothing, run Server Telemetry Pulse
-        if (!detectedBox) {
-          const blob = await captureFrameBlob(0.65, 320, 240);
-          if (blob && isMounted) {
-            const telem = await biometricsApi.sendBiometricTelemetry(studentId, blob, "opencv");
-            if (telem?.face_detected && telem?.face_box?.length === 4) {
-              const [fx, fy, fw, fh] = telem.face_box;
-              const normX = fx / 320.0;
-              const normY = fy / 240.0;
-              const normW = fw / 320.0;
-              const normH = fh / 240.0;
-
-              const mirroredNormX = 1.0 - (normX + normW);
-              detectedBox = {
-                x: offsetX + mirroredNormX * renderedW,
-                y: offsetY + normY * renderedH,
-                w: normW * renderedW,
-                h: normH * renderedH,
-              };
-            }
+        // 2. High-speed, zero-network Client Canvas Face & Head Tracker
+        if (!detectedBox && offscreenCanvasRef.current) {
+          const clientFace = detectClientFace(video, offscreenCanvasRef.current);
+          if (clientFace) {
+            const mirroredNormX = 1.0 - (clientFace.normX + clientFace.normW);
+            detectedBox = {
+              x: offsetX + mirroredNormX * renderedW,
+              y: offsetY + clientFace.normY * renderedH,
+              w: clientFace.normW * renderedW,
+              h: clientFace.normH * renderedH,
+            };
           }
         }
 
         if (detectedBox && isMounted) {
           noFaceCounter = 0;
-          // Apply padding around face for comfortable, stylish framing
+          // Apply padding around face for comfortable framing
           const padX = detectedBox.w * 0.16;
           const padY = detectedBox.h * 0.20;
           const targetX = Math.max(8, detectedBox.x - padX);
@@ -241,10 +313,19 @@ export function StudentBiometricsPage() {
       }
     };
 
-    const interval = setInterval(detectCycle, nativeDetector ? 100 : 350);
+    let timer = null;
+    const runLoop = async () => {
+      if (!isMounted) return;
+      await detectCycle();
+      if (isMounted) {
+        timer = setTimeout(runLoop, nativeDetector ? 60 : 40);
+      }
+    };
+    runLoop();
+
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
     };
   }, [isCameraActive, currentStep, enrollStatus.success, studentId]);
 
