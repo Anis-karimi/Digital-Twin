@@ -927,10 +927,10 @@ export const StudentExamPage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 text-white flex flex-col select-none"
+      className="relative w-full md:w-[360px] h-dvh mx-auto overflow-hidden bg-slate-950 text-white flex flex-col select-none shadow-2xl"
     >
-      {/* ================= 1. Full-Screen Live Webcam Video Layer ================= */}
-      <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-slate-950">
+      {/* ================= 1. Live Webcam Video Layer (Bounded to App Frame) ================= */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-slate-950">
         <video
           ref={videoRef}
           autoPlay
@@ -1503,7 +1503,7 @@ export const StudentExamPage = () => {
 
       {/* ================= 6. Video Call Hangup Confirmation Modal ================= */}
       {showExitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="w-full max-w-[320px] rounded-3xl bg-slate-900 border border-white/20 p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 mx-auto flex items-center justify-center shadow-lg shadow-rose-500/20">
               <PhoneOff className="w-6 h-6" />

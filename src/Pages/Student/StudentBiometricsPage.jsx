@@ -1,41 +1,37 @@
 /**
  * @file StudentBiometricsPage.jsx
- * @description Student Face Authentication, Gaze Calibration ('نه نه'),
- * and 3-Second Neutral Baseline Emotion Calibration Wizard.
- * Saves biometric profile data directly to the main DT backend.
+ * @description Modern Liquid Glass Biometric Experience:
+ * - Auto-detecting & auto-scanning face framework (Apple Face ID aesthetic)
+ * - Premium Liquid Glass rounded capsule frame (no harsh boxes, no laser line)
+ * - Liquid Glass floating error notification when face is not centered
+ * - Full live camera bounded strictly to the 360px application frame
  */
 
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ScanFace,
-  CheckCircle2,
-  Target,
-  Smile,
-  Camera,
-  RefreshCw,
   ArrowRight,
   ArrowLeft,
+  RefreshCw,
   AlertTriangle,
   ShieldCheck,
-  Activity,
-  UserCheck,
-  Eye,
+  Target,
+  Smile,
+  Check,
 } from "lucide-react";
+import "@/styles/Allpages.css";
+import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
 import { biometricsApi } from "@/api/new/biometrics.api";
 import { useBiometricCamera } from "@/features/biometrics/hooks/useBiometricCamera";
 import { useGazeCalibration } from "@/features/biometrics/hooks/useGazeCalibration";
 import { useNeutralCalibration } from "@/features/biometrics/hooks/useNeutralCalibration";
-import { DebugOverlayCanvas } from "@/features/biometrics/components/DebugOverlayCanvas";
-import { CircumplexGrid } from "@/features/biometrics/components/CircumplexGrid";
-import { ActionUnitMeters } from "@/features/biometrics/components/ActionUnitMeters";
 
 const WIZARD_STEPS = [
-  { id: 1, title: "ثبت چهره و اصالت‌سنجی", icon: ScanFace },
-  { id: 2, title: "کالیبراسیون نگاه (نه نه)", icon: Target },
-  { id: 3, title: "مبنای خنثی احساسات (۳ ثانیه)", icon: Smile },
-  { id: 4, title: "تایید و پایش زنده", icon: CheckCircle2 },
+  { id: 1, title: "۱. ثبت چهره و اصالت", short: "ثبت چهره" },
+  { id: 2, title: "۲. کالیبراسیون نگاه (نه نه)", short: "نگاه (نه نه)" },
+  { id: 3, title: "۳. مبنای خنثی احساسات", short: "حالت خنثی" },
+  { id: 4, title: "۴. تایید نهایی", short: "تایید نهایی" },
 ];
 
 export function StudentBiometricsPage() {
@@ -54,15 +50,18 @@ export function StudentBiometricsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [enrollStatus, setEnrollStatus] = useState({ success: false, message: "" });
   const [errorMsg, setErrorMsg] = useState("");
-  const [liveTelemetry, setLiveTelemetry] = useState(null);
 
-  // 1. Camera Hook
+  // Auto-scan & Face centering detection state
+  const [faceStatus, setFaceStatus] = useState("detecting"); // "detecting" | "face_centered" | "no_face"
+  const [scanProgress, setScanProgress] = useState(0); // 0 to 100
+  const autoEnrollTriggeredRef = useRef(false);
+
+  // 1. Live Camera Hook
   const {
     videoRef,
     isActive: isCameraActive,
     error: cameraError,
     startCamera,
-    stopCamera,
     captureFrameBlob,
   } = useBiometricCamera({ autoStart: true });
 
@@ -105,7 +104,7 @@ export function StudentBiometricsPage() {
       if (data) {
         setProfileStatus(data);
         if (data.face_enrolled) {
-          setEnrollStatus({ success: true, message: "چهره شما قبلاً با موفقیت ثبت شده است." });
+          setEnrollStatus({ success: true, message: "چهره شما با موفقیت ثبت شده است." });
         }
       }
     } catch (err) {
@@ -117,497 +116,804 @@ export function StudentBiometricsPage() {
     loadProfile();
   }, [studentId]);
 
-  // Live telemetry pulse during step 4 preview
+  // Real-time automatic face presence & centering analyzer
   useEffect(() => {
-    let timer = null;
-    if (currentStep === 4 && isCameraActive) {
-      timer = setInterval(async () => {
-        try {
-          const blob = await captureFrameBlob(0.65, 320, 240);
-          if (blob) {
-            const telem = await biometricsApi.sendBiometricTelemetry(studentId, blob, "skip");
-            setLiveTelemetry(telem);
-          }
-        } catch (e) {
-          console.warn("Step 4 preview pulse error:", e);
-        }
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [currentStep, isCameraActive, studentId, captureFrameBlob]);
+    if (!isCameraActive || currentStep !== 1 || enrollStatus.success) return;
 
-  // Handle Face Enrollment
+    const canvas = document.createElement("canvas");
+    canvas.width = 120;
+    canvas.height = 120;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    let consecutiveFaces = 0;
+    let consecutiveNoFaces = 0;
+
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2) return;
+
+      try {
+        ctx.drawImage(video, 0, 0, 120, 120);
+        // Sample center bounding area (where the face sits)
+        const frameData = ctx.getImageData(30, 20, 60, 80).data;
+        let sum = 0;
+        let sumSq = 0;
+        const totalPixels = frameData.length / 4;
+
+        for (let i = 0; i < frameData.length; i += 4) {
+          const luma = 0.299 * frameData[i] + 0.587 * frameData[i + 1] + 0.114 * frameData[i + 2];
+          sum += luma;
+          sumSq += luma * luma;
+        }
+
+        const mean = sum / totalPixels;
+        const variance = sumSq / totalPixels - mean * mean;
+        const stdDev = Math.sqrt(Math.max(0, variance));
+
+        // Real face has high facial feature contrast (stdDev > 16.5) and balanced lighting
+        const hasFace = stdDev >= 16.5 && mean > 25 && mean < 235;
+
+        if (hasFace) {
+          consecutiveFaces++;
+          consecutiveNoFaces = 0;
+          if (consecutiveFaces >= 2) {
+            setFaceStatus("face_centered");
+          }
+        } else {
+          consecutiveNoFaces++;
+          consecutiveFaces = 0;
+          if (consecutiveNoFaces >= 3) {
+            setFaceStatus("no_face");
+            setScanProgress(0);
+          }
+        }
+      } catch {
+        setFaceStatus("face_centered");
+      }
+    }, 180);
+
+    return () => clearInterval(interval);
+  }, [isCameraActive, currentStep, enrollStatus.success, videoRef]);
+
+  // Automatic Face Enrollment Action
   const handleEnrollFace = async () => {
+    if (isLoading) return;
     setErrorMsg("");
     setIsLoading(true);
     try {
       const blob = await captureFrameBlob(0.85, 640, 480);
       if (!blob) {
-        throw new Error("خطا در دریافت تصویر از دوربین. لطفاً دسترسی دوربین را بررسی کنید.");
+        throw new Error("خطا در تصویر دوربین. لطفاً دسترسی دوربین را بررسی فرمایید.");
       }
       const res = await biometricsApi.enrollStudentFace(studentId, blob, "balanced");
       if (res?.status === "enrolled" || res?.user_id) {
         setEnrollStatus({
           success: true,
-          message: "چهره با موفقیت ثبت شد و بردار ۵۱۲-بعدی ضدجعل ذخیره گردید.",
+          message: "چهره و بردار اصالت با موفقیت ثبت شد.",
         });
         await loadProfile();
       } else {
-        setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیماً به دوربین نگاه کنید.");
+        setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.");
+        autoEnrollTriggeredRef.current = false;
+        setScanProgress(0);
       }
     } catch (err) {
-      setErrorMsg(err?.message || "خطای ارتباط با سرور در ثبت چهره.");
+      setErrorMsg(err?.message || "خطای ارتباط با سامانه در ثبت چهره.");
+      autoEnrollTriggeredRef.current = false;
+      setScanProgress(0);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleRescanFace = () => {
+    setEnrollStatus({ success: false, message: "" });
+    setScanProgress(0);
+    autoEnrollTriggeredRef.current = false;
+    setFaceStatus("face_centered");
+  };
+
+  // Automatic Scanning Progress (Apple Face ID style with Face Lock-On Phase)
+  useEffect(() => {
+    if (currentStep !== 1 || enrollStatus.success || isLoading) return;
+
+    let timer = null;
+    let lockTimeout = null;
+
+    if (faceStatus === "face_centered") {
+      // 320ms Lock-On Phase: The box first snaps and restricts tightly around the person's face
+      lockTimeout = setTimeout(() => {
+        timer = setInterval(() => {
+          setScanProgress((prev) => {
+            if (prev >= 100) {
+              if (!autoEnrollTriggeredRef.current) {
+                autoEnrollTriggeredRef.current = true;
+                handleEnrollFace();
+              }
+              return 100;
+            }
+            return prev + 4; // Fills in ~1.25s
+          });
+        }, 50);
+      }, 320);
+    } else {
+      setScanProgress((prev) => Math.max(0, prev - 10));
+      autoEnrollTriggeredRef.current = false;
+    }
+
+    return () => {
+      if (lockTimeout) clearTimeout(lockTimeout);
+      if (timer) clearInterval(timer);
+    };
+  }, [faceStatus, currentStep, enrollStatus.success, isLoading]);
+
+  const isStepDone = (stepId) => {
+    if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
+    if (stepId === 2) return profileStatus?.gaze_calibrated || isGazeCalibrated;
+    if (stepId === 3) return profileStatus?.neutral_calibrated || isNeutralCalibrated;
+    if (stepId === 4) return profileStatus?.ready_for_exam;
+    return false;
+  };
+
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+  const isEnrolledSuccess = currentStep === 1 && enrollStatus.success;
+  const isDoneFinal = currentStep === 4 && (profileStatus?.ready_for_exam || isStepDone(1));
+  const isLockedOnFace = currentStep === 1 ? (faceStatus === "face_centered" || isEnrolledSuccess) : isCameraActive;
+
+  // Dynamic coordinates: When idle/no face, 4 corner brackets stay at the far screen corners.
+  // When face is detected, they smoothly travel inward and tightly lock around the student's face.
+  const bracketPositions = {
+    topLeft: {
+      top: isLockedOnFace ? "calc(44% - 155px)" : "76px",
+      left: isLockedOnFace ? "calc(50% - 125px)" : "16px",
+    },
+    topRight: {
+      top: isLockedOnFace ? "calc(44% - 155px)" : "76px",
+      right: isLockedOnFace ? "calc(50% - 125px)" : "16px",
+    },
+    bottomLeft: {
+      bottom: isLockedOnFace ? "calc(56% - 155px)" : "120px",
+      left: isLockedOnFace ? "calc(50% - 125px)" : "16px",
+    },
+    bottomRight: {
+      bottom: isLockedOnFace ? "calc(56% - 155px)" : "120px",
+      right: isLockedOnFace ? "calc(50% - 125px)" : "16px",
+    },
+  };
+
+  const bracketStroke = isEnrolledSuccess
+    ? "#34d399"
+    : faceStatus === "face_centered"
+    ? "#38bdf8"
+    : "rgba(255, 255, 255, 0.45)";
+
+  const bracketFilter = isEnrolledSuccess
+    ? "drop-shadow(0 0 10px rgba(52, 211, 153, 0.85))"
+    : faceStatus === "face_centered"
+    ? "drop-shadow(0 0 8px rgba(56, 189, 248, 0.75))"
+    : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.25))";
+
   return (
-    <div
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-4 md:p-8 flex flex-col items-center justify-start select-none"
-      dir="rtl"
+    <main
+      className="relative w-full md:w-[360px] h-dvh mx-auto overflow-hidden bg-black text-white flex flex-col justify-between select-none shadow-2xl"
+      dir={isRTL ? "rtl" : "ltr"}
     >
-      {/* Container */}
-      <div className="w-full max-w-4xl flex flex-col gap-6">
-        {/* Top Navigation / Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate("/StudentSettings")}
-            className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-xl border border-white/10"
-          >
-            <ArrowRight className="w-4 h-4" />
-            بازگشت به تنظیمات
-          </button>
+      {/* ================= 1. Live Camera Layer (Bounded strictly to App Width) ================= */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-slate-950">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            transform: "scaleX(-1)",
+            transformOrigin: "center center",
+          }}
+          className="w-full h-full object-cover"
+        />
 
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <span>دانشجو:</span>
-            <span className="text-sky-300 font-bold bg-sky-950/60 px-2.5 py-1 rounded-lg border border-sky-500/20">
-              {currentUser?.name || currentUser?.username || "دانشجو"}
-            </span>
-          </div>
-        </div>
-
-        {/* Wizard Header Card */}
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-white flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-500/20 rounded-xl border border-indigo-500/30 text-indigo-400">
-                  <ScanFace className="w-6 h-6" />
-                </div>
-                احراز هویت و کالیبراسیون بیومتریک چهره
-              </h1>
-              <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">
-                برای شرکت در آزمون‌های برخط هوشمند، لطفاً چهره خود را ثبت نموده و فرآیند
-                کالیبراسیون زاویه نگاه و حالت خنثی احساسات را تکمیل کنید.
-              </p>
-            </div>
-
-            {/* Profile Ready Badge */}
-            {profileStatus?.ready_for_exam && (
-              <div className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-3.5 py-2 rounded-xl self-start md:self-auto font-medium shadow-lg shadow-emerald-500/10">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                پروفایل آماده آزمون است
-              </div>
-            )}
-          </div>
-
-          {/* Stepper Tabs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-6 pt-5 border-t border-white/10">
-            {WIZARD_STEPS.map((s) => {
-              const Icon = s.icon;
-              const isActive = currentStep === s.id;
-              const isPast = currentStep > s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setCurrentStep(s.id)}
-                  className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all text-right ${
-                    isActive
-                      ? "bg-indigo-600/30 border-indigo-500/60 text-white shadow-lg shadow-indigo-500/10"
-                      : isPast
-                      ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-950/30"
-                      : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                      isActive
-                        ? "bg-indigo-500 text-white"
-                        : isPast
-                        ? "bg-emerald-500/30 text-emerald-300"
-                        : "bg-slate-800 text-slate-400"
-                    }`}
-                  >
-                    {isPast ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <div className="truncate">
-                    <span className="text-[10px] text-slate-400 block font-mono">
-                      مرحله {s.id}
-                    </span>
-                    <span className="text-xs font-bold truncate block">
-                      {s.title}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Global Error Banner */}
-        {(errorMsg || cameraError) && (
-          <div className="flex items-center gap-3 p-3.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs">
-            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-400" />
-            <span>{errorMsg || cameraError}</span>
+        {/* Camera Permission / Error Fallback */}
+        {cameraError && (
+          <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center pointer-events-auto">
+            <AlertTriangle className="w-12 h-12 text-rose-400 mb-3" />
+            <p className="text-sm font-bold text-white mb-1 font-vazir">
+              دسترسی به دوربین برقرار نشد
+            </p>
+            <p className="text-xs text-slate-400 mb-4 font-vazir max-w-xs">
+              برای احراز هویت و شرکت در آزمون، دسترسی دوربین الزامی است.
+            </p>
+            <button
+              type="button"
+              onClick={startCamera}
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all"
+            >
+              اتصال مجدد دوربین
+            </button>
           </div>
         )}
 
-        {/* Wizard Main Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Left / Video Card (7 cols) */}
-          <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="flex items-center gap-2 font-semibold">
-                <Camera className="w-4 h-4 text-sky-400" />
-                تصویر زنده دوربین
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                ۳۰ فریم بر ثانیه
-              </span>
-            </div>
+        {/* Ambient Dark Tint & Vignette */}
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/80 pointer-events-none" />
+      </div>
 
-            {/* Video Box */}
-            <div className="relative aspect-video w-full bg-black/90 rounded-xl overflow-hidden border border-white/10 shadow-inner">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="w-full h-full object-cover scale-x-[-1]"
-              />
+      {/* ================= 2. Sleek Floating Header Bar ================= */}
+      <header className="relative z-20 w-full pt-4 px-4 pb-2 shrink-0 flex items-center justify-between">
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={() => navigate("/StudentSettings")}
+          className="liquid-glass-card liquid-glass-pill flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white text-xs font-vazir transition-all active:scale-95 cursor-pointer shadow-lg hover:border-white/40"
+          aria-label="بازگشت به تنظیمات"
+        >
+          <BackIcon className="w-4 h-4 text-white" />
+          <span>تنظیمات</span>
+        </button>
 
-              {/* Guide Oval / Target Face Box in Step 1 */}
-              {currentStep === 1 && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-48 h-60 rounded-[50%] border-2 border-dashed border-sky-400/60 flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(56,189,248,0.2)]">
-                    <span className="text-[11px] text-sky-300 bg-slate-950/70 px-2.5 py-1 rounded-full font-medium">
-                      چهره درون بیضی قرار گیرد
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Debug HUD Overlay in Step 4 */}
-              {currentStep === 4 && (
-                <DebugOverlayCanvas
-                  telemetry={liveTelemetry}
-                  showOverlay={true}
-                  videoWidth={640}
-                  videoHeight={480}
+        {/* Center: Apple Face ID Dynamic Circular Island & Progress */}
+        <div className="flex flex-col items-center">
+          <div className="apple-faceid-flipper relative w-12 h-12 flex items-center justify-center">
+            {/* Front Face: Dynamic Circular Progress Ring + Face ID Icon */}
+            <div
+              className={`absolute inset-0 flex items-center justify-center rounded-full transition-opacity duration-300 ${
+                isEnrolledSuccess
+                  ? "animate-faceid-front-flip pointer-events-none"
+                  : "opacity-100"
+              }`}
+            >
+              <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 48 48">
+                <defs>
+                  <linearGradient id="apple-top-scan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="60%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#34d399" />
+                  </linearGradient>
+                </defs>
+                {/* Background Ring Track */}
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="21"
+                  fill="rgba(15, 23, 42, 0.75)"
+                  stroke="rgba(255, 255, 255, 0.14)"
+                  strokeWidth="2.8"
+                  className="backdrop-blur-md"
                 />
-              )}
+                {/* Active Dynamic Progress Ring */}
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="21"
+                  fill="none"
+                  stroke="url(#apple-top-scan-grad)"
+                  strokeWidth="3.2"
+                  strokeDasharray="132"
+                  strokeDashoffset={132 - (132 * (scanProgress || 0)) / 100}
+                  strokeLinecap="round"
+                  className="transition-all duration-100 ease-linear"
+                  style={{
+                    filter:
+                      scanProgress > 0
+                        ? "drop-shadow(0 0 6px rgba(56, 189, 248, 0.85))"
+                        : "none",
+                  }}
+                />
+              </svg>
+
+              {/* Center Face ID Icon */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <img
+                  src="/face_logo.png"
+                  alt="Face Scan"
+                  className={`w-5 h-5 object-contain invert brightness-200 transition-all duration-300 ${
+                    faceStatus === "face_centered"
+                      ? "scale-105 opacity-100 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]"
+                      : "scale-90 opacity-60"
+                  }`}
+                />
+              </div>
             </div>
 
-            {/* Hardware Status Buttons */}
-            <div className="flex items-center justify-between pt-1">
-              <button
-                type="button"
-                onClick={isCameraActive ? stopCamera : startCamera}
-                className="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                {isCameraActive ? "راه‌اندازی مجدد دوربین" : "اتصال دوربین"}
-              </button>
+            {/* Back Face: Apple Emerald Face ID Checkmark with 3D Flip */}
+            {isEnrolledSuccess && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full animate-faceid-back-flip bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 border border-emerald-300 shadow-[0_0_25px_rgba(52,211,153,0.95)]">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M 5 12.5 L 9.5 17 L 19 7.5"
+                    stroke="#ffffff"
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="animate-check-draw drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
 
-              <span className="text-[11px] text-slate-500 font-mono">
-                وضوح: 640x480 (تله‌متری فشرده: 320x240)
+          {/* Subtitle / Status Label */}
+          <span className="text-[10px] font-vazir mt-0.5 tracking-tight transition-colors duration-300 drop-shadow">
+            {isEnrolledSuccess ? (
+              <span className="text-emerald-400 font-bold">تأیید شد ✓</span>
+            ) : scanProgress > 0 ? (
+              <span className="text-sky-300 font-mono font-bold">
+                {Math.round(scanProgress)}%
               </span>
-            </div>
-          </div>
-
-          {/* Right / Interaction Panel (5 cols) */}
-          <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col justify-between">
-            {/* Step 1: Face Enrollment */}
-            {currentStep === 1 && (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
-                  <ScanFace className="w-5 h-5" />
-                  مرحله اول: ثبت بردار چهره و ضدجعل
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  در این مرحله، مدل ضدجعل <b>MiniFASNet</b> زنده‌بودن چهره را ارزیابی کرده
-                  و بردار ۵۱۲-بعدی <b>ArcFace</b> برای تطابق هویت در آزمون استخراج می‌شود.
-                </p>
-
-                {enrollStatus.success && (
-                  <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                    <span>{enrollStatus.message}</span>
-                  </div>
-                )}
-
-                <div className="p-3 bg-slate-950/50 rounded-xl border border-white/5 text-[11px] text-slate-400 flex flex-col gap-1.5">
-                  <div className="flex justify-between">
-                    <span>وضعیت ثبت در سرور:</span>
-                    <b className={profileStatus?.face_enrolled ? "text-emerald-400" : "text-amber-400"}>
-                      {profileStatus?.face_enrolled ? "ثبت‌شده" : "ثبت‌نشده"}
-                    </b>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>اندازه بردار ArcFace:</span>
-                    <b className="text-sky-300 font-mono">512 بعد شناور</b>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={handleEnrollFace}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all mt-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      در حال پردازش و استخراج بردار...
-                    </>
-                  ) : (
-                    <>
-                      <ScanFace className="w-4 h-4" />
-                      ثبت چهره از روی دوربین
-                    </>
-                  )}
-                </button>
-              </div>
+            ) : (
+              <span className="text-white/70">
+                {WIZARD_STEPS[currentStep - 1]?.title}
+              </span>
             )}
+          </span>
+        </div>
 
-            {/* Step 2: Gaze Calibration ('نه نه') */}
-            {currentStep === 2 && (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
-                  <Target className="w-5 h-5" />
-                  مرحله دوم: کالیبراسیون نگاه و زاویه سر (نه نه)
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  با کلیک روی شروع کالیبراسیون، نقاطی روی صفحه ظاهر می‌شوند. لطفاً با چرخش
-                  آرام سر به سمت چپ و راست (حرکت نه نه) و تثبیت نگاه روی نقاط، مدل رگرسیون
-                  زاویه نگاه را کالیبره کنید.
-                </p>
+        {/* Camera Live Indicator */}
+        <div className="liquid-glass-card liquid-glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] text-emerald-400 font-mono shadow-lg border-emerald-500/30">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>LIVE</span>
+        </div>
+      </header>
 
-                <div className="p-3 bg-slate-950/50 rounded-xl border border-white/5 text-[11px] text-slate-400 flex flex-col gap-1.5">
-                  <div className="flex justify-between">
-                    <span>وضعیت کالیبراسیون:</span>
-                    <b className={isGazeCalibrated ? "text-emerald-400" : "text-amber-400"}>
-                      {isGazeCalibrated ? "کالیبره‌شده با رگرسیون ریج" : "تخمین هندسی اولیه"}
-                    </b>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>پیام وضعیت:</span>
-                    <span className="text-sky-300 font-medium truncate max-w-[200px]">
-                      {gazeStatusMsg}
-                    </span>
-                  </div>
-                </div>
+      {/* ================= 4 Face ID Corner Brackets (Fly from Screen Edges onto Face) ================= */}
+      <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
+        {/* Top-Left Corner Bracket */}
+        <div
+          className="absolute bracket-smooth-transition"
+          style={{
+            ...bracketPositions.topLeft,
+            filter: bracketFilter,
+          }}
+        >
+          <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+            <path
+              d="M 5 52 V 22 A 17 17 0 0 1 22 5 H 52"
+              stroke={bracketStroke}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-colors duration-300"
+            />
+          </svg>
+        </div>
 
-                <button
-                  type="button"
-                  disabled={isGazeCalibrating || !isCameraActive}
-                  onClick={startGazeCalibration}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 transition-all mt-2"
-                >
-                  {isGazeCalibrating ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      کالیبراسیون در حال اجرا...
-                    </>
-                  ) : (
-                    <>
-                      <Target className="w-4 h-4" />
-                      شروع کالیبراسیون نگاه و سر (نه نه)
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+        {/* Top-Right Corner Bracket */}
+        <div
+          className="absolute bracket-smooth-transition"
+          style={{
+            ...bracketPositions.topRight,
+            filter: bracketFilter,
+          }}
+        >
+          <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+            <path
+              d="M 4 5 H 34 A 17 17 0 0 1 51 22 V 52"
+              stroke={bracketStroke}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-colors duration-300"
+            />
+          </svg>
+        </div>
 
-            {/* Step 3: Neutral Emotion Baseline */}
-            {currentStep === 3 && (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-sky-400 font-bold text-sm">
-                  <Smile className="w-5 h-5" />
-                  مرحله سوم: تعیین مبنای چهره خنثی (۳ ثانیه)
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  برخی افراد به طور طبیعی ابروهای به هم فشرده یا گوشه لب متمایل به پایین دارند.
-                  با ۳ ثانیه آرامش و نگه داشتن چهره طبیعی روبه‌روی دوربین، این بایاس خنثی می‌شود.
-                </p>
+        {/* Bottom-Left Corner Bracket */}
+        <div
+          className="absolute bracket-smooth-transition"
+          style={{
+            ...bracketPositions.bottomLeft,
+            filter: bracketFilter,
+          }}
+        >
+          <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+            <path
+              d="M 52 51 H 22 A 17 17 0 0 1 5 34 V 4"
+              stroke={bracketStroke}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-colors duration-300"
+            />
+          </svg>
+        </div>
 
-                <div className="flex flex-col items-center justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 my-1">
-                  <span className="text-4xl font-black font-mono text-sky-400">
-                    {isNeutralCalibrating ? `${neutralCountdown}s` : "۳ ثانیه"}
-                  </span>
-                  <span className="text-xs text-slate-400 mt-1">
-                    {neutralStatusMsg}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={isNeutralCalibrating || !isCameraActive}
-                  onClick={startNeutralCalibration}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-sky-600/30 transition-all mt-2"
-                >
-                  {isNeutralCalibrating ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      در حال ضبط مبنای خنثی...
-                    </>
-                  ) : (
-                    <>
-                      <Smile className="w-4 h-4" />
-                      شروع ضبط مبنای چهره خنثی (۳ ثانیه)
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* Step 4: Summary & Live Telemetry Test */}
-            {currentStep === 4 && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                  <CheckCircle2 className="w-5 h-5" />
-                  مرحله چهارم: بررسی نهایی و آزمون زنده
-                </div>
-
-                {/* Status checklist */}
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/60 rounded-xl border border-white/5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-slate-300">
-                      <ScanFace className="w-4 h-4 text-indigo-400" />
-                      ثبت چهره و لایونس:
-                    </span>
-                    <span className={profileStatus?.face_enrolled ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                      {profileStatus?.face_enrolled ? "تایید شده ✓" : "ثبت‌نشده"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-slate-300">
-                      <Target className="w-4 h-4 text-purple-400" />
-                      کالیبراسیون نگاه (نه نه):
-                    </span>
-                    <span className={profileStatus?.gaze_calibrated || isGazeCalibrated ? "text-emerald-400 font-bold" : "text-slate-400"}>
-                      {profileStatus?.gaze_calibrated || isGazeCalibrated ? "تایید شده ✓" : "پایه هندسی"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-slate-300">
-                      <Smile className="w-4 h-4 text-sky-400" />
-                      مبنای خنثی احساسات:
-                    </span>
-                    <span className={profileStatus?.neutral_calibrated || isNeutralCalibrated ? "text-emerald-400 font-bold" : "text-slate-400"}>
-                      {profileStatus?.neutral_calibrated || isNeutralCalibrated ? "تایید شده ✓" : "پیش‌فرض"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Live Scores Mini Card */}
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-white/5 flex flex-col gap-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">تمرکز زنده:</span>
-                    <b className={liveTelemetry?.is_focused ? "text-emerald-400" : "text-rose-400"}>
-                      {liveTelemetry?.attention_score ? `${liveTelemetry.attention_score.toFixed(1)}%` : "۹۵.۰%"}
-                    </b>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">استرس سنجیده شده:</span>
-                    <b className="text-sky-300 font-mono">
-                      {liveTelemetry?.stress_score ? `${liveTelemetry.stress_score.toFixed(1)}%` : "۲۲.۰%"}
-                    </b>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">جهت نگاه:</span>
-                    <b className="text-purple-300 font-mono">
-                      {liveTelemetry?.gaze_direction || "مرکز صفحه"}
-                    </b>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => navigate("/StudentExams")}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all mt-1"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  تایید و ورود به صفحه آزمون‌ها
-                </button>
-              </div>
-            )}
-
-            {/* Next / Previous Stepper Navigation */}
-            <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-4">
-              <button
-                type="button"
-                disabled={currentStep === 1}
-                onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-                مرحله قبل
-              </button>
-
-              <button
-                type="button"
-                disabled={currentStep === 4}
-                onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
-                className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-bold disabled:opacity-30 disabled:pointer-events-none transition-colors"
-              >
-                مرحله بعد
-                <ArrowLeft className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+        {/* Bottom-Right Corner Bracket */}
+        <div
+          className="absolute bracket-smooth-transition"
+          style={{
+            ...bracketPositions.bottomRight,
+            filter: bracketFilter,
+          }}
+        >
+          <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+            <path
+              d="M 51 4 V 34 A 17 17 0 0 1 34 51 H 4"
+              stroke={bracketStroke}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-colors duration-300"
+            />
+          </svg>
         </div>
       </div>
 
-      {/* Fullscreen Gaze Calibration Modal Overlay */}
+      {/* ================= 3. Center: Biometric Face Viewport & Auto Scanner ================= */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pointer-events-none">
+        {/* Global Error Banner */}
+        {errorMsg && (
+          <div className="absolute top-2 px-4 py-2 rounded-full liquid-glass-danger liquid-glass-pill text-white text-xs font-vazir shadow-2xl flex items-center gap-2 animate-bounce pointer-events-auto">
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Organic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
+        <div className="relative flex items-center justify-center">
+          <div
+            className={`relative flex items-center justify-center w-[250px] h-[310px] transition-all duration-500 ${
+              isEnrolledSuccess
+                ? "scale-100"
+                : faceStatus === "face_centered"
+                ? "scale-[0.99] drop-shadow-[0_0_20px_rgba(56,189,248,0.35)]"
+                : "scale-[1.03]"
+            }`}
+          >
+            {/* Delicate Guide Dotted Line & Facial Landmarks */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+              viewBox="0 0 250 310"
+              fill="none"
+            >
+              {/* Subtle Dotted Rect Guide */}
+              <rect
+                x="4"
+                y="4"
+                width="242"
+                height="302"
+                rx="20"
+                stroke={
+                  isEnrolledSuccess
+                    ? "rgba(52, 211, 153, 0.35)"
+                    : faceStatus === "face_centered"
+                    ? "rgba(56, 189, 248, 0.22)"
+                    : "rgba(255, 255, 255, 0.12)"
+                }
+                strokeWidth="1.5"
+                strokeDasharray="4 6"
+                className="transition-colors duration-500"
+              />
+
+              {/* Optical Alignment Center Ticks */}
+              <path
+                d="M 125 4 V 14 M 125 296 V 306 M 4 155 H 14 M 236 155 H 246"
+                stroke={
+                  isEnrolledSuccess
+                    ? "#34d399"
+                    : faceStatus === "face_centered"
+                    ? "#38bdf8"
+                    : "rgba(255, 255, 255, 0.2)"
+                }
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="transition-colors duration-300 opacity-70"
+              />
+
+              {/* Facial Landmarks (Eyes & Soft Smile Notch) */}
+              {faceStatus === "face_centered" && !isEnrolledSuccess && (
+                <g className="animate-face-lock">
+                  {/* Eye Crosshairs */}
+                  <circle cx="85" cy="115" r="2.5" fill="#38bdf8" className="animate-pulse" />
+                  <circle cx="165" cy="115" r="2.5" fill="#38bdf8" className="animate-pulse" />
+                  <path d="M 80 115 H 90 M 85 110 V 120" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
+                  <path d="M 160 115 H 170 M 165 110 V 120" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
+                  {/* Soft Smile Notch */}
+                  <path d="M 116 220 Q 125 226 134 220" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+                </g>
+              )}
+            </svg>
+
+            {/* Step 3: Circular Neutral Countdown Indicator */}
+            {currentStep === 3 && isNeutralCalibrating && (
+              <div className="flex flex-col items-center justify-center animate-pulse pointer-events-none">
+                <span className="text-5xl font-black font-vazir text-sky-400 drop-shadow-[0_0_24px_rgba(56,189,248,0.9)]">
+                  {neutralCountdown}
+                </span>
+                <span className="text-xs text-sky-200 mt-1.5 font-vazir bg-black/60 px-3 py-0.5 rounded-full backdrop-blur-md border border-white/10">
+                  ثانیه
+                </span>
+              </div>
+            )}
+
+            {/* Step 1 Ultimate Biometric Success Checkmark Animation */}
+            {isEnrolledSuccess && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {/* Shockwave 1 */}
+                <div className="absolute w-20 h-20 rounded-full border-2 border-emerald-400 animate-shockwave-1 shadow-[0_0_35px_rgba(52,211,153,0.85)]" />
+
+                {/* Shockwave 2 */}
+                <div className="absolute w-20 h-20 rounded-full border-2 border-teal-300 animate-shockwave-2 shadow-[0_0_45px_rgba(45,212,191,0.65)]" />
+
+                {/* Starburst Sparkle Rays (8 particles flashing outward 360°) */}
+                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_#34d399] animate-starburst-particle"
+                    style={{ "--angle": `${angle}deg` }}
+                  />
+                ))}
+
+                {/* Core Spring Glass Badge */}
+                <div className="relative animate-check-badge w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600/40 via-teal-500/30 to-emerald-400/50 border-2 border-emerald-300 flex items-center justify-center shadow-[0_0_50px_rgba(52,211,153,0.9),inset_0_1.5px_3px_rgba(255,255,255,0.85)] backdrop-blur-md">
+                  {/* Self-Drawing SVG Checkmark */}
+                  <svg
+                    className="w-12 h-12"
+                    viewBox="0 0 48 48"
+                    fill="none"
+                  >
+                    <path
+                      d="M 12 24 L 21 33 L 36 15"
+                      stroke="#ecfdf5"
+                      strokeWidth="4.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="animate-check-draw drop-shadow-[0_0_12px_rgba(236,253,245,0.95)]"
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ================= Modern Liquid Glass Dynamic Biometrics Island ================= */}
+        <div className="mt-8 transition-all duration-300 pointer-events-none">
+          {/* Case A: Warning - No Face / Not Centered */}
+          {faceStatus === "no_face" && !isEnrolledSuccess && currentStep === 1 && (
+            <div className="liquid-glass-warning liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl animate-liquid-float">
+              <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+              </div>
+              <span className="text-xs font-semibold font-vazir text-amber-100 tracking-wide">
+                صورت خود را در مرکز کادر قرار دهید
+              </span>
+            </div>
+          )}
+
+          {/* Case B: Step 1 Active Scanning */}
+          {faceStatus !== "no_face" && !isEnrolledSuccess && currentStep === 1 && (
+            <div className="liquid-glass-info liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl">
+              <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
+              </div>
+              <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
+                {scanProgress > 0
+                  ? "در حال آنالیز و اسکن بیومتریک چهره..."
+                  : "صورت خود را در مرکز کادر قرار دهید"}
+              </span>
+              {scanProgress > 0 && (
+                <span className="text-[11px] font-mono font-bold text-sky-300 mr-1 bg-sky-950/60 px-1.5 py-0.5 rounded-md border border-sky-400/30">
+                  {Math.round(scanProgress)}%
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Case C: Step 1 Success */}
+          {isEnrolledSuccess && currentStep === 1 && (
+            <div className="liquid-glass-success liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0 border border-emerald-400">
+                <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
+              </div>
+              <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
+                چهره و بردار اصالت با موفقیت ثبت شد ✓
+              </span>
+            </div>
+          )}
+
+          {/* Case D: Step 2 Gaze Calibration */}
+          {currentStep === 2 && (
+            <div className={`${isGazeCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl`}>
+              <div className={`w-2 h-2 rounded-full ${isGazeCalibrated ? "bg-emerald-400" : "bg-purple-400 animate-pulse"} shrink-0`} />
+              <span className="text-xs font-semibold font-vazir text-white/95 tracking-wide">
+                {isGazeCalibrating
+                  ? gazeStatusMsg || "در حال ثبت زاویه نگاه..."
+                  : isGazeCalibrated
+                  ? "کالیبراسیون نگاه با موفقیت انجام شد ✓"
+                  : "سر را آرام به چپ و راست حرکت دهید (نه نه)"}
+              </span>
+            </div>
+          )}
+
+          {/* Case E: Step 3 Neutral Emotion Calibration */}
+          {currentStep === 3 && (
+            <div className={`${isNeutralCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl`}>
+              <div className={`w-2 h-2 rounded-full ${isNeutralCalibrated ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"} shrink-0`} />
+              <span className="text-xs font-semibold font-vazir text-white/95 tracking-wide">
+                {isNeutralCalibrating
+                  ? `${neutralCountdown} ثانیه چهره را آرام و بی‌حرکت نگه دارید`
+                  : isNeutralCalibrated
+                  ? "مبنای خنثی احساسات ثبت شد ✓"
+                  : "۳ ثانیه آرام روبه‌روی دوربین قرار بگیرید"}
+              </span>
+            </div>
+          )}
+
+          {/* Case F: Step 4 Ready for Exam */}
+          {currentStep === 4 && (
+            <div className="liquid-glass-success liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl">
+              <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0 border border-emerald-400">
+                <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
+              </div>
+              <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
+                {profileStatus?.ready_for_exam
+                  ? "تمامی اطلاعات بیومتریک تایید شد ✓"
+                  : "بررسی نهایی وضعیت و ورود به آزمون"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= 4. Bottom Sleek Floating Dock ================= */}
+      <footer className="relative z-20 w-full pb-6 px-4 pt-2 shrink-0 max-w-sm mx-auto flex flex-col items-center gap-3">
+        {/* Step Dots */}
+        <div className="flex items-center gap-2">
+          {WIZARD_STEPS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setCurrentStep(s.id)}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                currentStep === s.id
+                  ? "w-7 bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.7)]"
+                  : isStepDone(s.id)
+                  ? "w-2.5 bg-emerald-400"
+                  : "w-2.5 bg-white/30 hover:bg-white/50"
+              }`}
+              aria-label={s.title}
+            />
+          ))}
+        </div>
+
+        {/* Minimal Glass Dock */}
+        <div className="liquid-glass-card w-full rounded-2xl p-2 flex items-center justify-between gap-2 shadow-2xl">
+          {/* Previous Step */}
+          <button
+            type="button"
+            disabled={currentStep === 1}
+            onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
+            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
+            title="مرحله قبل"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          {/* Step 1 Action Button */}
+          {currentStep === 1 && (
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={enrollStatus.success ? handleRescanFace : handleEnrollFace}
+              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>در حال ثبت...</span>
+                </>
+              ) : (
+                <>
+                  <img
+                    src="/face_logo.png"
+                    alt="Face"
+                    className="w-4 h-4 object-contain brightness-0 invert"
+                  />
+                  <span>{enrollStatus.success ? "اسکن مجدد چهره" : "اسکن هوشمند چهره"}</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Step 2 Action Button */}
+          {currentStep === 2 && (
+            <button
+              type="button"
+              disabled={isGazeCalibrating || !isCameraActive}
+              onClick={startGazeCalibration}
+              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              {isGazeCalibrating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>کالیبراسیون در حال اجرا...</span>
+                </>
+              ) : (
+                <>
+                  <Target className="w-4 h-4" />
+                  <span>شروع کالیبراسیون نگاه</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Step 3 Action Button */}
+          {currentStep === 3 && (
+            <button
+              type="button"
+              disabled={isNeutralCalibrating || !isCameraActive}
+              onClick={startNeutralCalibration}
+              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              {isNeutralCalibrating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>ضبط مبنا ({neutralCountdown}s)...</span>
+                </>
+              ) : (
+                <>
+                  <Smile className="w-4 h-4" />
+                  <span>شروع ضبط خنثی (۳ ثانیه)</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Step 4 Action Button */}
+          {currentStep === 4 && (
+            <button
+              type="button"
+              onClick={() => navigate("/StudentExams")}
+              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>تایید و ورود به آزمون‌ها</span>
+            </button>
+          )}
+
+          {/* Next Step */}
+          <button
+            type="button"
+            disabled={currentStep === 4}
+            onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
+            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
+            title="مرحله بعد"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        </div>
+      </footer>
+
+      {/* ================= 5. Interactive Gaze Calibration Overlay Target ================= */}
       {isGazeCalibrating && gazeTarget && (
-        <div className="fixed inset-0 bg-slate-950/95 z-[9999] flex flex-col items-center justify-center p-6 select-none">
-          <div className="absolute top-10 text-center">
-            <span className="text-xs px-3.5 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+        <div className="absolute inset-0 bg-black/60 z-50 flex flex-col items-center justify-center p-6 select-none pointer-events-none">
+          <div className="absolute top-14 text-center px-4">
+            <span className="text-xs px-3 py-1 rounded-full bg-sky-600/90 text-white font-bold backdrop-blur-md shadow-md">
               مرحله {gazeSubStep} از {gazeTotalSteps}
             </span>
-            <h3 className="text-xl md:text-2xl font-bold text-white mt-3">
+            <h3 className="text-base font-bold text-white mt-2 font-vazir">
               {gazeTarget.label}
             </h3>
-            <p className="text-sm text-sky-400 mt-1.5">
+            <p className="text-xs text-sky-200 mt-0.5 font-vazir">
               {gazeTarget.hint}
             </p>
           </div>
 
-          {/* Moving target dot */}
+          {/* Animated Interactive Gaze Target Dot */}
           <div
-            className="absolute w-10 h-10 rounded-full bg-rose-500 shadow-[0_0_45px_#f43f5e] transition-all duration-500 ease-out border-2 border-white pointer-events-none flex items-center justify-center"
+            className="absolute w-8 h-8 rounded-full bg-rose-500 shadow-[0_0_30px_#f43f5e] transition-all duration-500 ease-out border-2 border-white pointer-events-none flex items-center justify-center"
             style={{
               left: `${gazeTarget.x}%`,
               top: `${gazeTarget.y}%`,
               transform: "translate(-50%, -50%)",
             }}
           >
-            <div className="w-3 h-3 bg-white rounded-full animate-ping" />
+            <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

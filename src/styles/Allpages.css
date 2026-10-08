@@ -692,3 +692,338 @@ div[data-voice-beam].chat-bubble-student {
 .chat-bubble-student[data-voice-beam]::after {
   clip-path: inset(0 round 18px 18px 0px 18px) !important;
 }
+
+/* ================= Modern Liquid Glass Biometrics System ================= */
+@keyframes liquid-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Master Liquid Glass Surface (VisionOS / iOS 18 grade) */
+.liquid-glass-card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+  backdrop-filter: blur(28px) saturate(210%) brightness(112%);
+  -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(112%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 
+    0 20px 45px -10px rgba(0, 0, 0, 0.65),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Polished Specular Top Highlight for Liquid Glass Elements */
+.liquid-glass-pill {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-glass-pill::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+/* Notification Variant: Warning (Face not centered) */
+.liquid-glass-warning {
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.24) 0%,
+    rgba(180, 83, 9, 0.12) 45%,
+    rgba(15, 12, 10, 0.65) 100%
+  );
+  backdrop-filter: blur(28px) saturate(220%) brightness(110%);
+  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(110%);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.75),
+    0 0 24px 2px rgba(245, 158, 11, 0.28),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Notification Variant: Info / Scanning */
+.liquid-glass-info {
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.22) 0%,
+    rgba(30, 58, 138, 0.12) 45%,
+    rgba(10, 15, 30, 0.65) 100%
+  );
+  backdrop-filter: blur(28px) saturate(220%) brightness(112%);
+  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.75),
+    0 0 26px 2px rgba(56, 189, 248, 0.32),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Notification Variant: Success */
+.liquid-glass-success {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.26) 0%,
+    rgba(6, 78, 59, 0.12) 45%,
+    rgba(6, 25, 18, 0.65) 100%
+  );
+  backdrop-filter: blur(28px) saturate(220%) brightness(112%);
+  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%);
+  border: 1px solid rgba(52, 211, 153, 0.6);
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.75),
+    0 0 30px 2px rgba(16, 185, 129, 0.38),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Notification Variant: Danger */
+.liquid-glass-danger {
+  background: linear-gradient(
+    135deg,
+    rgba(244, 63, 94, 0.28) 0%,
+    rgba(159, 18, 57, 0.12) 45%,
+    rgba(25, 5, 10, 0.7) 100%
+  );
+  backdrop-filter: blur(28px) saturate(220%) brightness(110%);
+  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(110%);
+  border: 1px solid rgba(251, 113, 133, 0.55);
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.75),
+    0 0 26px 2px rgba(244, 63, 94, 0.3),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Biometrics Viewfinder Frame: Crystal-clear, zero-blur over face camera */
+.liquid-glass-frame {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Face ID Corner Expansion Animations (Logo edges extending into viewfinder) */
+@keyframes face-bracket-expand {
+  0% {
+    transform: scale(0.72);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.03);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bracket-expand {
+  animation: face-bracket-expand 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: center center;
+}
+
+/* Biometric Face Lock Reticle (Snaps tightly onto face landmarks when detected) */
+@keyframes face-lock-snap {
+  0% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+.animate-face-lock {
+  animation: face-lock-snap 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center center;
+}
+
+/* ================= Incredible Checkmark Animation System ================= */
+/* 1. Self-Drawing SVG Checkmark */
+@keyframes checkmark-draw {
+  0% {
+    stroke-dashoffset: 54;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.animate-check-draw {
+  stroke-dasharray: 54;
+  stroke-dashoffset: 54;
+  animation: checkmark-draw 0.45s cubic-bezier(0.65, 0, 0.45, 1) 0.22s forwards;
+}
+
+/* 2. Core Spring Pop for Badge */
+@keyframes checkmark-badge-pop {
+  0% {
+    transform: scale(0) rotate(-24deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.22) rotate(4deg);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(0.94) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-check-badge {
+  animation: checkmark-badge-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 3. Outer Emerald Shockwaves */
+@keyframes checkmark-shockwave-1 {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.95;
+    border-width: 3px;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+@keyframes checkmark-shockwave-2 {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.85;
+    border-width: 3px;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.animate-shockwave-1 {
+  animation: checkmark-shockwave-1 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-shockwave-2 {
+  animation: checkmark-shockwave-2 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+}
+
+/* 4. Radial Starburst Particles */
+@keyframes starburst-particle {
+  0% {
+    transform: rotate(var(--angle)) translateY(0px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateY(52px) scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-starburst-particle {
+  animation: starburst-particle 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+}
+
+/* 5. Apple Face ID 3D Flip Morph Animation */
+.apple-faceid-flipper {
+  perspective: 700px;
+  transform-style: preserve-3d;
+}
+
+@keyframes apple-flip-out {
+  0% {
+    transform: perspective(700px) rotateY(0deg) rotateZ(0deg) scale(1);
+    opacity: 1;
+  }
+  48% {
+    opacity: 0.7;
+  }
+  50% {
+    transform: perspective(700px) rotateY(90deg) rotateZ(24deg) scale(0.88);
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(700px) rotateY(90deg) rotateZ(24deg) scale(0.88);
+    opacity: 0;
+  }
+}
+
+@keyframes apple-flip-in {
+  0% {
+    transform: perspective(700px) rotateY(-90deg) rotateZ(-24deg) scale(0.75);
+    opacity: 0;
+  }
+  50% {
+    transform: perspective(700px) rotateY(-90deg) rotateZ(-24deg) scale(0.75);
+    opacity: 0;
+  }
+  75% {
+    transform: perspective(700px) rotateY(12deg) rotateZ(3deg) scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(700px) rotateY(0deg) rotateZ(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-faceid-front-flip {
+  animation: apple-flip-out 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-faceid-back-flip {
+  animation: apple-flip-in 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.bracket-smooth-transition {
+  transition: all 0.75s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.animate-liquid-float {
+  animation: liquid-float 3s ease-in-out infinite;
+}

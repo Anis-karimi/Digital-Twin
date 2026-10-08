@@ -11,7 +11,8 @@ export const StudentLayout = () => {
 
   const isExamLive =
     location.pathname.toLowerCase().includes("/studentexam/") ||
-    location.pathname.toLowerCase().startsWith("/studentexam/");
+    location.pathname.toLowerCase().startsWith("/studentexam/") ||
+    location.pathname.toLowerCase().includes("/biometrics");
 
   return (
     <div

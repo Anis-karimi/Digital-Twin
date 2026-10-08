@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ScanFace } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import Camera from "@/assets/icons/Camera.svg";
@@ -16,7 +15,13 @@ const settingsItems = [
     title: "احراز هویت و کالیبراسیون چهره",
     subtitle: "ثبت چهره، کالیبراسیون نگاه و مبنای احساسات",
     path: "/StudentSettings/Biometrics",
-    icon: <ScanFace className="w-[23px] h-[23px] text-indigo-500 dark:text-indigo-400" />,
+    icon: (
+      <img
+        className="w-[23px] h-[23px] object-contain dark:invert"
+        alt="احراز هویت چهره"
+        src="/face_logo.png"
+      />
+    ),
   },
   {
     id: "theme",
