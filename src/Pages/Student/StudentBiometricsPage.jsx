@@ -139,6 +139,7 @@ function detectClientFace(video, canvas) {
     normY: Math.max(0, Math.min(1.0 - faceH / sh, faceY / sh)),
     normW: faceW / sw,
     normH: faceH / sh,
+    sharpness: avgEdge,
   };
 }
 
@@ -164,7 +165,12 @@ export function StudentBiometricsPage() {
   const [faceBox, setFaceBox] = useState(null); // { x, y, width, height } in px
   const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked"
   const [scanProgress, setScanProgress] = useState(0); // 0 to 100
+  const [scanFeedback, setScanFeedback] = useState("");
   const autoEnrollTriggeredRef = useRef(false);
+  const consecutiveQualityFramesRef = useRef(0);
+  const bestFrameBlobRef = useRef(null);
+  const bestSharpnessRef = useRef(0);
+  const cooldownUntilRef = useRef(0);
   const offscreenCanvasRef = useRef(null);
 
   // 1. Live Camera Hook
@@ -323,6 +329,7 @@ export function StudentBiometricsPage() {
           const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
           const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
 
+          let frameMovement = 0;
           setFaceBox((prev) => {
             if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
 
@@ -330,6 +337,7 @@ export function StudentBiometricsPage() {
             const dy = Math.abs(targetY - prev.y);
             const dw = Math.abs(targetW - prev.width);
             const dh = Math.abs(targetH - prev.height);
+            frameMovement = Math.max(dx, dy);
 
             // Deadband: Ignore micro-jitter (< 3px movement or < 3.5px size change)
             const smoothX = dx < 3.0 ? prev.x : prev.x * 0.82 + targetX * 0.18;
@@ -345,12 +353,67 @@ export function StudentBiometricsPage() {
             };
           });
           setFaceStatus("face_locked");
+
+          // === Real Moment-by-Moment Quality Analysis ===
+          if (currentStep === 1 && !enrollStatus.success && !isLoading) {
+            // Check if user is in cooldown after an error
+            if (Date.now() < cooldownUntilRef.current) {
+              // Wait for cooldown to expire before starting new analysis
+            } else {
+              const isCentered =
+                Math.abs(cx - cw / 2) < cw * 0.24 &&
+                Math.abs(cy - ch * 0.44) < ch * 0.22;
+              const sharpness = clientFace?.sharpness || 4.2;
+              const isSharp = sharpness >= 2.8;
+              const isSteady = frameMovement < 9.0;
+
+              if (isCentered && isSharp && isSteady) {
+                // High-quality valid frame: accumulate progressive real verification
+                consecutiveQualityFramesRef.current = Math.min(18, consecutiveQualityFramesRef.current + 1);
+                const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 16) * 100));
+                setScanProgress(prog);
+                setScanFeedback(`در حال تطبیق و تحلیل چهره (${prog}%)...`);
+
+                // Asynchronously record highest-sharpness candidate frame
+                if (sharpness > bestSharpnessRef.current || !bestFrameBlobRef.current) {
+                  bestSharpnessRef.current = sharpness;
+                  captureFrameBlob(0.92, 960, 960).then((blob) => {
+                    if (blob) bestFrameBlobRef.current = blob;
+                  });
+                }
+
+                // When 100% genuine frames verified, trigger enrollment
+                if (prog >= 100 && !autoEnrollTriggeredRef.current) {
+                  autoEnrollTriggeredRef.current = true;
+                  handleEnrollFace(bestFrameBlobRef.current);
+                }
+              } else {
+                // Quality dropped (moved too fast, turned head, or off-center): decay gently
+                consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
+                const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 16) * 100));
+                setScanProgress(prog);
+
+                if (!isCentered) {
+                  setScanFeedback("صورت را در مرکز کادر قرار دهید");
+                } else if (!isSteady) {
+                  setScanFeedback("لطفاً بدون حرکت بمانید");
+                } else {
+                  setScanFeedback("مستقیم به دوربین نگاه کنید");
+                }
+              }
+            }
+          }
         } else if (isMounted) {
           noFaceCounter++;
           // Generous hold: do not drop box unless face is absent for at least 8 frames (~400ms)
           if (noFaceCounter >= 8) {
             setFaceBox(null);
             setFaceStatus("no_face");
+            consecutiveQualityFramesRef.current = 0;
+            setScanProgress(0);
+            bestFrameBlobRef.current = null;
+            bestSharpnessRef.current = 0;
+            setScanFeedback("");
           }
         }
       } catch (err) {
@@ -374,15 +437,16 @@ export function StudentBiometricsPage() {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [isCameraActive, currentStep, enrollStatus.success, studentId]);
+  }, [isCameraActive, currentStep, enrollStatus.success, studentId, isLoading]);
 
-  // Automatic Face Enrollment Action
-  const handleEnrollFace = async () => {
+  // Automatic Face Enrollment Action with candidate blob
+  const handleEnrollFace = async (candidateBlob = null) => {
     if (isLoading) return;
     setErrorMsg("");
     setIsLoading(true);
+    setScanFeedback("در حال ارسال و ثبت نهایی...");
     try {
-      const blob = await captureFrameBlob(0.9, 640, 480);
+      const blob = candidateBlob || (await captureFrameBlob(0.92, 960, 960));
       if (!blob) {
         throw new Error("خطا در تصویر دوربین. لطفاً دسترسی دوربین را بررسی فرمایید.");
       }
@@ -392,16 +456,29 @@ export function StudentBiometricsPage() {
           success: true,
           message: "چهره و بردار اصالت با موفقیت تایید شد ✓",
         });
+        setScanFeedback("تأیید شد ✓");
         await loadProfile();
       } else {
-        setErrorMsg(res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.");
-        autoEnrollTriggeredRef.current = false;
+        const msg = res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.";
+        setErrorMsg(msg);
+        setScanFeedback(msg);
+        cooldownUntilRef.current = Date.now() + 3000;
+        consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
+        bestFrameBlobRef.current = null;
+        bestSharpnessRef.current = 0;
+        autoEnrollTriggeredRef.current = false;
       }
     } catch (err) {
-      setErrorMsg(err?.message || "خطای ارتباط با سامانه در ثبت چهره.");
-      autoEnrollTriggeredRef.current = false;
+      const msg = err?.message || "خطای ارتباط با سامانه در ثبت چهره.";
+      setErrorMsg(msg);
+      setScanFeedback(msg);
+      cooldownUntilRef.current = Date.now() + 3000;
+      consecutiveQualityFramesRef.current = 0;
       setScanProgress(0);
+      bestFrameBlobRef.current = null;
+      bestSharpnessRef.current = 0;
+      autoEnrollTriggeredRef.current = false;
     } finally {
       setIsLoading(false);
     }
@@ -411,41 +488,15 @@ export function StudentBiometricsPage() {
     setEnrollStatus({ success: false, message: "" });
     setProfileStatus((prev) => (prev ? { ...prev, face_enrolled: false } : null));
     setScanProgress(0);
+    setScanFeedback("");
+    consecutiveQualityFramesRef.current = 0;
+    bestFrameBlobRef.current = null;
+    bestSharpnessRef.current = 0;
+    cooldownUntilRef.current = 0;
     autoEnrollTriggeredRef.current = false;
     setFaceStatus("no_face");
     setFaceBox(null);
   };
-
-  // Automatic Scanning Progress (Sequentially samples face stability over ~2s before enrolling)
-  useEffect(() => {
-    if (currentStep !== 1 || enrollStatus.success || isLoading) return;
-
-    let timer = null;
-
-    if (faceStatus === "face_locked") {
-      // Sequential accumulation: ~2 seconds of stable face lock
-      timer = setInterval(() => {
-        setScanProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(timer);
-            if (!autoEnrollTriggeredRef.current) {
-              autoEnrollTriggeredRef.current = true;
-              handleEnrollFace();
-            }
-            return 100;
-          }
-          return prev + 2.5;
-        });
-      }, 50);
-
-      return () => {
-        if (timer) clearInterval(timer);
-      };
-    } else {
-      setScanProgress(0);
-      autoEnrollTriggeredRef.current = false;
-    }
-  }, [faceStatus, currentStep, enrollStatus.success, isLoading]);
 
   const isStepDone = (stepId) => {
     if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
@@ -466,11 +517,11 @@ export function StudentBiometricsPage() {
   const cw = containerRef.current?.clientWidth || 360;
   const ch = containerRef.current?.clientHeight || 640;
 
-  // Natural resting face guide in the center of viewport
-  const guideW = Math.min(220, Math.round(cw * 0.56));
-  const guideH = Math.min(286, Math.round(guideW * 1.30));
+  // Natural resting face guide in the center of viewport - spacious wide framing
+  const guideW = Math.round(cw * 0.84);
+  const guideH = Math.min(Math.round(ch * 0.60), Math.round(guideW * 1.34));
   const guideX = Math.round((cw - guideW) / 2);
-  const guideY = Math.round((ch - guideH) / 2 - 25);
+  const guideY = Math.round((ch - guideH) / 2 - 15);
 
   const activeBox = (isLockedOnFace && faceBox) ? faceBox : {
     x: guideX,
@@ -688,47 +739,9 @@ export function StudentBiometricsPage() {
         </div>
       </header>
 
-      {/* ================= 4 Face ID Corner Brackets & Synchronized Dotted Frame ================= */}
+      {/* ================= 4 Face ID Corner Brackets ================= */}
       <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
-        {/* Dynamic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
-        <div
-          className="absolute rounded-[22px] pointer-events-none bracket-smooth-transition"
-          style={{
-            top: `${Math.round(activeBox.y)}px`,
-            left: `${Math.round(activeBox.x)}px`,
-            width: `${Math.round(activeBox.width)}px`,
-            height: `${Math.round(activeBox.height)}px`,
-            filter: bracketFilter,
-          }}
-        >
-          {/* Delicate Guide Dotted Line & Face Tracking Box */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-            viewBox={`0 0 ${Math.round(activeBox.width)} ${Math.round(activeBox.height)}`}
-            fill="none"
-          >
-            <rect
-              x="3"
-              y="3"
-              width={Math.round(activeBox.width) - 6}
-              height={Math.round(activeBox.height) - 6}
-              rx="20"
-              stroke={reticleStroke}
-              strokeWidth="1.5"
-              strokeDasharray="4 6"
-            />
-            {/* Optical Alignment Center Ticks */}
-            <path
-              d={`M ${Math.round(activeBox.width / 2)} 4 V 14 M ${Math.round(activeBox.width / 2)} ${Math.round(activeBox.height - 14)} V ${Math.round(activeBox.height - 4)} M 4 ${Math.round(activeBox.height / 2)} H 14 M ${Math.round(activeBox.width - 14)} ${Math.round(activeBox.height / 2)} H ${Math.round(activeBox.width - 4)}`}
-              stroke={centerTickStroke}
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="opacity-80"
-            />
-          </svg>
-        </div>
-
-        {/* Top-Left Corner Bracket */}
+        {/* Top-Left Corner Bracket (Sharp, Thick Right-Angle) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -738,17 +751,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 5 52 V 22 A 17 17 0 0 1 22 5 H 52"
+              d="M 4 52 L 4 4 L 52 4"
               stroke={bracketStroke}
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="6.5"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Top-Right Corner Bracket */}
+        {/* Top-Right Corner Bracket (Sharp, Thick Right-Angle) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -758,17 +771,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 4 5 H 34 A 17 17 0 0 1 51 22 V 52"
+              d="M 4 4 L 52 4 L 52 52"
               stroke={bracketStroke}
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="6.5"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Bottom-Left Corner Bracket */}
+        {/* Bottom-Left Corner Bracket (Sharp, Thick Right-Angle) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -778,17 +791,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 52 51 H 22 A 17 17 0 0 1 5 34 V 4"
+              d="M 4 4 L 4 52 L 52 52"
               stroke={bracketStroke}
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="6.5"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Bottom-Right Corner Bracket */}
+        {/* Bottom-Right Corner Bracket (Sharp, Thick Right-Angle) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -798,11 +811,11 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 51 4 V 34 A 17 17 0 0 1 34 51 H 4"
+              d="M 4 52 L 52 52 L 52 4"
               stroke={bracketStroke}
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="6.5"
+              strokeLinecap="square"
+              strokeLinejoin="miter"
               className="transition-colors duration-300"
             />
           </svg>
@@ -819,11 +832,11 @@ export function StudentBiometricsPage() {
           </div>
         )}
 
-        {/* Subtle Waiting Guide when waiting for face */}
-        {(!faceBox || !isLockedOnFace) && !isEnrolledSuccess && (
-          <div className="relative flex items-center justify-center pointer-events-none mt-16">
-            <span className="text-[12px] text-white/70 font-vazir bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 shadow-lg animate-pulse">
-              صورت خود را در کادر قرار دهید
+        {/* Real-time Guidance / Feedback Pill */}
+        {!isEnrolledSuccess && (
+          <div className="relative flex items-center justify-center pointer-events-none mt-20">
+            <span className="text-[12px] text-white/85 font-vazir bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/15 shadow-xl transition-all duration-200">
+              {scanFeedback || (isLockedOnFace ? "در حال تطبیق چهره..." : "صورت خود را در کادر قرار دهید")}
             </span>
           </div>
         )}

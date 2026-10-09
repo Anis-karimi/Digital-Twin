@@ -96,9 +96,9 @@ export function useBiometricCamera(options = {}) {
     setIsActive(false);
   }, [stream, videoRef]);
 
-  // Capture current frame as Blob (JPEG downscaled for minimal payload while preserving aspect ratio)
+  // Capture current frame as Blob (JPEG optimized for high biometric accuracy while preserving aspect ratio)
   const captureFrameBlob = useCallback(
-    (quality = 0.85, targetWidth = 640, targetHeight = 480) => {
+    (quality = 0.92, targetWidth = 960, targetHeight = 960) => {
       return new Promise((resolve) => {
         const video = videoRef.current;
         if (!video || video.readyState < 2) {
