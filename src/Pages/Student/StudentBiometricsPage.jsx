@@ -7,7 +7,7 @@
  * - Full live camera bounded strictly to the 360px application frame
  */
 
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -262,8 +262,9 @@ export function StudentBiometricsPage() {
       ? neutralProgress
       : 100;
 
+  const isEnrolledSuccess = currentStep === 1 && enrollStatus.success;
   const isCurrentStepFinished =
-    (currentStep === 1 && isEnrolledSuccess) ||
+    isEnrolledSuccess ||
     (currentStep === 2 && isGazeCalibrated) ||
     (currentStep === 3 && isNeutralCalibrated);
 
@@ -560,7 +561,6 @@ export function StudentBiometricsPage() {
   };
 
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
-  const isEnrolledSuccess = currentStep === 1 && enrollStatus.success;
   const isDoneFinal = currentStep === 4 && (profileStatus?.ready_for_exam || isStepDone(1));
   const isLockedOnFace = (faceStatus === "face_locked" && faceBox) || isEnrolledSuccess;
 
