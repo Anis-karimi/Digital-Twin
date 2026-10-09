@@ -807,15 +807,6 @@ export function StudentBiometricsPage() {
           </div>
         )}
 
-        {/* Real-time Guidance / Feedback Pill */}
-        {!isEnrolledSuccess && (
-          <div className="relative flex items-center justify-center pointer-events-none mt-20">
-            <span className="text-[12px] text-white/85 font-vazir bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/15 shadow-xl transition-all duration-200">
-              {scanFeedback || (isLockedOnFace ? "در حال تطبیق چهره..." : "صورت خود را در کادر قرار دهید")}
-            </span>
-          </div>
-        )}
-
         {/* Step 3: Circular Neutral Countdown Indicator */}
         {currentStep === 3 && isNeutralCalibrating && (
           <div className="absolute inset-0 flex flex-col items-center justify-center animate-pulse pointer-events-none">
@@ -866,12 +857,15 @@ export function StudentBiometricsPage() {
             </div>
           </div>
         )}
+      </div>
 
-        {/* ================= Modern Liquid Glass Dynamic Biometrics Island ================= */}
-        <div className="mt-8 transition-all duration-300 pointer-events-none">
+      {/* ================= 4. Bottom Sleek Floating Dock ================= */}
+      <footer className="relative z-20 w-full pb-6 px-4 pt-2 shrink-0 max-w-sm mx-auto flex flex-col items-center gap-3">
+        {/* ================= Modern Liquid Glass Dynamic Biometrics Island (Positioned at Bottom) ================= */}
+        <div className="w-full flex justify-center transition-all duration-300 pointer-events-none">
           {/* Case A: Warning - No Face / Not Centered */}
           {faceStatus === "no_face" && !isEnrolledSuccess && currentStep === 1 && (
-            <div className="liquid-glass-warning liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl animate-liquid-float">
+            <div className="liquid-glass-warning liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl animate-liquid-float">
               <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
@@ -884,7 +878,7 @@ export function StudentBiometricsPage() {
 
           {/* Case B: Step 1 Active Scanning */}
           {faceStatus !== "no_face" && !isEnrolledSuccess && currentStep === 1 && (
-            <div className="liquid-glass-info liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl">
+            <div className="liquid-glass-info liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl">
               <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
@@ -904,7 +898,7 @@ export function StudentBiometricsPage() {
 
           {/* Case C: Step 1 Success */}
           {isEnrolledSuccess && currentStep === 1 && (
-            <div className="liquid-glass-success liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="liquid-glass-success liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl animate-in zoom-in-95 duration-300">
               <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0 border border-emerald-400">
                 <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
               </div>
@@ -916,7 +910,7 @@ export function StudentBiometricsPage() {
 
           {/* Case D: Step 2 Gaze Calibration */}
           {currentStep === 2 && (
-            <div className={`${isGazeCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl`}>
+            <div className={`${isGazeCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl`}>
               <div className={`w-2 h-2 rounded-full ${isGazeCalibrated ? "bg-emerald-400" : "bg-purple-400 animate-pulse"} shrink-0`} />
               <span className="text-xs font-semibold font-vazir text-white/95 tracking-wide">
                 {isGazeCalibrating
@@ -930,7 +924,7 @@ export function StudentBiometricsPage() {
 
           {/* Case E: Step 3 Neutral Emotion Calibration */}
           {currentStep === 3 && (
-            <div className={`${isNeutralCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl`}>
+            <div className={`${isNeutralCalibrated ? "liquid-glass-success" : "liquid-glass-info"} liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl`}>
               <div className={`w-2 h-2 rounded-full ${isNeutralCalibrated ? "bg-emerald-400" : "bg-cyan-400 animate-pulse"} shrink-0`} />
               <span className="text-xs font-semibold font-vazir text-white/95 tracking-wide">
                 {isNeutralCalibrating
@@ -944,7 +938,7 @@ export function StudentBiometricsPage() {
 
           {/* Case F: Step 4 Ready for Exam */}
           {currentStep === 4 && (
-            <div className="liquid-glass-success liquid-glass-pill px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-2xl">
+            <div className="liquid-glass-success liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl">
               <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0 border border-emerald-400">
                 <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
               </div>
@@ -956,10 +950,6 @@ export function StudentBiometricsPage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* ================= 4. Bottom Sleek Floating Dock ================= */}
-      <footer className="relative z-20 w-full pb-6 px-4 pt-2 shrink-0 max-w-sm mx-auto flex flex-col items-center gap-3">
         {/* Step Dots */}
         <div className="flex items-center gap-2">
           {WIZARD_STEPS.map((s) => (
