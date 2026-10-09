@@ -220,9 +220,6 @@ export function StudentBiometricsPage() {
       const data = await biometricsApi.getStudentBiometricProfile(studentId);
       if (data) {
         setProfileStatus(data);
-        if (data.face_enrolled) {
-          setEnrollStatus({ success: true, message: "چهره شما با موفقیت ثبت شده است." });
-        }
       }
     } catch (err) {
       console.warn("Failed to fetch student biometric profile:", err);
@@ -354,52 +351,29 @@ export function StudentBiometricsPage() {
           });
           setFaceStatus("face_locked");
 
-          // === Real Moment-by-Moment Quality Analysis ===
+          // === Progressive Continuous Face Scanning over ~2 seconds ===
           if (currentStep === 1 && !enrollStatus.success && !isLoading) {
             // Check if user is in cooldown after an error
             if (Date.now() < cooldownUntilRef.current) {
               // Wait for cooldown to expire before starting new analysis
             } else {
-              const isCentered =
-                Math.abs(cx - cw / 2) < cw * 0.24 &&
-                Math.abs(cy - ch * 0.44) < ch * 0.22;
-              const sharpness = clientFace?.sharpness || 4.2;
-              const isSharp = sharpness >= 2.8;
-              const isSteady = frameMovement < 9.0;
+              // Smooth, steady accumulation when face is tracked
+              consecutiveQualityFramesRef.current = Math.min(46, consecutiveQualityFramesRef.current + 1);
+              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 42) * 100));
+              setScanProgress(prog);
+              setScanFeedback(`در حال تطبیق و اسکن چهره (${prog}%)...`);
 
-              if (isCentered && isSharp && isSteady) {
-                // High-quality valid frame: accumulate progressive real verification
-                consecutiveQualityFramesRef.current = Math.min(18, consecutiveQualityFramesRef.current + 1);
-                const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 16) * 100));
-                setScanProgress(prog);
-                setScanFeedback(`در حال تطبیق و تحلیل چهره (${prog}%)...`);
+              // Capture crisp high-res frame at 60-75% progress
+              if (prog >= 60 && !bestFrameBlobRef.current) {
+                captureFrameBlob(0.92, 960, 960).then((blob) => {
+                  if (blob) bestFrameBlobRef.current = blob;
+                });
+              }
 
-                // Asynchronously record highest-sharpness candidate frame
-                if (sharpness > bestSharpnessRef.current || !bestFrameBlobRef.current) {
-                  bestSharpnessRef.current = sharpness;
-                  captureFrameBlob(0.92, 960, 960).then((blob) => {
-                    if (blob) bestFrameBlobRef.current = blob;
-                  });
-                }
-
-                // When 100% genuine frames verified, trigger enrollment
-                if (prog >= 100 && !autoEnrollTriggeredRef.current) {
-                  autoEnrollTriggeredRef.current = true;
-                  handleEnrollFace(bestFrameBlobRef.current);
-                }
-              } else {
-                // Quality dropped (moved too fast, turned head, or off-center): decay gently
-                consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
-                const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 16) * 100));
-                setScanProgress(prog);
-
-                if (!isCentered) {
-                  setScanFeedback("صورت را در مرکز کادر قرار دهید");
-                } else if (!isSteady) {
-                  setScanFeedback("لطفاً بدون حرکت بمانید");
-                } else {
-                  setScanFeedback("مستقیم به دوربین نگاه کنید");
-                }
+              // When 100% genuine frames completed, trigger enrollment
+              if (prog >= 100 && !autoEnrollTriggeredRef.current) {
+                autoEnrollTriggeredRef.current = true;
+                handleEnrollFace(bestFrameBlobRef.current);
               }
             }
           }
@@ -409,11 +383,12 @@ export function StudentBiometricsPage() {
           if (noFaceCounter >= 8) {
             setFaceBox(null);
             setFaceStatus("no_face");
-            consecutiveQualityFramesRef.current = 0;
-            setScanProgress(0);
+            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 2);
+            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 42) * 100));
+            setScanProgress(prog);
             bestFrameBlobRef.current = null;
             bestSharpnessRef.current = 0;
-            setScanFeedback("");
+            setScanFeedback("صورت خود را در کادر قرار دهید");
           }
         }
       } catch (err) {
@@ -741,7 +716,7 @@ export function StudentBiometricsPage() {
 
       {/* ================= 4 Face ID Corner Brackets ================= */}
       <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
-        {/* Top-Left Corner Bracket (Sharp, Thick Right-Angle) */}
+        {/* Top-Left Corner Bracket (Curved Border Radius) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -751,17 +726,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 4 52 L 4 4 L 52 4"
+              d="M 5 52 L 5 21 A 16 16 0 0 1 21 5 L 52 5"
               stroke={bracketStroke}
-              strokeWidth="6.5"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Top-Right Corner Bracket (Sharp, Thick Right-Angle) */}
+        {/* Top-Right Corner Bracket (Curved Border Radius) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -771,17 +746,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 4 4 L 52 4 L 52 52"
+              d="M 4 5 L 35 5 A 16 16 0 0 1 51 21 L 51 52"
               stroke={bracketStroke}
-              strokeWidth="6.5"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Bottom-Left Corner Bracket (Sharp, Thick Right-Angle) */}
+        {/* Bottom-Left Corner Bracket (Curved Border Radius) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -791,17 +766,17 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 4 4 L 4 52 L 52 52"
+              d="M 5 4 L 5 35 A 16 16 0 0 0 21 51 L 52 51"
               stroke={bracketStroke}
-              strokeWidth="6.5"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="transition-colors duration-300"
             />
           </svg>
         </div>
 
-        {/* Bottom-Right Corner Bracket (Sharp, Thick Right-Angle) */}
+        {/* Bottom-Right Corner Bracket (Curved Border Radius) */}
         <div
           className="absolute bracket-smooth-transition"
           style={{
@@ -811,11 +786,11 @@ export function StudentBiometricsPage() {
         >
           <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
             <path
-              d="M 4 52 L 52 52 L 52 4"
+              d="M 4 51 L 35 51 A 16 16 0 0 0 51 35 L 51 4"
               stroke={bracketStroke}
-              strokeWidth="6.5"
-              strokeLinecap="square"
-              strokeLinejoin="miter"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="transition-colors duration-300"
             />
           </svg>
