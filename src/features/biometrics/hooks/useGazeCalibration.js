@@ -29,8 +29,11 @@ export function useGazeCalibration(options = {}) {
   const [currentTarget, setCurrentTarget] = useState(null);
   const [isCalibrated, setIsCalibrated] = useState(false);
   const [statusMessage, setStatusMessage] = useState("تخمین هندسی اولیه");
+  const [progress, setProgress] = useState(0);
 
   const collectedSamplesRef = useRef([]);
+  const progressTimerRef = useRef(null);
+  const sequenceTimerRef = useRef(null);
 
   // Check calibration status from backend
   const checkCalibrationStatus = useCallback(async () => {
@@ -38,21 +41,40 @@ export function useGazeCalibration(options = {}) {
       const data = await biometricsApi.getGazeCalibrationStatus(userId);
       setIsCalibrated(data?.is_calibrated || false);
       setStatusMessage(data?.is_calibrated ? "کالیبره‌شده با دقت بالا" : "نیاز به کالیبراسیون");
+      if (data?.is_calibrated) {
+        setProgress(100);
+      }
     } catch (e) {
       console.warn("Could not check gaze calibration status:", e);
     }
   }, [userId]);
 
+  // Clean up timers
+  const clearTimers = useCallback(() => {
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    if (sequenceTimerRef.current) {
+      clearTimeout(sequenceTimerRef.current);
+      sequenceTimerRef.current = null;
+    }
+  }, []);
+
   // Step through calibration targets
   const processNextTarget = useCallback(
     async (stepIndex) => {
+      clearTimers();
+
       if (stepIndex >= CALIBRATION_TARGETS.length) {
         // Completed all targets -> submit to API
         setStatusMessage("در حال برازش مدل رگرسیون چندجمله‌ای...");
+        setProgress(96);
         try {
           const res = await biometricsApi.calibrateGaze(userId, collectedSamplesRef.current);
           if (res?.is_calibrated || res?.status === "success") {
             setIsCalibrated(true);
+            setProgress(100);
             setStatusMessage("کالیبراسیون زاویه سر و نگاه با موفقیت انجام شد");
             if (onCalibrationComplete) onCalibrationComplete();
           } else {
@@ -72,8 +94,34 @@ export function useGazeCalibration(options = {}) {
       setCurrentTarget(target);
       setStatusMessage(target.hint);
 
-      // Dwell for 900ms while user fixates, then capture frame
-      setTimeout(async () => {
+      // Smooth progress calculation across 5 points:
+      // Point 1 (index 0): 0% -> 20%
+      // Point 2 (index 1): 20% -> 40%
+      // Point 3 (index 2): 40% -> 60%
+      // Point 4 (index 3): 60% -> 80%
+      // Point 5 (index 4): 80% -> 95%
+      const baseProgress = stepIndex * 20;
+      const targetGoal = stepIndex === 4 ? 95 : (stepIndex + 1) * 20;
+      const span = targetGoal - baseProgress;
+
+      let tick = 0;
+      const totalTicks = 20; // 20 * 50ms = 1000ms fixation dwell
+      setProgress(baseProgress);
+
+      progressTimerRef.current = setInterval(() => {
+        tick += 1;
+        const currentP = Math.min(targetGoal, baseProgress + Math.round((tick / totalTicks) * span));
+        setProgress(currentP);
+        if (tick >= totalTicks) {
+          if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+            progressTimerRef.current = null;
+          }
+        }
+      }, 50);
+
+      // After 1000ms fixation, capture frame blob
+      sequenceTimerRef.current = setTimeout(async () => {
         try {
           const blob = await captureFrameBlob(0.75, 320, 240);
           if (blob) {
@@ -97,29 +145,33 @@ export function useGazeCalibration(options = {}) {
           console.warn("Target sample capture error:", e);
         }
 
-        // Move to next target after brief pause
-        setTimeout(() => {
+        // Brief 400ms pause before advancing to next target
+        sequenceTimerRef.current = setTimeout(() => {
           processNextTarget(stepIndex + 1);
-        }, 500);
-      }, 900);
+        }, 400);
+      }, 1000);
     },
-    [userId, captureFrameBlob, onCalibrationComplete]
+    [userId, captureFrameBlob, onCalibrationComplete, clearTimers]
   );
 
   const startCalibration = useCallback(() => {
+    clearTimers();
     setIsCalibrating(true);
     setCurrentStep(0);
+    setProgress(0);
     collectedSamplesRef.current = [];
     processNextTarget(0);
-  }, [processNextTarget]);
+  }, [processNextTarget, clearTimers]);
 
   const resetCalibration = useCallback(() => {
+    clearTimers();
     setIsCalibrated(false);
     setCurrentStep(0);
+    setProgress(0);
     setCurrentTarget(null);
     setStatusMessage("کالیبراسیون بازنشانی شد");
     collectedSamplesRef.current = [];
-  }, []);
+  }, [clearTimers]);
 
   return {
     isCalibrating,
@@ -128,6 +180,7 @@ export function useGazeCalibration(options = {}) {
     currentTarget,
     isCalibrated,
     statusMessage,
+    progress,
     startCalibration,
     resetCalibration,
     checkCalibrationStatus,

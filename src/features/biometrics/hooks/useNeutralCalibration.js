@@ -13,16 +13,24 @@ export function useNeutralCalibration(options = {}) {
     userId = "default",
     captureFrameBlob,
     onCalibrationComplete,
+    isFaceInFrame,
   } = options;
 
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [countdownSec, setCountdownSec] = useState(3);
+  const [progress, setProgress] = useState(0);
+  const [isFaceMissing, setIsFaceMissing] = useState(false);
   const [isNeutralCalibrated, setIsNeutralCalibrated] = useState(false);
   const [statusText, setStatusText] = useState("کالیبره‌نشده");
   const [sampleCount, setSampleCount] = useState(0);
 
   const samplesBufferRef = useRef([]);
   const timerRef = useRef(null);
+  const isFaceInFrameRef = useRef(isFaceInFrame);
+
+  useEffect(() => {
+    isFaceInFrameRef.current = isFaceInFrame;
+  }, [isFaceInFrame]);
 
   // Check current neutral status
   const checkStatus = useCallback(async () => {
@@ -43,48 +51,86 @@ export function useNeutralCalibration(options = {}) {
     };
   }, []);
 
-  // Start 3-second neutral calibration
+  // Start 3-second neutral calibration based on actual in-frame presence
   const startNeutralCalibration = useCallback(async () => {
     if (isCalibrating) return;
 
+    // Prerequisite: verify face is in frame
+    const faceCheck = typeof isFaceInFrameRef.current === "function"
+      ? isFaceInFrameRef.current()
+      : isFaceInFrameRef.current;
+
+    if (faceCheck === false) {
+      setStatusText("لطفاً ابتدا صورت خود را در مرکز کادر قرار دهید");
+      return;
+    }
+
     setIsCalibrating(true);
+    setIsFaceMissing(false);
+    setProgress(0);
     setCountdownSec(3);
     setStatusText("لطفاً چهره خود را در حالت کاملاً آرام و طبیعی (خنثی) نگه دارید...");
     samplesBufferRef.current = [];
     setSampleCount(0);
 
-    let remaining = 3.0;
+    const TOTAL_MS = 3000;
+    const TICK_MS = 50;
+    let accumulatedMs = 0;
+    let lastSampleMs = 0;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
 
     timerRef.current = setInterval(async () => {
-      // Capture a low-res sample every 500ms
-      try {
-        if (captureFrameBlob) {
-          const blob = await captureFrameBlob(0.75, 320, 240);
-          if (blob) {
-            const telemData = await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
-            const au = telemData?.action_units || {};
-            // 7D Feature vector: [Valence, Arousal, AU1, AU2, AU4, AU12, AU15]
-            const feat = [
-              telemData?.continuous_valence ?? 0.0,
-              telemData?.continuous_arousal ?? 0.0,
-              au["AU01_inner_brow_raiser"] ?? 0.05,
-              au["AU02_outer_brow_raiser"] ?? 0.05,
-              au["AU04_brow_lowerer"] ?? 0.05,
-              au["AU12_lip_corner_puller"] ?? 0.05,
-              au["AU15_lip_corner_depress"] ?? 0.05,
-            ];
-            samplesBufferRef.current.push(feat);
-            setSampleCount(samplesBufferRef.current.length);
-          }
-        }
-      } catch (err) {
-        console.warn("Error sampling neutral frame:", err);
+      const isPresent = typeof isFaceInFrameRef.current === "function"
+        ? isFaceInFrameRef.current()
+        : isFaceInFrameRef.current;
+
+      if (!isPresent) {
+        setIsFaceMissing(true);
+        setStatusText("چهره از کادر خارج شد! لطفاً روبه‌روی دوربین قرار بگیرید");
+        return;
       }
 
-      remaining -= 0.5;
-      setCountdownSec(Math.max(0, Math.ceil(remaining)));
+      setIsFaceMissing(false);
+      accumulatedMs += TICK_MS;
 
-      if (remaining <= 0) {
+      const pct = Math.min(100, Math.round((accumulatedMs / TOTAL_MS) * 100));
+      setProgress(pct);
+
+      const remSec = Math.max(0, Math.ceil((TOTAL_MS - accumulatedMs) / 1000));
+      setCountdownSec(remSec);
+      // Collect telemetry sample every 500ms of valid in-frame presence
+      if (accumulatedMs - lastSampleMs >= 500) {
+        lastSampleMs = accumulatedMs;
+        try {
+          if (captureFrameBlob) {
+            const blob = await captureFrameBlob(0.75, 320, 240);
+            if (blob) {
+              const telemData = await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
+              const au = telemData?.action_units || {};
+              // 7D Feature vector: [Valence, Arousal, AU1, AU2, AU4, AU12, AU15]
+              const feat = [
+                telemData?.continuous_valence ?? 0.0,
+                telemData?.continuous_arousal ?? 0.0,
+                au["AU01_inner_brow_raiser"] ?? 0.05,
+                au["AU02_outer_brow_raiser"] ?? 0.05,
+                au["AU04_brow_lowerer"] ?? 0.05,
+                au["AU12_lip_corner_puller"] ?? 0.05,
+                au["AU15_lip_corner_depress"] ?? 0.05,
+              ];
+              samplesBufferRef.current.push(feat);
+              setSampleCount(samplesBufferRef.current.length);
+            }
+          }
+        } catch (err) {
+          console.warn("Error sampling neutral frame:", err);
+        }
+      }
+
+      // Reached full 3 seconds of verified in-frame face presence
+      if (accumulatedMs >= TOTAL_MS) {
         if (timerRef.current) {
           clearInterval(timerRef.current);
           timerRef.current = null;
@@ -100,6 +146,7 @@ export function useNeutralCalibration(options = {}) {
 
           if (res?.is_calibrated || res?.status === "success") {
             setIsNeutralCalibrated(true);
+            setProgress(100);
             setStatusText("کالیبراسیون احساسات خنثی با موفقیت ثبت شد");
             if (onCalibrationComplete) {
               onCalibrationComplete();
@@ -112,13 +159,22 @@ export function useNeutralCalibration(options = {}) {
           setStatusText("خطای ارتباط با سرور");
         } finally {
           setIsCalibrating(false);
+          setIsFaceMissing(false);
         }
       }
-    }, 500);
+    }, TICK_MS);
   }, [isCalibrating, userId, captureFrameBlob, onCalibrationComplete]);
 
   // Reset neutral calibration
   const resetNeutralCalibration = useCallback(async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsCalibrating(false);
+    setIsFaceMissing(false);
+    setProgress(0);
+    setCountdownSec(3);
     setIsNeutralCalibrated(false);
     setStatusText("کالیبره‌نشده");
     samplesBufferRef.current = [];
@@ -128,6 +184,8 @@ export function useNeutralCalibration(options = {}) {
   return {
     isCalibrating,
     countdownSec,
+    progress,
+    isFaceMissing,
     sampleCount,
     isNeutralCalibrated,
     statusText,
