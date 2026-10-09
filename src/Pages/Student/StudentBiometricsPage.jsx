@@ -34,7 +34,7 @@ const WIZARD_STEPS = [
   { id: 4, title: "۴. تایید نهایی", short: "تایید نهایی" },
 ];
 
-// Pure client-side, zero-network fast face & head detector using canvas chrominance clustering
+// Pure client-side, zero-network contrast-aware face & head detector
 function detectClientFace(video, canvas) {
   if (!video || video.readyState < 2) return null;
   const sw = 96;
@@ -48,55 +48,89 @@ function detectClientFace(video, canvas) {
   const imgData = ctx.getImageData(0, 0, sw, sh);
   const data = imgData.data;
 
-  let skinCount = 0;
-  let sumX = 0;
-  let sumY = 0;
-  let sumSqX = 0;
+  // Scan central head-framing corridor (where student's face is naturally positioned)
+  const minX = Math.floor(sw * 0.12);
+  const maxX = Math.floor(sw * 0.88);
+  const minY = Math.floor(sh * 0.10);
+  const maxY = Math.floor(sh * 0.82);
 
-  // Scan central/upper 85% where student's head is positioned
-  const minScanY = Math.floor(sh * 0.08);
-  const maxScanY = Math.floor(sh * 0.85);
+  const skinPixels = [];
+  let totalEdgeEnergy = 0;
+  let edgeSampleCount = 0;
 
-  for (let y = minScanY; y < maxScanY; y++) {
-    for (let x = 0; x < sw; x++) {
+  for (let y = minY; y < maxY; y++) {
+    for (let x = minX; x < maxX; x++) {
       const idx = (y * sw + x) * 4;
       const r = data[idx];
       const g = data[idx + 1];
       const b = data[idx + 2];
 
-      // Robust skin color condition in YCbCr & RGB space
+      // YCbCr skin chrominance representation
       const Y = 0.299 * r + 0.587 * g + 0.114 * b;
       const Cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
       const Cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
 
-      if (Y > 35 && Cb >= 75 && Cb <= 135 && Cr >= 130 && Cr <= 180 && r > g && g > b) {
-        skinCount++;
-        sumX += x;
-        sumY += y;
-        sumSqX += x * x;
+      // Realistic skin chromaticity: strict separation from flat beige / yellow wall paint
+      const isSkinHue =
+        Y > 40 &&
+        Y < 235 &&
+        Cb >= 85 &&
+        Cb <= 130 &&
+        Cr >= 135 &&
+        Cr <= 175 &&
+        r > g &&
+        g > b &&
+        r - g >= 10 &&
+        r - b >= 18;
+
+      if (isSkinHue) {
+        // Measure horizontal luminance difference to test for facial features (eyes, eyebrows, nose, mouth)
+        if (x < maxX - 1) {
+          const nextIdx = (y * sw + (x + 1)) * 4;
+          const nextY = 0.299 * data[nextIdx] + 0.587 * data[nextIdx + 1] + 0.114 * data[nextIdx + 2];
+          totalEdgeEnergy += Math.abs(Y - nextY);
+          edgeSampleCount++;
+        }
+        skinPixels.push({ x, y });
       }
     }
   }
 
-  // Require human skin presence (>2.5% of pixels)
-  const totalPixels = sw * sh;
-  if (skinCount < totalPixels * 0.025) {
+  const totalScanned = (maxX - minX) * (maxY - minY);
+  const skinRatio = skinPixels.length / totalScanned;
+
+  // Rejection 1: Absence of skin (< 4% of region)
+  if (skinRatio < 0.04) {
     return null;
   }
 
-  // 1. Centroid (Center of Mass)
-  const cx = sumX / skinCount;
-  const cy = sumY / skinCount;
+  // Rejection 2: Homogeneous background / beige wall filling frame (> 52% of entire corridor)
+  if (skinRatio > 0.52) {
+    return null;
+  }
 
-  // 2. Variance & standard deviation (immune to noise & outliers)
-  const varX = Math.max(1, (sumSqX / skinCount) - (cx * cx));
-  const stdX = Math.sqrt(varX);
+  // Rejection 3: Flat texture / Wall check (faces have facial contours with avg gradient > 3.5)
+  const avgEdge = edgeSampleCount > 0 ? totalEdgeEnergy / edgeSampleCount : 0;
+  if (avgEdge < 3.0) {
+    return null;
+  }
 
-  // 3. Stably bounded face width and height
-  const faceW = Math.max(sw * 0.28, Math.min(sw * 0.52, stdX * 2.75));
-  const faceH = faceW * 1.30; // Anthropometric head aspect ratio
+  // Centroid and trimmed cluster bounding box (15th-85th percentile to discard stray clothing/shoulders)
+  skinPixels.sort((a, b) => a.x - b.x);
+  const p15X = skinPixels[Math.floor(skinPixels.length * 0.15)].x;
+  const p85X = skinPixels[Math.floor(skinPixels.length * 0.85)].x;
 
-  // 4. Centered head box
+  skinPixels.sort((a, b) => a.y - b.y);
+  const p15Y = skinPixels[Math.floor(skinPixels.length * 0.15)].y;
+  const p85Y = skinPixels[Math.floor(skinPixels.length * 0.85)].y;
+
+  const clusterW = Math.max(sw * 0.22, p85X - p15X);
+  const cx = (p15X + p85X) / 2;
+  const cy = (p15Y + p85Y) / 2;
+
+  // Stably bounded anthropometric face box (tightly hugs the face)
+  const faceW = Math.max(sw * 0.28, Math.min(sw * 0.48, clusterW * 1.15));
+  const faceH = faceW * 1.30;
   const faceX = cx - faceW / 2;
   const faceY = cy - faceH * 0.42;
 
@@ -278,13 +312,16 @@ export function StudentBiometricsPage() {
 
         if (detectedBox && isMounted) {
           noFaceCounter = 0;
-          // Apply padding around face for comfortable framing
-          const padX = detectedBox.w * 0.16;
-          const padY = detectedBox.h * 0.20;
-          const targetX = Math.max(8, detectedBox.x - padX);
-          const targetY = Math.max(68, detectedBox.y - padY);
-          const targetW = Math.min(cw - 16, detectedBox.w + padX * 2);
-          const targetH = Math.min(ch - 140, detectedBox.h + padY * 2);
+          // Constrain box width strictly to realistic human head dimensions (38% to 58% of container width)
+          const maxFaceW = Math.round(cw * 0.58);
+          const minFaceW = Math.round(cw * 0.38);
+          const targetW = Math.max(minFaceW, Math.min(maxFaceW, detectedBox.w * 1.15));
+          const targetH = Math.round(targetW * 1.30);
+
+          const cx = detectedBox.x + detectedBox.w / 2;
+          const cy = detectedBox.y + detectedBox.h * 0.45;
+          const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
+          const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
 
           setFaceBox((prev) => {
             if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
@@ -429,58 +466,65 @@ export function StudentBiometricsPage() {
   const cw = containerRef.current?.clientWidth || 360;
   const ch = containerRef.current?.clientHeight || 640;
 
-  let bracketPositions;
-  if (isLockedOnFace && faceBox) {
-    bracketPositions = {
-      topLeft: {
-        top: `${Math.round(faceBox.y)}px`,
-        left: `${Math.round(faceBox.x)}px`,
-      },
-      topRight: {
-        top: `${Math.round(faceBox.y)}px`,
-        left: `${Math.round(faceBox.x + faceBox.width - bracketSize)}px`,
-      },
-      bottomLeft: {
-        top: `${Math.round(faceBox.y + faceBox.height - bracketSize)}px`,
-        left: `${Math.round(faceBox.x)}px`,
-      },
-      bottomRight: {
-        top: `${Math.round(faceBox.y + faceBox.height - bracketSize)}px`,
-        left: `${Math.round(faceBox.x + faceBox.width - bracketSize)}px`,
-      },
-    };
-  } else {
-    bracketPositions = {
-      topLeft: {
-        top: "76px",
-        left: "16px",
-      },
-      topRight: {
-        top: "76px",
-        left: `${Math.max(16, cw - 16 - bracketSize)}px`,
-      },
-      bottomLeft: {
-        top: `${Math.max(120, ch - 120 - bracketSize)}px`,
-        left: "16px",
-      },
-      bottomRight: {
-        top: `${Math.max(120, ch - 120 - bracketSize)}px`,
-        left: `${Math.max(16, cw - 16 - bracketSize)}px`,
-      },
-    };
-  }
+  // Natural resting face guide in the center of viewport
+  const guideW = Math.min(220, Math.round(cw * 0.56));
+  const guideH = Math.min(286, Math.round(guideW * 1.30));
+  const guideX = Math.round((cw - guideW) / 2);
+  const guideY = Math.round((ch - guideH) / 2 - 25);
 
+  const activeBox = (isLockedOnFace && faceBox) ? faceBox : {
+    x: guideX,
+    y: guideY,
+    width: guideW,
+    height: guideH,
+  };
+
+  const bracketPositions = {
+    topLeft: {
+      top: `${Math.round(activeBox.y)}px`,
+      left: `${Math.round(activeBox.x)}px`,
+    },
+    topRight: {
+      top: `${Math.round(activeBox.y)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+    },
+    bottomLeft: {
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      left: `${Math.round(activeBox.x)}px`,
+    },
+    bottomRight: {
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+    },
+  };
+
+  // Three progressive color states:
+  // 1. White: Waiting for face
+  // 2. Blue: Face locked and tracking
+  // 3. Green: Biometrics enrolled and verified
   const bracketStroke = isEnrolledSuccess
     ? "#34d399"
     : isLockedOnFace
     ? "#38bdf8"
-    : "rgba(255, 255, 255, 0.4)";
+    : "rgba(255, 255, 255, 0.92)";
 
   const bracketFilter = isEnrolledSuccess
-    ? "drop-shadow(0 0 12px rgba(52, 211, 153, 0.9))"
+    ? "drop-shadow(0 0 16px rgba(52, 211, 153, 0.95))"
     : isLockedOnFace
-    ? "drop-shadow(0 0 10px rgba(56, 189, 248, 0.85))"
-    : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.2))";
+    ? "drop-shadow(0 0 14px rgba(56, 189, 248, 0.9))"
+    : "drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))";
+
+  const reticleStroke = isEnrolledSuccess
+    ? "rgba(52, 211, 153, 0.55)"
+    : isLockedOnFace
+    ? "rgba(56, 189, 248, 0.50)"
+    : "rgba(255, 255, 255, 0.35)";
+
+  const centerTickStroke = isEnrolledSuccess
+    ? "#34d399"
+    : isLockedOnFace
+    ? "#38bdf8"
+    : "rgba(255, 255, 255, 0.65)";
 
   return (
     <main
@@ -647,44 +691,42 @@ export function StudentBiometricsPage() {
       {/* ================= 4 Face ID Corner Brackets & Synchronized Dotted Frame ================= */}
       <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
         {/* Dynamic Biometric Face Reticle Frame (Synchronized with 4 Corner Brackets) */}
-        {faceBox && isLockedOnFace && (
-          <div
-            className="absolute rounded-[22px] pointer-events-none bracket-smooth-transition"
-            style={{
-              top: `${Math.round(faceBox.y)}px`,
-              left: `${Math.round(faceBox.x)}px`,
-              width: `${Math.round(faceBox.width)}px`,
-              height: `${Math.round(faceBox.height)}px`,
-              filter: bracketFilter,
-            }}
+        <div
+          className="absolute rounded-[22px] pointer-events-none bracket-smooth-transition"
+          style={{
+            top: `${Math.round(activeBox.y)}px`,
+            left: `${Math.round(activeBox.x)}px`,
+            width: `${Math.round(activeBox.width)}px`,
+            height: `${Math.round(activeBox.height)}px`,
+            filter: bracketFilter,
+          }}
+        >
+          {/* Delicate Guide Dotted Line & Face Tracking Box */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+            viewBox={`0 0 ${Math.round(activeBox.width)} ${Math.round(activeBox.height)}`}
+            fill="none"
           >
-            {/* Delicate Guide Dotted Line & Face Tracking Box */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-              viewBox={`0 0 ${Math.round(faceBox.width)} ${Math.round(faceBox.height)}`}
-              fill="none"
-            >
-              <rect
-                x="3"
-                y="3"
-                width={Math.round(faceBox.width) - 6}
-                height={Math.round(faceBox.height) - 6}
-                rx="20"
-                stroke={isEnrolledSuccess ? "rgba(52, 211, 153, 0.45)" : "rgba(56, 189, 248, 0.35)"}
-                strokeWidth="1.5"
-                strokeDasharray="4 6"
-              />
-              {/* Optical Alignment Center Ticks */}
-              <path
-                d={`M ${Math.round(faceBox.width / 2)} 4 V 14 M ${Math.round(faceBox.width / 2)} ${Math.round(faceBox.height - 14)} V ${Math.round(faceBox.height - 4)} M 4 ${Math.round(faceBox.height / 2)} H 14 M ${Math.round(faceBox.width - 14)} ${Math.round(faceBox.height / 2)} H ${Math.round(faceBox.width - 4)}`}
-                stroke={isEnrolledSuccess ? "#34d399" : "#38bdf8"}
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="opacity-80"
-              />
-            </svg>
-          </div>
-        )}
+            <rect
+              x="3"
+              y="3"
+              width={Math.round(activeBox.width) - 6}
+              height={Math.round(activeBox.height) - 6}
+              rx="20"
+              stroke={reticleStroke}
+              strokeWidth="1.5"
+              strokeDasharray="4 6"
+            />
+            {/* Optical Alignment Center Ticks */}
+            <path
+              d={`M ${Math.round(activeBox.width / 2)} 4 V 14 M ${Math.round(activeBox.width / 2)} ${Math.round(activeBox.height - 14)} V ${Math.round(activeBox.height - 4)} M 4 ${Math.round(activeBox.height / 2)} H 14 M ${Math.round(activeBox.width - 14)} ${Math.round(activeBox.height / 2)} H ${Math.round(activeBox.width - 4)}`}
+              stroke={centerTickStroke}
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="opacity-80"
+            />
+          </svg>
+        </div>
 
         {/* Top-Left Corner Bracket */}
         <div
@@ -777,14 +819,12 @@ export function StudentBiometricsPage() {
           </div>
         )}
 
-        {/* Subtle Waiting Guide in Center when waiting for face */}
-        {(!faceBox || !isLockedOnFace) && (
-          <div className="relative flex items-center justify-center pointer-events-none">
-            <div className="relative flex items-center justify-center w-[230px] h-[280px] rounded-[24px] border border-dashed border-white/20 transition-all duration-500 scale-95 opacity-40">
-              <span className="text-[11px] text-white/50 font-vazir text-center px-4">
-                صورت خود را در این کادر قرار دهید
-              </span>
-            </div>
+        {/* Subtle Waiting Guide when waiting for face */}
+        {(!faceBox || !isLockedOnFace) && !isEnrolledSuccess && (
+          <div className="relative flex items-center justify-center pointer-events-none mt-16">
+            <span className="text-[12px] text-white/70 font-vazir bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 shadow-lg animate-pulse">
+              صورت خود را در کادر قرار دهید
+            </span>
           </div>
         )}
 
