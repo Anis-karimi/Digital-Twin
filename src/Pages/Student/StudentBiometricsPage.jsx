@@ -156,6 +156,8 @@ export function StudentBiometricsPage() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [profileStatus, setProfileStatus] = useState(null);
+  const [showReRegistrationModal, setShowReRegistrationModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [enrollStatus, setEnrollStatus] = useState({ success: false, message: "" });
   const [errorMsg, setErrorMsg] = useState("");
@@ -232,7 +234,7 @@ export function StudentBiometricsPage() {
     userId: studentId,
     captureFrameBlob,
     onCalibrationComplete: () => {
-      loadProfile();
+      loadProfile(false);
       setTimeout(() => {
         setCurrentStep(3);
       }, 1200);
@@ -261,7 +263,10 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     isFaceInFrame: () => faceStatusRef.current === "face_locked" && Boolean(faceBoxRef.current),
     onCalibrationComplete: () => {
-      loadProfile();
+      loadProfile(false);
+      setTimeout(() => {
+        setCurrentStep(4);
+      }, 1200);
     },
   });
 
@@ -305,19 +310,53 @@ export function StudentBiometricsPage() {
   };
 
   // Load profile from backend
-  const loadProfile = async () => {
+  const loadProfile = async (shouldShowRegistrationModal = false) => {
     try {
       const data = await biometricsApi.getStudentBiometricProfile(studentId);
       if (data) {
         setProfileStatus(data);
+        const isEnrolled = Boolean(data.is_enrolled || data.face_enrolled);
+        const isGazeDone = Boolean(data.is_gaze_calibrated || data.gaze_calibrated);
+        const isNeutralDone = Boolean(data.is_neutral_calibrated || data.neutral_calibrated);
+        const isAlreadyDone = Boolean(
+          data.is_fully_registered &&
+          isEnrolled &&
+          isGazeDone &&
+          isNeutralDone
+        );
+        if (isAlreadyDone && shouldShowRegistrationModal) {
+          setShowReRegistrationModal(true);
+        }
       }
     } catch (err) {
       console.warn("Failed to fetch student biometric profile:", err);
     }
   };
 
+  const handleResetBiometrics = async () => {
+    setIsResetting(true);
+    try {
+      const res = await biometricsApi.resetStudentBiometrics(studentId);
+      if (res?.status === "success") {
+        setEnrollStatus({ success: false, message: "" });
+        setProfileStatus(null);
+        setShowReRegistrationModal(false);
+        setCurrentStep(1);
+        setFaceBox(null);
+        setScanProgress(0);
+        showBottomError("اطلاعات قبلی با موفقیت بازنشانی شد. می‌توانید فرآیند ثبت را انجام دهید.", 4000);
+      } else {
+        showBottomError("خطا در بازنشانی اطلاعات بیومتریک");
+      }
+    } catch (err) {
+      showBottomError(err?.message || "امکان حذف اطلاعات وجود ندارد.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   useEffect(() => {
-    loadProfile();
+    loadProfile(true);
   }, [studentId]);
 
   // Real-time automatic face presence & tracking analyzer
@@ -809,11 +848,8 @@ export function StudentBiometricsPage() {
           </span>
         </div>
 
-        {/* Camera Live Indicator */}
-        <div className="liquid-glass-card liquid-glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] text-emerald-400 font-mono shadow-lg border-emerald-500/30">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>LIVE</span>
-        </div>
+        {/* Header Right Spacer (Keeps center title aligned) */}
+        <div className="w-10 h-10" />
       </header>
 
       {/* ================= 4 Face ID Corner Brackets ================= */}
@@ -1264,14 +1300,27 @@ export function StudentBiometricsPage() {
 
           {/* Step 4 Action Button */}
           {currentStep === 4 && (
-            <button
-              type="button"
-              onClick={() => navigate("/StudentExams")}
-              className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>تایید و ورود به آزمون‌ها</span>
-            </button>
+            <div className="flex-1 flex items-center gap-2">
+              {profileStatus?.can_edit !== false && (
+                <button
+                  type="button"
+                  onClick={() => setShowReRegistrationModal(true)}
+                  className="h-10 px-3 rounded-xl bg-white/10 hover:bg-rose-500/20 border border-white/15 hover:border-rose-400/30 text-rose-200 text-xs font-vazir font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
+                  title="حذف داده‌ها و بازثبت موارد"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">بازثبت</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate("/StudentExams")}
+                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>تایید و ورود به آزمون‌ها</span>
+              </button>
+            </div>
           )}
 
           {/* Next Step */}
@@ -1312,6 +1361,64 @@ export function StudentBiometricsPage() {
             }}
           >
             <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
+          </div>
+        </div>
+      )}
+
+      {/* ================= 6. Already Registered / Reset Confirmation Modal ================= */}
+      {showReRegistrationModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="liquid-glass-card max-w-sm w-full p-6 rounded-3xl text-center space-y-4 shadow-2xl border border-white/20 relative animate-in zoom-in-95 duration-300">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-base font-bold font-vazir text-white drop-shadow">
+                اطلاعات شما با موفقیت ثبت شده است
+              </h3>
+              <p className="text-xs font-vazir text-white/80 leading-relaxed px-1">
+                {profileStatus?.can_edit !== false ? (
+                  "اطلاعات شما با موفقیت ثبت شده است. درخواست حذف داده‌های ثبت‌شده و بازثبت موارد را دارید؟"
+                ) : (
+                  "تمامی اطلاعات بیومتریک شما در سامانه ثبت و تایید شده است. امکان ویرایش یا بازثبت اطلاعات توسط مدیر سیستم بسته شده است."
+                )}
+              </p>
+            </div>
+
+            <div className="pt-2 space-y-2.5">
+              {profileStatus?.can_edit !== false && (
+                <button
+                  type="button"
+                  onClick={handleResetBiometrics}
+                  disabled={isResetting}
+                  className="w-full h-11 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 hover:text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isResetting ? "animate-spin" : ""}`} />
+                  <span>{isResetting ? "در حال حذف و بازنشانی..." : "حذف داده‌های ثبت‌شده و بازثبت موارد"}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReRegistrationModal(false);
+                  navigate("/StudentExams");
+                }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/25 active:scale-95"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>تایید و ورود به صفحه آزمون‌ها</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowReRegistrationModal(false)}
+                className="text-[11px] text-white/50 hover:text-white/80 transition-colors cursor-pointer pt-1 inline-block"
+              >
+                مشاهده وضعیت جزئیات ثبت‌شده
+              </button>
+            </div>
           </div>
         </div>
       )}

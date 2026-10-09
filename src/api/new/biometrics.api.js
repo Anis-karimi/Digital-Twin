@@ -253,6 +253,48 @@ export async function logExamDistraction(sessionId, userId, details = {}) {
   );
 }
 
+/**
+ * 10. Reset Student Biometrics (Allow Re-Registration if can_edit is true)
+ * @param {string} userId
+ * @returns {Promise<Object>}
+ */
+export async function resetStudentBiometrics(userId) {
+  return requestWithFallback(
+    `${BASE_PREFIX}/student/${encodeURIComponent(userId)}/reset`,
+    {
+      method: "POST",
+    },
+    () => ({
+      status: "success",
+      message: "اطلاعات بیومتریک با موفقیت حذف شد.",
+      user_id: userId,
+      can_edit: true,
+    })
+  );
+}
+
+/**
+ * 11. Admin Toggle Biometric Edit Permission
+ * @param {string} userId
+ * @param {boolean} canEdit
+ * @returns {Promise<Object>}
+ */
+export async function toggleBiometricEditPermission(userId, canEdit) {
+  return requestWithFallback(
+    `${BASE_PREFIX}/student/${encodeURIComponent(userId)}/edit-permission`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ can_edit: canEdit }),
+    },
+    () => ({
+      status: "success",
+      user_id: userId,
+      can_edit: canEdit,
+    })
+  );
+}
+
 export const biometricsApi = {
   enrollStudentFace,
   verifyStudentFace,
@@ -263,6 +305,8 @@ export const biometricsApi = {
   sendBiometricTelemetry,
   getStudentBiometricProfile,
   logExamDistraction,
+  resetStudentBiometrics,
+  toggleBiometricEditPermission,
 };
 
 export default biometricsApi;
