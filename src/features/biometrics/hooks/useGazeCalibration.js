@@ -69,7 +69,7 @@ export function useGazeCalibration(options = {}) {
       if (stepIndex >= CALIBRATION_TARGETS.length) {
         // Completed all targets -> submit to API
         setStatusMessage("در حال برازش مدل رگرسیون چندجمله‌ای...");
-        setProgress(96);
+        setProgress(95);
         try {
           const res = await biometricsApi.calibrateGaze(userId, collectedSamplesRef.current);
           if (res?.is_calibrated || res?.status === "success") {
@@ -94,33 +94,12 @@ export function useGazeCalibration(options = {}) {
       setCurrentTarget(target);
       setStatusMessage(target.hint);
 
-      // Smooth progress calculation across 5 points:
-      // Point 1 (index 0): 0% -> 20%
-      // Point 2 (index 1): 20% -> 40%
-      // Point 3 (index 2): 40% -> 60%
-      // Point 4 (index 3): 60% -> 80%
-      // Point 5 (index 4): 80% -> 95%
-      const baseProgress = stepIndex * 20;
-      const targetGoal = stepIndex === 4 ? 95 : (stepIndex + 1) * 20;
-      const span = targetGoal - baseProgress;
+      // Clean discrete target percentage:
+      // Point 1: 20%, Point 2: 40%, Point 3: 60%, Point 4: 80%, Point 5: 90% (stays 90% during fixation/submission, only hits 100% upon server confirmation)
+      const currentTargetProgress = stepIndex === 4 ? 90 : (stepIndex + 1) * 20;
+      setProgress(currentTargetProgress);
 
-      let tick = 0;
-      const totalTicks = 20; // 20 * 50ms = 1000ms fixation dwell
-      setProgress(baseProgress);
-
-      progressTimerRef.current = setInterval(() => {
-        tick += 1;
-        const currentP = Math.min(targetGoal, baseProgress + Math.round((tick / totalTicks) * span));
-        setProgress(currentP);
-        if (tick >= totalTicks) {
-          if (progressTimerRef.current) {
-            clearInterval(progressTimerRef.current);
-            progressTimerRef.current = null;
-          }
-        }
-      }, 50);
-
-      // After 1000ms fixation, capture frame blob
+      // 900ms fixation dwell
       sequenceTimerRef.current = setTimeout(async () => {
         try {
           const blob = await captureFrameBlob(0.75, 320, 240);
@@ -149,7 +128,7 @@ export function useGazeCalibration(options = {}) {
         sequenceTimerRef.current = setTimeout(() => {
           processNextTarget(stepIndex + 1);
         }, 400);
-      }, 1000);
+      }, 900);
     },
     [userId, captureFrameBlob, onCalibrationComplete, clearTimers]
   );

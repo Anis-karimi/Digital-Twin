@@ -233,14 +233,18 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
     onCalibrationComplete: () => {
       loadProfile();
+      setTimeout(() => {
+        setCurrentStep(3);
+      }, 1200);
     },
   });
 
-  // Calculate dynamic progress for each step
+  // Calculate dynamic progress for each step:
+  // Step 2 gaze targets: 20%, 40%, 60%, 80%, 90% (stays 90% until server confirms, then 100%)
   const gazeProgress = isGazeCalibrated
     ? 100
     : isGazeCalibrating
-    ? (gazeHookProgress ?? 0)
+    ? (gazeHookProgress || (gazeSubStep === 5 ? 90 : Math.min(80, gazeSubStep * 20)))
     : 0;
 
   // 3. Neutral Calibration Hook (synchronized with verified face-in-frame presence)
@@ -1189,51 +1193,26 @@ export function StudentBiometricsPage() {
             )
           )}
 
-          {/* Step 2 Action Button */}
+          {/* Step 2: Auto-calibrating indicator (step button removed as requested) */}
           {currentStep === 2 && (
-            isStepDone(2) ? (
-              <div className="flex-1 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={startGazeCalibration}
-                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
-                  title="کالیبراسیون مجدد نگاه"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep(3)}
-                  className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <span>مرحله بعد: مبنای خنثی احساسات</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={isGazeCalibrating || !isCameraActive}
-                onClick={handleStartGaze}
-                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                {isGazeCalibrating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>کالیبراسیون در حال اجرا ({Math.round(gazeProgress)}%)...</span>
-                  </>
-                ) : (
-                  <>
-                    <Target className="w-4 h-4" />
-                    <span>
-                      {faceStatus === "no_face"
-                        ? "در انتظار چهره..."
-                        : "شروع کالیبراسیون نگاه"}
-                    </span>
-                  </>
-                )}
-              </button>
-            )
+            <div className="flex-1 h-10 px-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center gap-2 text-white/80 text-xs font-vazir">
+              {isGazeCalibrated ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span className="text-emerald-300 font-bold">کالیبراسیون نگاه با موفقیت انجام شد</span>
+                </>
+              ) : isGazeCalibrating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-sky-400 animate-spin" />
+                  <span className="text-sky-300">در حال کالیبراسیون نگاه ({Math.round(gazeProgress)}%)...</span>
+                </>
+              ) : (
+                <>
+                  <Target className="w-4 h-4 text-sky-400" />
+                  <span>کالیبراسیون خودکار نگاه با تشخیص چهره</span>
+                </>
+              )}
+            </div>
           )}
 
           {/* Step 3 Action Button */}

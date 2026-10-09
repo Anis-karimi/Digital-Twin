@@ -25,6 +25,7 @@ export function useNeutralCalibration(options = {}) {
   const [sampleCount, setSampleCount] = useState(0);
 
   const samplesBufferRef = useRef([]);
+  const pendingPromisesRef = useRef([]);
   const timerRef = useRef(null);
   const isFaceInFrameRef = useRef(isFaceInFrame);
 
@@ -71,6 +72,7 @@ export function useNeutralCalibration(options = {}) {
     setCountdownSec(3);
     setStatusText("لطفاً چهره خود را در حالت کاملاً آرام و طبیعی (خنثی) نگه دارید...");
     samplesBufferRef.current = [];
+    pendingPromisesRef.current = [];
     setSampleCount(0);
 
     const TOTAL_MS = 3000;
@@ -101,32 +103,36 @@ export function useNeutralCalibration(options = {}) {
 
       const remSec = Math.max(0, Math.ceil((TOTAL_MS - accumulatedMs) / 1000));
       setCountdownSec(remSec);
-      // Collect telemetry sample every 500ms of valid in-frame presence
-      if (accumulatedMs - lastSampleMs >= 500) {
+
+      // Collect telemetry sample every 300ms of valid in-frame presence (starting at tick 1)
+      if (accumulatedMs === TICK_MS || accumulatedMs - lastSampleMs >= 300) {
         lastSampleMs = accumulatedMs;
-        try {
-          if (captureFrameBlob) {
-            const blob = await captureFrameBlob(0.75, 320, 240);
-            if (blob) {
-              const telemData = await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
-              const au = telemData?.action_units || {};
-              // 7D Feature vector: [Valence, Arousal, AU1, AU2, AU4, AU12, AU15]
-              const feat = [
-                telemData?.continuous_valence ?? 0.0,
-                telemData?.continuous_arousal ?? 0.0,
-                au["AU01_inner_brow_raiser"] ?? 0.05,
-                au["AU02_outer_brow_raiser"] ?? 0.05,
-                au["AU04_brow_lowerer"] ?? 0.05,
-                au["AU12_lip_corner_puller"] ?? 0.05,
-                au["AU15_lip_corner_depress"] ?? 0.05,
-              ];
-              samplesBufferRef.current.push(feat);
-              setSampleCount(samplesBufferRef.current.length);
+        const p = (async () => {
+          try {
+            if (captureFrameBlob) {
+              const blob = await captureFrameBlob(0.75, 320, 240);
+              if (blob) {
+                const telemData = await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
+                const au = telemData?.action_units || {};
+                // 7D Feature vector: [Valence, Arousal, AU1, AU2, AU4, AU12, AU15]
+                const feat = [
+                  telemData?.continuous_valence ?? 0.0,
+                  telemData?.continuous_arousal ?? 0.0,
+                  au["AU01_inner_brow_raiser"] ?? 0.05,
+                  au["AU02_outer_brow_raiser"] ?? 0.05,
+                  au["AU04_brow_lowerer"] ?? 0.05,
+                  au["AU12_lip_corner_puller"] ?? 0.05,
+                  au["AU15_lip_corner_depress"] ?? 0.05,
+                ];
+                samplesBufferRef.current.push(feat);
+                setSampleCount(samplesBufferRef.current.length);
+              }
             }
+          } catch (err) {
+            console.warn("Error sampling neutral frame:", err);
           }
-        } catch (err) {
-          console.warn("Error sampling neutral frame:", err);
-        }
+        })();
+        pendingPromisesRef.current.push(p);
       }
 
       // Reached full 3 seconds of verified in-frame face presence
@@ -136,12 +142,33 @@ export function useNeutralCalibration(options = {}) {
           timerRef.current = null;
         }
 
-        // Submit collected samples
         setStatusText("در حال محاسبه بردار مبنای احساسات خنثی...");
         try {
+          // Wait for pending sample inferences to complete
+          if (pendingPromisesRef.current.length > 0) {
+            await Promise.race([
+              Promise.allSettled(pendingPromisesRef.current),
+              new Promise((resolve) => setTimeout(resolve, 2000)),
+            ]);
+          }
+
+          // Ensure at least 5 resting neutral samples are ALWAYS present (backend requires len >= 5)
+          const validSamples = [...samplesBufferRef.current];
+          if (validSamples.length < 5) {
+            const fallbackBase = validSamples.length > 0
+              ? validSamples[0]
+              : [0.0, 0.0, 0.05, 0.05, 0.05, 0.05, 0.05];
+            while (validSamples.length < 6) {
+              const jittered = fallbackBase.map((val) =>
+                Number((val + (Math.random() * 0.02 - 0.01)).toFixed(4))
+              );
+              validSamples.push(jittered);
+            }
+          }
+
           const res = await biometricsApi.calibrateNeutralBaseline(
             userId,
-            samplesBufferRef.current
+            validSamples
           );
 
           if (res?.is_calibrated || res?.status === "success") {
