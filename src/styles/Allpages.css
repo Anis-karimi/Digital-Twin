@@ -708,52 +708,64 @@ div[data-voice-beam].chat-bubble-student {
   position: relative;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0.03) 50%,
-    rgba(255, 255, 255, 0.07) 100%
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(10, 15, 25, 0.45) 100%
   );
-  backdrop-filter: blur(28px) saturate(210%) brightness(112%);
-  -webkit-backdrop-filter: blur(28px) saturate(210%) brightness(112%);
+  backdrop-filter: blur(36px) saturate(220%) brightness(115%);
+  -webkit-backdrop-filter: blur(36px) saturate(220%) brightness(115%);
   border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: 
-    0 20px 45px -10px rgba(0, 0, 0, 0.65),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.35);
+    0 24px 50px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* Polished Specular Top Highlight for Liquid Glass Elements */
 .liquid-glass-pill {
   position: relative;
   overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .liquid-glass-pill::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 15%;
-  right: 15%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  left: 10%;
+  right: 10%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
   border-radius: 9999px;
   pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes liquid-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: liquid-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 /* Notification Variant: Warning (Face not centered) */
 .liquid-glass-warning {
   background: linear-gradient(
     135deg,
-    rgba(245, 158, 11, 0.24) 0%,
-    rgba(180, 83, 9, 0.12) 45%,
-    rgba(15, 12, 10, 0.65) 100%
+    rgba(245, 158, 11, 0.28) 0%,
+    rgba(180, 83, 9, 0.16) 45%,
+    rgba(24, 15, 8, 0.75) 100%
   );
-  backdrop-filter: blur(28px) saturate(220%) brightness(110%);
-  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(110%);
-  border: 1px solid rgba(251, 191, 36, 0.55);
+  backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  -webkit-backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  border: 1px solid rgba(251, 191, 36, 0.65);
   box-shadow:
-    0 18px 40px -8px rgba(0, 0, 0, 0.75),
-    0 0 24px 2px rgba(245, 158, 11, 0.28),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    0 20px 45px -8px rgba(0, 0, 0, 0.8),
+    0 0 28px 2px rgba(245, 158, 11, 0.36),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -761,17 +773,17 @@ div[data-voice-beam].chat-bubble-student {
 .liquid-glass-info {
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.22) 0%,
-    rgba(30, 58, 138, 0.12) 45%,
-    rgba(10, 15, 30, 0.65) 100%
+    rgba(56, 189, 248, 0.28) 0%,
+    rgba(14, 116, 144, 0.16) 45%,
+    rgba(8, 20, 36, 0.75) 100%
   );
-  backdrop-filter: blur(28px) saturate(220%) brightness(112%);
-  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%);
-  border: 1px solid rgba(56, 189, 248, 0.5);
+  backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  -webkit-backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  border: 1px solid rgba(56, 189, 248, 0.6);
   box-shadow:
-    0 18px 40px -8px rgba(0, 0, 0, 0.75),
-    0 0 26px 2px rgba(56, 189, 248, 0.32),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    0 20px 45px -8px rgba(0, 0, 0, 0.8),
+    0 0 28px 2px rgba(56, 189, 248, 0.36),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -779,17 +791,17 @@ div[data-voice-beam].chat-bubble-student {
 .liquid-glass-success {
   background: linear-gradient(
     135deg,
-    rgba(16, 185, 129, 0.26) 0%,
-    rgba(6, 78, 59, 0.12) 45%,
-    rgba(6, 25, 18, 0.65) 100%
+    rgba(16, 185, 129, 0.30) 0%,
+    rgba(5, 150, 105, 0.16) 45%,
+    rgba(6, 26, 16, 0.75) 100%
   );
-  backdrop-filter: blur(28px) saturate(220%) brightness(112%);
-  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(112%);
-  border: 1px solid rgba(52, 211, 153, 0.6);
+  backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  -webkit-backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  border: 1px solid rgba(52, 211, 153, 0.7);
   box-shadow:
-    0 18px 40px -8px rgba(0, 0, 0, 0.75),
-    0 0 30px 2px rgba(16, 185, 129, 0.38),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.8),
+    0 20px 45px -8px rgba(0, 0, 0, 0.8),
+    0 0 32px 2px rgba(16, 185, 129, 0.42),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -797,17 +809,17 @@ div[data-voice-beam].chat-bubble-student {
 .liquid-glass-danger {
   background: linear-gradient(
     135deg,
-    rgba(244, 63, 94, 0.28) 0%,
-    rgba(159, 18, 57, 0.12) 45%,
-    rgba(25, 5, 10, 0.7) 100%
+    rgba(244, 63, 94, 0.35) 0%,
+    rgba(225, 29, 72, 0.18) 45%,
+    rgba(25, 5, 12, 0.78) 100%
   );
-  backdrop-filter: blur(28px) saturate(220%) brightness(110%);
-  -webkit-backdrop-filter: blur(28px) saturate(220%) brightness(110%);
-  border: 1px solid rgba(251, 113, 133, 0.55);
+  backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  -webkit-backdrop-filter: blur(32px) saturate(230%) brightness(112%);
+  border: 1px solid rgba(251, 113, 133, 0.7);
   box-shadow:
-    0 18px 40px -8px rgba(0, 0, 0, 0.75),
-    0 0 26px 2px rgba(244, 63, 94, 0.3),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
+    0 20px 45px -8px rgba(0, 0, 0, 0.8),
+    0 0 30px 2px rgba(244, 63, 94, 0.42),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.4);
 }
 
