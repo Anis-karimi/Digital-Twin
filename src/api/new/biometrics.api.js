@@ -118,16 +118,20 @@ export async function getGazeCalibrationStatus(userId) {
  * @param {Array<Array<number>>} samples
  * @returns {Promise<Object>}
  */
-export async function calibrateNeutralBaseline(userId, samples) {
+export async function calibrateNeutralBaseline(userId, samples = null) {
+  const payload = {
+    user_id: String(userId).trim(),
+  };
+  if (Array.isArray(samples) && samples.length > 0) {
+    payload.samples = samples;
+  }
+
   return requestWithFallback(
     `${BASE_PREFIX}/telemetry/calibrate_neutral`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: String(userId).trim(),
-        samples,
-      }),
+      body: JSON.stringify(payload),
     },
     () => ({
       status: "success",

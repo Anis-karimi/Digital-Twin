@@ -24,7 +24,6 @@ export function useNeutralCalibration(options = {}) {
   const [statusText, setStatusText] = useState("کالیبره‌نشده");
   const [sampleCount, setSampleCount] = useState(0);
 
-  const samplesBufferRef = useRef([]);
   const pendingPromisesRef = useRef([]);
   const timerRef = useRef(null);
   const isFaceInFrameRef = useRef(isFaceInFrame);
@@ -71,7 +70,6 @@ export function useNeutralCalibration(options = {}) {
     setProgress(0);
     setCountdownSec(3);
     setStatusText("لطفاً چهره خود را در حالت کاملاً آرام و طبیعی (خنثی) نگه دارید...");
-    samplesBufferRef.current = [];
     pendingPromisesRef.current = [];
     setSampleCount(0);
 
@@ -104,7 +102,7 @@ export function useNeutralCalibration(options = {}) {
       const remSec = Math.max(0, Math.ceil((TOTAL_MS - accumulatedMs) / 1000));
       setCountdownSec(remSec);
 
-      // Collect telemetry sample every 300ms of valid in-frame presence (starting at tick 1)
+      // Send telemetry sample every 300ms of valid in-frame presence (starting at tick 1)
       if (accumulatedMs === TICK_MS || accumulatedMs - lastSampleMs >= 300) {
         lastSampleMs = accumulatedMs;
         const p = (async () => {
@@ -112,24 +110,13 @@ export function useNeutralCalibration(options = {}) {
             if (captureFrameBlob) {
               const blob = await captureFrameBlob(0.75, 320, 240);
               if (blob) {
-                const telemData = await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
-                const au = telemData?.action_units || {};
-                // 7D Feature vector: [Valence, Arousal, AU1, AU2, AU4, AU12, AU15]
-                const feat = [
-                  telemData?.continuous_valence ?? 0.0,
-                  telemData?.continuous_arousal ?? 0.0,
-                  au["AU01_inner_brow_raiser"] ?? 0.05,
-                  au["AU02_outer_brow_raiser"] ?? 0.05,
-                  au["AU04_brow_lowerer"] ?? 0.05,
-                  au["AU12_lip_corner_puller"] ?? 0.05,
-                  au["AU15_lip_corner_depress"] ?? 0.05,
-                ];
-                samplesBufferRef.current.push(feat);
-                setSampleCount(samplesBufferRef.current.length);
+                // Server extracts 7D features and buffers directly in Redis session with TTL
+                await biometricsApi.sendBiometricTelemetry(userId, blob, "skip");
+                setSampleCount((prev) => prev + 1);
               }
             }
           } catch (err) {
-            console.warn("Error sampling neutral frame:", err);
+            console.warn("Error streaming neutral frame:", err);
           }
         })();
         pendingPromisesRef.current.push(p);
@@ -142,7 +129,7 @@ export function useNeutralCalibration(options = {}) {
           timerRef.current = null;
         }
 
-        setStatusText("در حال محاسبه بردار مبنای احساسات خنثی...");
+        setStatusText("در حال محاسبه و ثبت بردار مبنا در دیتابیس...");
         try {
           // Wait for pending sample inferences to complete
           if (pendingPromisesRef.current.length > 0) {
@@ -152,29 +139,13 @@ export function useNeutralCalibration(options = {}) {
             ]);
           }
 
-          // Ensure at least 5 resting neutral samples are ALWAYS present (backend requires len >= 5)
-          const validSamples = [...samplesBufferRef.current];
-          if (validSamples.length < 5) {
-            const fallbackBase = validSamples.length > 0
-              ? validSamples[0]
-              : [0.0, 0.0, 0.05, 0.05, 0.05, 0.05, 0.05];
-            while (validSamples.length < 6) {
-              const jittered = fallbackBase.map((val) =>
-                Number((val + (Math.random() * 0.02 - 0.01)).toFixed(4))
-              );
-              validSamples.push(jittered);
-            }
-          }
-
-          const res = await biometricsApi.calibrateNeutralBaseline(
-            userId,
-            validSamples
-          );
+          // Trigger server-side calibration from Redis session buffer directly into PostgreSQL
+          const res = await biometricsApi.calibrateNeutralBaseline(userId);
 
           if (res?.is_calibrated || res?.status === "success") {
             setIsNeutralCalibrated(true);
             setProgress(100);
-            setStatusText("کالیبراسیون احساسات خنثی با موفقیت ثبت شد");
+            setStatusText("کالیبراسیون احساسات خنثی با موفقیت در دیتابیس ثبت شد");
             if (onCalibrationComplete) {
               onCalibrationComplete();
             }
@@ -204,7 +175,6 @@ export function useNeutralCalibration(options = {}) {
     setCountdownSec(3);
     setIsNeutralCalibrated(false);
     setStatusText("کالیبره‌نشده");
-    samplesBufferRef.current = [];
     setSampleCount(0);
   }, []);
 
