@@ -1214,8 +1214,8 @@ export const CreateExamAccordion = ({
                         ? "اهداف آزمون با موفقیت تنظیم شد"
                         : "Goals extracted successfully from file"
                       : isRTL
-                        ? "تولید هوشمند اهداف از فایل مرجع با هوش مصنوعی"
-                        : "Auto-generate goals from reference file via AI"}
+                        ? "تولید هوشمند اهداف با هوش مصنوعی"
+                        : "Auto-generate goals via AI"}
                 </span>
                 {rawFiles.length > 0 && !isGeneratingGoals && (
                   <span className="text-[10px] font-normal text-neutral-400 dark:text-neutral-500 max-w-xs truncate">

@@ -21,6 +21,7 @@ export async function getContextDocuments() {
   }
 }
 
+
 /**
  * Uploads a course context document (e.g. PDF, syllabus).
  * Encapsulates FormData creation.
@@ -72,8 +73,9 @@ export async function deleteDocuments(documentNames) {
  * @returns {string} Direct URL
  */
 export function getDocumentDownloadUrl(fileName) {
-  return `${API_CONFIG.BACKEND_URL}/tmp/${encodeURIComponent(fileName)}`;
+  return `${API_CONFIG.DGTW_URL}/tmp/${encodeURIComponent(fileName)}`;
 }
+
 
 export const contextsApi = {
   getDocuments: getContextDocuments,
