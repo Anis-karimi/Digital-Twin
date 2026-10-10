@@ -626,19 +626,23 @@ export const ChatArea = () => {
 
         setIsTyping(message.trim().length > 0);
 
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            try {
+                ws.current.send(JSON.stringify({ type: "stop" }));
+            } catch (err) {
+                console.warn("[WS] Error sending stop:", err);
+            }
+            ws.current.close();
+        }
+        ws.current = null;
+
         processor.current?.disconnect();
+        processor.current = null;
         audioCtx.current?.close();
         audioCtx.current = null;
-        processor.current = null;
-        ws.current = null;
 
         streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
-
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({ type: "stop" }));
-            ws.current.close();
-        }
     };
 
     const handleFeedback = async (messageId, feedback) => {

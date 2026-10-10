@@ -103,6 +103,9 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
   console.log(`[STT WebSocket] Connecting (${isEn ? "English :8882" : "Persian :8881"}) to:`, wsUrl);
   const ws = new WebSocket(wsUrl);
 
+  // Accumulates finalized sentences across speaker pauses
+  let committedTranscript = "";
+
   ws.onopen = (event) => {
     console.log(`[STT WebSocket] Connected (${isEn ? "en" : "fa"}) to:`, wsUrl);
     if (onOpen) onOpen(event);
@@ -111,10 +114,68 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      const text = data.text || data.result || data.transcript || "";
-      console.log(data)
-      if (onTranscript && text) {
-        onTranscript(text.trim(), data);
+      console.log("[STT WebSocket] frame:", data);
+
+      // 1. Extract finalized text (Vosk: data.text, Whisper: data.text / transcript, custom: result)
+      let finalText = "";
+      if (typeof data.text === "string") {
+        finalText = data.text;
+      } else if (typeof data.transcript === "string") {
+        finalText = data.transcript;
+      } else if (typeof data.result === "string") {
+        finalText = data.result;
+      } else if (Array.isArray(data.result)) {
+        // Vosk array of word objects
+        finalText = data.result
+          .map((w) => (typeof w === "object" ? w?.word : w))
+          .filter(Boolean)
+          .join(" ");
+      }
+
+      // 2. Extract partial/interim text (Vosk: data.partial)
+      let partialText = "";
+      if (typeof data.partial === "string") {
+        partialText = data.partial;
+      }
+
+      finalText = finalText.trim();
+      partialText = partialText.trim();
+
+      // Case A: A completed utterance/phrase frame has arrived (after silence/pause)
+      if (finalText) {
+        if (!committedTranscript) {
+          committedTranscript = finalText;
+        } else if (finalText.startsWith(committedTranscript)) {
+          // If server sends cumulative text, adopt directly
+          committedTranscript = finalText;
+        } else {
+          // Server sends chunk per pause (standard Vosk/Kaldi behavior)
+          committedTranscript = `${committedTranscript} ${finalText}`;
+        }
+
+        if (onTranscript) {
+          onTranscript(committedTranscript, {
+            ...data,
+            isFinal: true,
+            chunk: finalText,
+            accumulated: committedTranscript,
+          });
+        }
+      }
+      // Case B: Partial interim words while the speaker is actively talking
+      else if (partialText) {
+        const currentFull = committedTranscript
+          ? `${committedTranscript} ${partialText}`
+          : partialText;
+
+        if (onTranscript) {
+          onTranscript(currentFull, {
+            ...data,
+            isFinal: false,
+            chunk: partialText,
+            accumulated: currentFull,
+          });
+        }
       }
     } catch (err) {
       console.warn("[STT WebSocket] Received non-JSON frame:", event.data);
