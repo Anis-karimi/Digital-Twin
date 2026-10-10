@@ -24,7 +24,7 @@ import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
 import { biometricsApi } from "@/api/new/biometrics.api";
 import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
-import { toPersianDigits } from "@/utils/dateUtils";
+import { toPersianDigits, jalaliToGregorian } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
   const navigate = useNavigate();
@@ -78,42 +78,131 @@ export const StudentExams = () => {
     ].join(":");
   };
 
+  const getExamDateTimes = (exam) => {
+    // 1. Try ISO timestamps first if available
+    let overallStart = exam.startAt ? new Date(exam.startAt) : null;
+    let overallEnd = exam.endAt ? new Date(exam.endAt) : null;
+
+    if (overallStart && isNaN(overallStart.getTime())) overallStart = null;
+    if (overallEnd && isNaN(overallEnd.getTime())) overallEnd = null;
+
+    // 2. Resolve base calendar date (year, month 0-indexed, day)
+    let baseYear = null;
+    let baseMonth = null; // 0-indexed
+    let baseDay = null;
+
+    if (overallStart) {
+      baseYear = overallStart.getFullYear();
+      baseMonth = overallStart.getMonth();
+      baseDay = overallStart.getDate();
+    } else if (exam.date) {
+      const asciiDate = String(exam.date)
+        .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+        .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+      const parts = asciiDate.split(/[\/\-]/).map(Number);
+      if (parts.length === 3 && parts.every((p) => !isNaN(p))) {
+        if (parts[0] > 1900) {
+          // Gregorian (e.g. 2026/10/03)
+          baseYear = parts[0];
+          baseMonth = parts[1] - 1;
+          baseDay = parts[2];
+        } else if (parts[0] > 1300 && parts[0] < 1600) {
+          // Jalali (e.g. 1405/07/11)
+          const { gy, gm, gd } = jalaliToGregorian(parts[0], parts[1], parts[2]);
+          baseYear = gy;
+          baseMonth = gm - 1;
+          baseDay = gd;
+        }
+      }
+    }
+
+    if (baseYear === null) {
+      const today = new Date();
+      baseYear = today.getFullYear();
+      baseMonth = today.getMonth();
+      baseDay = today.getDate();
+    }
+
+    const parseTime = (timeStr) => {
+      if (!timeStr || !String(timeStr).includes(":")) return null;
+      const [h, m] = String(timeStr).split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      return new Date(baseYear, baseMonth, baseDay, h, m, 0, 0);
+    };
+
+    let slotStart = parseTime(exam.studentSlotStart);
+    let slotEnd = parseTime(exam.studentSlotEnd);
+    let windowStart = parseTime(exam.windowStart) || overallStart;
+    let windowEnd = parseTime(exam.windowEnd) || overallEnd;
+
+    if (slotStart && slotEnd && slotEnd < slotStart) {
+      slotEnd.setDate(slotEnd.getDate() + 1);
+    }
+    if (windowStart && windowEnd && windowEnd < windowStart) {
+      windowEnd.setDate(windowEnd.getDate() + 1);
+    }
+
+    if (!overallStart) {
+      overallStart = windowStart || slotStart || new Date(baseYear, baseMonth, baseDay, 0, 0, 0, 0);
+    }
+    if (!overallEnd) {
+      overallEnd = windowEnd || slotEnd || new Date(baseYear, baseMonth, baseDay, 23, 59, 59, 999);
+    }
+
+    return {
+      slotStart: slotStart || overallStart,
+      slotEnd: slotEnd || overallEnd,
+      windowStart: windowStart || overallStart,
+      windowEnd: windowEnd || overallEnd,
+    };
+  };
+
   const checkSlotTiming = (exam) => {
     if (exam.status === "completed") {
       return { status: "completed", canEnter: true };
+    }
+
+    if (exam.status === "expired" || exam.status === "passed") {
+      return {
+        status: "passed",
+        canEnter: false,
+        slotStart: exam.studentSlotStart,
+        slotEnd: exam.studentSlotEnd,
+        message: "زمان برگزاری این آزمون به پایان رسیده است.",
+      };
     }
 
     if (exam.status === "started" || exam.status === "active") {
       return { status: "active", canEnter: true };
     }
 
-    if (!exam.studentSlotStart || !exam.studentSlotEnd) {
-      return { status: "ready", canEnter: true };
+    const currentTime = now;
+    const { slotStart, slotEnd, windowEnd } = getExamDateTimes(exam);
+
+    // If the overall exam window has already ended in calendar time
+    if (currentTime.getTime() > windowEnd.getTime()) {
+      return {
+        status: "passed",
+        canEnter: false,
+        slotStart: exam.studentSlotStart,
+        slotEnd: exam.studentSlotEnd,
+        message: "زمان برگزاری این آزمون به پایان رسیده است.",
+      };
     }
 
-    const currentTime = now;
-
-    const currentMinutes =
-      currentTime.getHours() * 60 + currentTime.getMinutes();
-
-    const [sh, sm] = String(exam.studentSlotStart).split(":").map(Number);
-    const [eh, em] = String(exam.studentSlotEnd).split(":").map(Number);
-
-    const slotStart = new Date(currentTime);
-    slotStart.setHours(sh, sm, 0, 0);
-
-    const slotEnd = new Date(currentTime);
-    slotEnd.setHours(eh, em, 0, 0);
-
+    // If student slot is upcoming (has not started yet)
     const remainingUntilStart = slotStart.getTime() - currentTime.getTime();
-
     if (remainingUntilStart > 0) {
       const waitMins = Math.ceil(remainingUntilStart / 60000);
-
-      const waitStr =
-        waitMins >= 60
-          ? `${Math.floor(waitMins / 60)} ساعت و ${waitMins % 60} دقیقه دیگر`
-          : `${waitMins} دقیقه دیگر`;
+      let waitStr = "";
+      if (waitMins >= 1440) {
+        const days = Math.floor(waitMins / 1440);
+        waitStr = `${days} روز دیگر`;
+      } else if (waitMins >= 60) {
+        waitStr = `${Math.floor(waitMins / 60)} ساعت و ${waitMins % 60} دقیقه دیگر`;
+      } else {
+        waitStr = `${waitMins} دقیقه دیگر`;
+      }
 
       return {
         status: "upcoming",
@@ -126,15 +215,9 @@ export const StudentExams = () => {
       };
     }
 
-    let windowEndMinutes = 14 * 60;
-
-    if (exam.windowEnd && String(exam.windowEnd).includes(":")) {
-      const [wh, wm] = String(exam.windowEnd).split(":").map(Number);
-      windowEndMinutes = wh * 60 + wm;
-    }
-
-    if (currentTime > slotEnd) {
-      if (currentMinutes <= windowEndMinutes) {
+    // Slot start has arrived. Check if within slot or within overall window
+    if (currentTime.getTime() > slotEnd.getTime()) {
+      if (currentTime.getTime() <= windowEnd.getTime()) {
         return {
           status: "current",
           canEnter: true,
@@ -149,10 +232,11 @@ export const StudentExams = () => {
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
-        message: `زمان برگزاری این آزمون به پایان رسیده است.`,
+        message: "زمان برگزاری این آزمون به پایان رسیده است.",
       };
     }
 
+    // Inside slot
     return {
       status: "current",
       canEnter: true,
@@ -333,6 +417,10 @@ export const StudentExams = () => {
       return "active";
     }
 
+    if (exam.status === "expired" || exam.status === "passed") {
+      return "passed";
+    }
+
     return "assigned";
   };
 
@@ -341,7 +429,7 @@ export const StudentExams = () => {
     let past = 0;
     for (const ex of exams) {
       const timing = checkSlotTiming(ex);
-      if (ex.status === "completed" || timing.status === "passed") {
+      if (ex.status === "completed" || ex.status === "expired" || ex.status === "passed" || timing.status === "passed") {
         past++;
       } else {
         active++;
@@ -364,7 +452,11 @@ export const StudentExams = () => {
         timing.status === "current"
       ) {
         timingCategory = "active";
-      } else if (timing.status === "passed") {
+      } else if (
+        exam.status === "expired" ||
+        exam.status === "passed" ||
+        timing.status === "passed"
+      ) {
         timingCategory = "ended";
       } else {
         timingCategory = "upcoming";
@@ -393,13 +485,8 @@ export const StudentExams = () => {
         return (a.title || "").localeCompare(b.title || "", "fa");
       }
 
-      const dateA = a.startAt
-        ? new Date(a.startAt).getTime()
-        : new Date(a.date || "").getTime();
-
-      const dateB = b.startAt
-        ? new Date(b.startAt).getTime()
-        : new Date(b.date || "").getTime();
+      const dateA = getExamDateTimes(a).windowStart.getTime();
+      const dateB = getExamDateTimes(b).windowStart.getTime();
 
       if (sortOrder === "date_asc") {
         return dateA - dateB;
@@ -418,6 +505,12 @@ export const StudentExams = () => {
       navigate(`/StudentExamResult/${targetId}`, {
         state: { exam },
       });
+      return;
+    }
+
+    const timing = checkSlotTiming(exam);
+    if (timing.status === "passed" || exam.status === "expired" || exam.status === "passed") {
+      setTurnWarning("زمان برگزاری این آزمون به پایان رسیده است.");
       return;
     }
 
@@ -1201,11 +1294,13 @@ export const StudentExams = () => {
                               dir="ltr"
                               className={`${isRTL ? "font-vazir" : "font-inter"} font-bold tabular-nums`}
                             >
-                              {isRTL
-                                ? toPersianDigits(
-                                    formatCountdown(timing.remainingUntilStart),
-                                  )
-                                : formatCountdown(timing.remainingUntilStart)}
+                              {timing.remainingUntilStart >= 86400000
+                                ? timing.waitStr
+                                : isRTL
+                                  ? toPersianDigits(
+                                      formatCountdown(timing.remainingUntilStart),
+                                    )
+                                  : formatCountdown(timing.remainingUntilStart)}
                             </span>
                           </>
                         ) : isReadyToStart ? (
@@ -1220,8 +1315,8 @@ export const StudentExams = () => {
 
                             <span>
                               {isRTL
-                                ? "زمان نوبت شما به پایان رسیده"
-                                : "Slot Expired"}
+                                ? "زمان برگزاری به پایان رسیده"
+                                : "Exam Ended"}
                             </span>
                           </>
                         ) : (
