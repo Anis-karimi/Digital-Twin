@@ -112,6 +112,7 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
     try {
       const data = JSON.parse(event.data);
       const text = data.text || data.result || data.transcript || "";
+      console.log(data)
       if (onTranscript && text) {
         onTranscript(text.trim(), data);
       }
