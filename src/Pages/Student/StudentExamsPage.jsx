@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
@@ -28,9 +28,11 @@ import { toPersianDigits } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isRTL, t, currentUser } = useContext(AppContext);
 
   const studentId = String(
+    currentUser?.user_id ||
     currentUser?.id ||
     currentUser?.student_id ||
     currentUser?.username ||
@@ -39,6 +41,13 @@ export const StudentExams = () => {
 
   const [biometricsStatus, setBiometricsStatus] = useState(null);
   const [biometricsLoading, setBiometricsLoading] = useState(true);
+
+  const isBiometricsRegistered = Boolean(
+    biometricsStatus?.is_enrolled ||
+    biometricsStatus?.face_enrolled ||
+    biometricsStatus?.is_fully_registered ||
+    biometricsStatus?.ready_for_exam
+  );
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -298,6 +307,7 @@ export const StudentExams = () => {
 
   useEffect(() => {
     let isMounted = true;
+    setBiometricsLoading(true);
     biometricsApi
       .getStudentBiometricProfile(studentId)
       .then((res) => {
@@ -314,7 +324,7 @@ export const StudentExams = () => {
     return () => {
       isMounted = false;
     };
-  }, [studentId]);
+  }, [studentId, location.key]);
 
   const getExamStatus = (exam) => {
     if (exam.status === "completed") return "completed";
@@ -412,14 +422,7 @@ export const StudentExams = () => {
     }
 
     // Check biometric identity registration before letting student enter
-    const isBioReady = Boolean(
-      biometricsStatus?.is_fully_registered &&
-      (biometricsStatus?.is_enrolled || biometricsStatus?.face_enrolled) &&
-      (biometricsStatus?.is_gaze_calibrated || biometricsStatus?.gaze_calibrated) &&
-      (biometricsStatus?.is_neutral_calibrated || biometricsStatus?.neutral_calibrated)
-    );
-
-    if (!isBioReady) {
+    if (!isBiometricsRegistered) {
       navigate("/StudentSettings/Biometrics", {
         state: {
           returnTo: `/StudentExam/${targetId}`,
@@ -492,8 +495,8 @@ export const StudentExams = () => {
       {/* Content */}
       <section className="w-full flex-1 min-h-0 flex flex-col">
         <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[105px]">
-          {/* Biometric Identity Requirement Banner */}
-          {!biometricsLoading && (!biometricsStatus || !biometricsStatus.is_fully_registered) && (
+          {/* Biometric Identity Requirement Banner - only shown when not registered */}
+          {!biometricsLoading && !isBiometricsRegistered && (
             <div className="mt-2 mb-2 w-full p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 flex items-start gap-3 transition-all">
               <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
                 <ScanFace className="w-4 h-4" />
