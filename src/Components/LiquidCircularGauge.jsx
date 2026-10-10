@@ -4,11 +4,11 @@ import { toPersianDigits } from "@/utils/dateUtils";
 /**
  * LiquidCircularGauge
  * 
- * Circular Progress Ring Line Gauge in Liquid Glass style:
- * - Glowing circular stroke/line that smoothly sweeps around the circle
- * - Translucent Liquid Glass backdrop disc with specular rim
- * - Animated progress line with rounded caps and neon fluid glow
- * - Dynamic Stress Reaction (turns radiant red when elevated)
+ * Luxury Apple visionOS Liquid Glass Circular Gauge:
+ * - Pure crystal-clear glassmorphism disc (zero dark box background)
+ * - Radiant neon fluid stroke with dynamic progress sweeping
+ * - Specular rim highlights and internal glass reflections
+ * - Reactive stress state shifting dynamically to ruby red on elevation
  * 
  * @param {Object} props
  * @param {number} props.percentage Value between 0 and 100
@@ -39,8 +39,8 @@ export const LiquidCircularGauge = ({
           primary: "#ef4444",
           secondary: "#dc2626",
           light: "#f87171",
-          glow: "rgba(239, 68, 68, 0.8)",
-          track: "rgba(239, 68, 68, 0.2)",
+          glow: "rgba(239, 68, 68, 0.85)",
+          track: "rgba(239, 68, 68, 0.22)",
           pulse: true,
         };
       }
@@ -50,8 +50,8 @@ export const LiquidCircularGauge = ({
           primary: "#f59e0b",
           secondary: "#d97706",
           light: "#fbbf24",
-          glow: "rgba(245, 158, 11, 0.65)",
-          track: "rgba(245, 158, 11, 0.18)",
+          glow: "rgba(245, 158, 11, 0.7)",
+          track: "rgba(245, 158, 11, 0.2)",
           pulse: false,
         };
       }
@@ -60,8 +60,8 @@ export const LiquidCircularGauge = ({
         primary: "#10b981",
         secondary: "#059669",
         light: "#34d399",
-        glow: "rgba(16, 185, 129, 0.55)",
-        track: "rgba(16, 185, 129, 0.18)",
+        glow: "rgba(16, 185, 129, 0.65)",
+        track: "rgba(16, 185, 129, 0.2)",
         pulse: false,
       };
     }
@@ -72,8 +72,8 @@ export const LiquidCircularGauge = ({
         primary: "#a855f7",
         secondary: "#7c3aed",
         light: "#c084fc",
-        glow: "rgba(168, 85, 247, 0.65)",
-        track: "rgba(168, 85, 247, 0.18)",
+        glow: "rgba(168, 85, 247, 0.75)",
+        track: "rgba(168, 85, 247, 0.2)",
         pulse: false,
       };
     }
@@ -83,8 +83,8 @@ export const LiquidCircularGauge = ({
       primary: "#0ea5e9",
       secondary: "#0284c7",
       light: "#38bdf8",
-      glow: "rgba(14, 165, 233, 0.65)",
-      track: "rgba(14, 165, 233, 0.18)",
+      glow: "rgba(14, 165, 233, 0.75)",
+      track: "rgba(14, 165, 233, 0.2)",
       pulse: false,
     };
   }, [type, clampedPercent]);
@@ -102,11 +102,11 @@ export const LiquidCircularGauge = ({
         width: size,
         height: size,
         background:
-          "linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.08) 100%), rgba(15, 23, 42, 0.45)",
-        backdropFilter: "blur(16px) saturate(180%)",
-        WebkitBackdropFilter: "blur(16px) saturate(180%)",
-        border: "1px solid rgba(255, 255, 255, 0.22)",
-        boxShadow: `0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 16px ${theme.glow}, inset 0 1.5px 2px rgba(255, 255, 255, 0.5), inset 0 -1.5px 2px rgba(0, 0, 0, 0.35)`,
+          "linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.14) 100%)",
+        backdropFilter: "blur(20px) saturate(190%)",
+        WebkitBackdropFilter: "blur(20px) saturate(190%)",
+        border: "1px solid rgba(255, 255, 255, 0.35)",
+        boxShadow: `0 8px 24px -2px rgba(0, 0, 0, 0.45), 0 0 16px ${theme.glow}, inset 0 2px 3px rgba(255, 255, 255, 0.65), inset 0 -1.5px 2px rgba(0, 0, 0, 0.25)`,
       }}
     >
       <svg
@@ -135,15 +135,15 @@ export const LiquidCircularGauge = ({
             x2="0%"
             y2="100%"
           >
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         {/* Ambient Inner Glass Chamber */}
-        <circle cx="50" cy="50" r="44" fill="rgba(255, 255, 255, 0.03)" />
+        <circle cx="50" cy="50" r="44" fill="rgba(255, 255, 255, 0.04)" />
 
-        {/* Background Track Ring (مسیر خاکستری/محو دایره) */}
+        {/* Background Track Ring */}
         <circle
           cx="50"
           cy="50"
@@ -153,7 +153,7 @@ export const LiquidCircularGauge = ({
           strokeWidth="6"
         />
 
-        {/* Active Progress Line (خط محیطی که روی دایره پر و زیاد می‌شه) */}
+        {/* Active Progress Line */}
         <circle
           cx="50"
           cy="50"
@@ -167,7 +167,7 @@ export const LiquidCircularGauge = ({
           transform="rotate(-90 50 50)"
           style={{
             transition: "stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
-            filter: `drop-shadow(0 0 5px ${theme.glow})`,
+            filter: `drop-shadow(0 0 6px ${theme.glow})`,
           }}
         />
 
@@ -177,7 +177,7 @@ export const LiquidCircularGauge = ({
           cy="50"
           r="46"
           fill="none"
-          stroke="rgba(255, 255, 255, 0.2)"
+          stroke="rgba(255, 255, 255, 0.28)"
           strokeWidth="0.8"
         />
 
@@ -191,11 +191,11 @@ export const LiquidCircularGauge = ({
       {/* Centered Percentage Value */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
         <span
-          className={`font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] ${
+          className={`font-black tracking-tight text-white ${
             size < 60 ? "text-[12px]" : "text-sm"
           } ${isRTL ? "font-vazir" : "font-inter"}`}
           style={{
-            textShadow: "0 1px 4px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.6)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5)",
           }}
         >
           {formattedPercent}

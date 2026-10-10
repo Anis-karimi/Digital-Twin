@@ -12,8 +12,8 @@ import { adminApi, userApi } from "@/api";
 const settingsItems = [
   {
     id: "biometrics",
-    title: "احراز هویت و کالیبراسیون چهره",
-    subtitle: "ثبت چهره، کالیبراسیون نگاه و مبنای احساسات",
+    title: "احراز هویت",
+    subtitle: "ثبت چهره",
     path: "/StudentSettings/Biometrics",
     icon: (
       <img

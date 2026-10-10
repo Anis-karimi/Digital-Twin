@@ -14,6 +14,7 @@ import {
   ArrowUpDown,
   Check,
   X,
+  ScanFace,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -21,12 +22,23 @@ import { useNavigate } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
+import { biometricsApi } from "@/api/new/biometrics.api";
 import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
 import { toPersianDigits } from "@/utils/dateUtils";
 
 export const StudentExams = () => {
   const navigate = useNavigate();
-  const { isRTL, t } = useContext(AppContext);
+  const { isRTL, t, currentUser } = useContext(AppContext);
+
+  const studentId = String(
+    currentUser?.id ||
+    currentUser?.student_id ||
+    currentUser?.username ||
+    "20000000-0000-4000-8000-000000000105"
+  );
+
+  const [biometricsStatus, setBiometricsStatus] = useState(null);
+  const [biometricsLoading, setBiometricsLoading] = useState(true);
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -284,6 +296,26 @@ export const StudentExams = () => {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    biometricsApi
+      .getStudentBiometricProfile(studentId)
+      .then((res) => {
+        if (isMounted) {
+          setBiometricsStatus(res);
+          setBiometricsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to check biometric profile in exams page:", err);
+        if (isMounted) setBiometricsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentId]);
+
   const getExamStatus = (exam) => {
     if (exam.status === "completed") return "completed";
 
@@ -379,6 +411,28 @@ export const StudentExams = () => {
       return;
     }
 
+    // Check biometric identity registration before letting student enter
+    const isBioReady = Boolean(
+      biometricsStatus?.is_fully_registered &&
+      (biometricsStatus?.is_enrolled || biometricsStatus?.face_enrolled) &&
+      (biometricsStatus?.is_gaze_calibrated || biometricsStatus?.gaze_calibrated) &&
+      (biometricsStatus?.is_neutral_calibrated || biometricsStatus?.neutral_calibrated)
+    );
+
+    if (!isBioReady) {
+      navigate("/StudentSettings/Biometrics", {
+        state: {
+          returnTo: `/StudentExam/${targetId}`,
+          exam,
+          reason: "biometrics_required",
+          message: isRTL
+            ? "جهت ورود به آزمون، احراز هویت چهره و نگاه الزامی است."
+            : "Biometric identity verification is required before entering the exam."
+        }
+      });
+      return;
+    }
+
     const isActive = exam.status === "started" || exam.status === "active";
 
     if (!isActive) {
@@ -438,6 +492,33 @@ export const StudentExams = () => {
       {/* Content */}
       <section className="w-full flex-1 min-h-0 flex flex-col">
         <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pb-[105px]">
+          {/* Biometric Identity Requirement Banner */}
+          {!biometricsLoading && (!biometricsStatus || !biometricsStatus.is_fully_registered) && (
+            <div className="mt-2 mb-2 w-full p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 flex items-start gap-3 transition-all">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <ScanFace className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold font-vazir text-amber-800 dark:text-amber-300">
+                  {isRTL ? "احراز هویت بیومتریک الزامی است" : "Biometric Verification Required"}
+                </h4>
+                <p className="text-[11px] font-vazir text-amber-700/90 dark:text-amber-300/80 mt-0.5 leading-relaxed">
+                  {isRTL
+                    ? "پیش از شرکت در آزمون، تکمیل مراحل ثبت چهره، کالیبراسیون نگاه و حالت خنثی الزامی است."
+                    : "Face enrollment and gaze calibration must be completed before entering any exam."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/StudentSettings/Biometrics", { state: { reason: "biometrics_required" } })}
+                  className="mt-2 h-7 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 active:scale-95 text-white text-[11px] font-bold font-vazir flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <span>{isRTL ? "تکمیل احراز هویت" : "Complete Verification"}</span>
+                  <ArrowLeft className={`w-3 h-3 ${isRTL ? "" : "rotate-180"}`} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-[5px] w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-[20px]">
             {/* Section Header */}
             <div className="px-4 flex flex-col gap-2.5">

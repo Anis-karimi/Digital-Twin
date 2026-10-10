@@ -30,6 +30,7 @@ import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
+import { ChatGptOrb } from "@/Components/ChatGptOrb";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -98,6 +99,12 @@ export const StudentExamPage = () => {
   const distractionTimerRef = useRef(null);
   const lastDistractionLogTimeRef = useRef(0);
 
+  // Pre-exam Face Identity Verification Gate
+  const [isIdentityVerified, setIsIdentityVerified] = useState(false);
+  const [isVerifyingIdentity, setIsVerifyingIdentity] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [periodicAlert, setPeriodicAlert] = useState("");
+
   // Capture low-res frame from videoRef for background 1 FPS telemetry
   const captureExamFrameBlob = useCallback((quality = 0.65, width = 320, height = 240) => {
     return new Promise((resolve) => {
@@ -124,12 +131,50 @@ export const StudentExamPage = () => {
     });
   }, []);
 
+  // 1. Initial Face Verification before letting student take the exam
+  const handleVerifyIdentity = useCallback(async () => {
+    setIsVerifyingIdentity(true);
+    setVerificationError("");
+    try {
+      const blob = await captureExamFrameBlob(0.85, 480, 360);
+      if (!blob) {
+        setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
+        return;
+      }
+
+      const res = await biometricsApi.verifyStudentFace(studentId, blob, "balanced");
+      if (res && res.verified) {
+        setIsIdentityVerified(true);
+        setVerificationError("");
+      } else {
+        setVerificationError("عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید.");
+      }
+    } catch (err) {
+      console.warn("Identity verification error:", err);
+      if (err?.message?.includes("not enrolled")) {
+        setVerificationError("پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ثبت هویت نمایید.");
+      } else {
+        setVerificationError(err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
+      }
+    } finally {
+      setIsVerifyingIdentity(false);
+    }
+  }, [captureExamFrameBlob, studentId]);
+
+  // 2. Real-time Telemetry & Fast Gaze Deviation Reaction
   const handleTelemetryUpdate = useCallback((data) => {
     if (!data) return;
     const isFocused = data.is_focused ?? (data.attention_score >= 45);
     const attention = data.attention_score ?? 100;
+    const gazeDir = String(data.gaze_direction || "Direct");
 
-    if (!isFocused || attention < 45) {
+    // Fast check if student looked away or averted head/eyes
+    const isLookingAway =
+      !isFocused ||
+      attention < 45 ||
+      (gazeDir !== "Direct" && gazeDir !== "Screen" && gazeDir !== "Forward" && gazeDir !== "Center");
+
+    if (isLookingAway) {
       if (!distractionTimerRef.current) {
         distractionTimerRef.current = setTimeout(() => {
           setIsDistracted(true);
@@ -141,12 +186,12 @@ export const StudentExamPage = () => {
             lastDistractionLogTimeRef.current = now;
             biometricsApi.logExamDistraction(sessionId || id, studentId, {
               attention_score: attention,
-              gaze_direction: data.gaze_direction || "Unfocused",
+              gaze_direction: gazeDir,
               dominant_emotion: data.dominant_emotion || "neutral",
               stress_score: data.stress_score || 0,
             }).catch((e) => console.warn("Distraction log error:", e));
           }
-        }, 1800); // Trigger after ~2 seconds of looking away
+        }, 400); // 400ms rapid response!
       }
     } else {
       if (distractionTimerRef.current) {
@@ -157,14 +202,47 @@ export const StudentExamPage = () => {
     }
   }, [sessionId, id, studentId]);
 
+  // 3. Periodic Random Background Face Re-verification (Low overhead, 1 frame every 90-150s)
+  useEffect(() => {
+    if (!isIdentityVerified || isCompleted || loading || error) return;
+
+    let timeoutId = null;
+
+    const scheduleNextCheck = () => {
+      const randomDelay = Math.floor(Math.random() * (150000 - 90000 + 1)) + 90000;
+      timeoutId = setTimeout(async () => {
+        try {
+          const blob = await captureExamFrameBlob(0.65, 320, 240);
+          if (blob) {
+            const res = await biometricsApi.verifyStudentFace(studentId, blob, "balanced");
+            if (res && res.verified === false) {
+              setPeriodicAlert("هشدار امنیتی: عدم تطابق چهره مقابل دوربین با هویت ثبت‌شده دانشجو!");
+              setTimeout(() => setPeriodicAlert(""), 6000);
+            }
+          }
+        } catch (e) {
+          console.warn("Periodic identity check error:", e);
+        }
+        scheduleNextCheck();
+      }, randomDelay);
+    };
+
+    scheduleNextCheck();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isIdentityVerified, isCompleted, loading, error, captureExamFrameBlob, studentId]);
+
   const {
     telemetry: biometricTelemetry,
   } = useBiometricTelemetry({
     intervalMs: 1000,
     userId: studentId,
+    detector: "opencv",
     captureFrameBlob: captureExamFrameBlob,
     onTelemetryUpdate: handleTelemetryUpdate,
-    enabled: !cameraLoading && !cameraError && !isCompleted,
+    enabled: !cameraLoading && !cameraError && !isCompleted && isIdentityVerified,
   });
 
   useEffect(() => {
@@ -508,7 +586,7 @@ export const StudentExamPage = () => {
 
   // Auto-play TTS and sync word-by-word reveal whenever a new question is loaded
   useEffect(() => {
-    if (currentQuestion && !isCompleted && !loading) {
+    if (currentQuestion && !isCompleted && !loading && isIdentityVerified) {
       setHasFinishedCurrentQuestion(false);
       playQuestionTTS(currentQuestion);
       // Auto-align voice input language with question language (fa for Persian, en for English)
@@ -517,7 +595,7 @@ export const StudentExamPage = () => {
     return () => {
       stopQuestionTTS();
     };
-  }, [currentQuestion, isCompleted, isQuestionRTL, loading, playQuestionTTS, stopQuestionTTS]);
+  }, [currentQuestion, isCompleted, isQuestionRTL, loading, isIdentityVerified, playQuestionTTS, stopQuestionTTS]);
 
   // True while the AI examiner is actively buffering or reading the current question
   const isBotReading = Boolean(
@@ -802,8 +880,52 @@ export const StudentExamPage = () => {
       setLoading(true);
       setError("");
       try {
+        // 1. Verify biometric identity registration before launching exam
+        try {
+          const bioStatus = await biometricsApi.getStudentBiometricProfile(studentId);
+          const isBioReady = Boolean(
+            bioStatus?.is_fully_registered &&
+            (bioStatus?.is_enrolled || bioStatus?.face_enrolled) &&
+            (bioStatus?.is_gaze_calibrated || bioStatus?.gaze_calibrated) &&
+            (bioStatus?.is_neutral_calibrated || bioStatus?.neutral_calibrated)
+          );
+          if (!isBioReady) {
+            navigate("/StudentSettings/Biometrics", {
+              replace: true,
+              state: {
+                returnTo: `/StudentExam/${id}`,
+                exam: passedExam,
+                reason: "biometrics_required",
+                message: isRTL
+                  ? "جهت شرکت در آزمون، احراز هویت چهره و نگاه الزامی است."
+                  : "Biometric identity verification is required before taking the exam.",
+              },
+            });
+            return;
+          }
+        } catch (bioErr) {
+          console.warn("Pre-launch biometric check error:", bioErr);
+        }
+
         const res = await examsApi.launchStudentExam(id);
         if (!isMounted) return;
+
+        // If backend rejected due to missing biometrics
+        if (
+          res?.error &&
+          (res?.detail?.includes("بیومتریک") || res?.detail?.includes("احراز هویت"))
+        ) {
+          navigate("/StudentSettings/Biometrics", {
+            replace: true,
+            state: {
+              returnTo: `/StudentExam/${id}`,
+              exam: passedExam,
+              reason: "biometrics_required",
+              message: res.detail,
+            },
+          });
+          return;
+        }
 
         if (res && res.session_id) {
           setSessionId(res.session_id);
@@ -1050,6 +1172,16 @@ export const StudentExamPage = () => {
         </div>
       )}
 
+      {/* Periodic Random Identity Alert */}
+      {periodicAlert && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] animate-in fade-in slide-in-from-top-3 duration-300 pointer-events-none">
+          <div className="px-3.5 py-2.5 rounded-2xl bg-rose-600/35 backdrop-blur-xl border border-rose-400/80 text-rose-100 text-xs font-vazir font-bold flex items-center gap-2.5 shadow-[0_0_30px_rgba(244,63,94,0.4)]">
+            <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0 animate-bounce" />
+            <span className="leading-snug">{periodicAlert}</span>
+          </div>
+        </div>
+      )}
+
       {/* ================= 3. Main Body / Floating Call Stage ================= */}
       <section className="relative z-10 w-full flex-1 min-h-0 flex flex-col justify-between px-3.5 py-2 overflow-y-auto max-w-xl mx-auto">
         {loading ? (
@@ -1223,9 +1355,75 @@ export const StudentExamPage = () => {
               </p>
             </div>
           </div>
+        ) : !isIdentityVerified ? (
+          /* ================= Pre-Exam Face Identity Verification Gate ================= */
+          <div className="m-auto w-full max-w-sm rounded-3xl liquid-glass-card border border-white/25 bg-black/60 backdrop-blur-2xl p-6 flex flex-col items-center justify-center text-center gap-4 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative w-20 h-20 rounded-full flex items-center justify-center bg-sky-500/15 border-2 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.4)]">
+              {isVerifyingIdentity ? (
+                <RefreshCw className="w-9 h-9 text-sky-400 animate-spin" />
+              ) : (
+                <ShieldCheck className="w-10 h-10 text-sky-400" />
+              )}
+              <div className="absolute inset-0 rounded-full border border-sky-400/40 animate-ping pointer-events-none" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-white font-vazir drop-shadow">
+                {isRTL ? "احراز هویت هوشمند دانشجو" : "Identity Verification"}
+              </h3>
+              <p className="text-xs text-slate-300 font-vazir leading-relaxed">
+                {isRTL
+                  ? "جهت ورود به آزمون، تطبیق چهره با الگوی بیومتریک ثبت‌شده شما در سامانه الزامی است. لطفاً مستقیماً به دوربین نگاه کنید."
+                  : "Please look directly at the camera to verify your face against the registered biometric profile."}
+              </p>
+            </div>
+
+            {verificationError && (
+              <div className="w-full px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-vazir flex items-center gap-2 text-right">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{verificationError}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleVerifyIdentity}
+              disabled={isVerifyingIdentity || cameraLoading || cameraError}
+              className="w-full h-11 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isVerifyingIdentity ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>{isRTL ? "در حال تطبیق چهره با سرور..." : "Verifying with server..."}</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isRTL ? "تایید هویت و ورود به آزمون" : "Verify & Begin Exam"}</span>
+                </>
+              )}
+            </button>
+          </div>
         ) : (
           /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
-          <div className="w-full flex flex-col justify-center items-center flex-1 gap-3 sm:gap-3.5 py-1 my-auto">
+          <div className="w-full flex flex-col justify-center items-center flex-1 gap-2.5 sm:gap-3 py-1 my-auto">
+            {/* ChatGPT AI Voice Dynamic Orb Visualizer */}
+            <div className="flex flex-col items-center justify-center -my-1 z-20">
+              <ChatGptOrb
+                state={
+                  isSubmitting
+                    ? "thinking"
+                    : isSpeakingQuestion
+                    ? "speaking"
+                    : recording
+                    ? "listening"
+                    : "idle"
+                }
+                size={62}
+                voiceLevel={isSpeakingQuestion ? ttsVoiceLevel : recording ? audioLevel : 0}
+              />
+            </div>
+
             {/* Real-Time Assessment Indicators: 3 Liquid Gauges (Certainty, Stress, Composure) */}
             <div className="w-full max-w-[360px] mx-auto animate-in fade-in-50 duration-500">
               <LiquidGaugesTrio
@@ -1237,33 +1435,12 @@ export const StudentExamPage = () => {
                 stress={
                   biometricTelemetry?.stress_score !== undefined
                     ? Math.round(biometricTelemetry.stress_score)
-                    : recording
-                    ? 54
-                    : isSubmitting
-                    ? 76
-                    : currentDifficulty > 0.6
-                    ? 72
-                    : currentDifficulty > 0.35
-                    ? 45
-                    : 28
+                    : 32
                 }
                 composure={
                   biometricTelemetry?.attention_score !== undefined
-                    ? Math.round(
-                        Math.max(
-                          15,
-                          Math.min(
-                            100,
-                            biometricTelemetry.attention_score * 0.6 +
-                              (100 - (biometricTelemetry.stress_score || 30)) * 0.4
-                          )
-                        )
-                      )
-                    : recording
-                    ? 74
-                    : isSubmitting
-                    ? 68
-                    : 88
+                    ? Math.round(biometricTelemetry.attention_score)
+                    : 92
                 }
                 isRTL={isRTL}
               />

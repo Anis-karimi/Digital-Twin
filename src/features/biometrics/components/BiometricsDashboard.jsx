@@ -237,7 +237,7 @@ export function BiometricsDashboard({
             >
               {isNeutralCalibrating
                 ? `در حال کالیبراسیون (${neutralCountdown}s)...`
-                : "🧘 مبنای خنثی (۳ ثانیه)"}
+                : " مبنای خنثی (۳ ثانیه)"}
             </button>
 
             <button
@@ -246,7 +246,7 @@ export function BiometricsDashboard({
               disabled={!isCameraActive || isGazeCalibrating}
               className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all"
             >
-              🎯 کالیبراسیون نگاه (نه نه)
+               کالیبراسیون نگاه 
             </button>
           </div>
         </div>

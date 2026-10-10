@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
   ArrowLeft,
@@ -28,8 +28,8 @@ import { useGazeCalibration } from "@/features/biometrics/hooks/useGazeCalibrati
 import { useNeutralCalibration } from "@/features/biometrics/hooks/useNeutralCalibration";
 
 const WIZARD_STEPS = [
-  { id: 1, title: "۱. ثبت چهره و اصالت", short: "ثبت چهره" },
-  { id: 2, title: "۲. کالیبراسیون نگاه (نه نه)", short: "نگاه (نه نه)" },
+  { id: 1, title: "۱. ثبت چهره", short: "ثبت چهره" },
+  { id: 2, title: "۲. کالیبراسیون نگاه", short: "نگاه" },
   { id: 3, title: "۳. مبنای خنثی احساسات", short: "حالت خنثی" },
   { id: 4, title: "۴. تایید نهایی", short: "تایید نهایی" },
 ];
@@ -145,6 +145,10 @@ function detectClientFace(video, canvas) {
 
 export function StudentBiometricsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo;
+  const returnExam = location.state?.exam;
+  const isRequiredForExam = location.state?.reason === "biometrics_required" || Boolean(returnTo);
   const { currentUser, isRTL } = useContext(AppContext);
 
   const studentId = String(
@@ -324,8 +328,11 @@ export function StudentBiometricsPage() {
           isGazeDone &&
           isNeutralDone
         );
-        if (isAlreadyDone && shouldShowRegistrationModal) {
-          setShowReRegistrationModal(true);
+        if (isAlreadyDone) {
+          setCurrentStep(4);
+          if (shouldShowRegistrationModal) {
+            setShowReRegistrationModal(true);
+          }
         }
       }
     } catch (err) {
@@ -622,10 +629,10 @@ export function StudentBiometricsPage() {
   };
 
   const isStepDone = (stepId) => {
-    if (stepId === 1) return profileStatus?.face_enrolled || enrollStatus.success;
-    if (stepId === 2) return profileStatus?.gaze_calibrated || isGazeCalibrated;
-    if (stepId === 3) return profileStatus?.neutral_calibrated || isNeutralCalibrated;
-    if (stepId === 4) return profileStatus?.ready_for_exam;
+    if (stepId === 1) return Boolean(profileStatus?.face_enrolled || profileStatus?.is_enrolled || enrollStatus.success);
+    if (stepId === 2) return Boolean(profileStatus?.gaze_calibrated || profileStatus?.is_gaze_calibrated || isGazeCalibrated);
+    if (stepId === 3) return Boolean(profileStatus?.neutral_calibrated || profileStatus?.is_neutral_calibrated || isNeutralCalibrated);
+    if (stepId === 4) return Boolean(profileStatus?.ready_for_exam || profileStatus?.is_fully_registered || (isStepDone(1) && isStepDone(2) && isStepDone(3)));
     return false;
   };
 
@@ -749,12 +756,12 @@ export function StudentBiometricsPage() {
         {/* Back Button */}
         <button
           type="button"
-          onClick={() => navigate("/StudentSettings")}
+          onClick={() => navigate(returnTo ? "/StudentExams" : "/StudentSettings")}
           className="liquid-glass-card liquid-glass-pill flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white text-xs font-vazir transition-all active:scale-95 cursor-pointer shadow-lg hover:border-white/40"
-          aria-label="بازگشت به تنظیمات"
+          aria-label={returnTo ? "بازگشت به آزمون‌ها" : "بازگشت به تنظیمات"}
         >
           <BackIcon className="w-4 h-4 text-white" />
-          <span>تنظیمات</span>
+          <span>{returnTo ? "آزمون‌ها" : "تنظیمات"}</span>
         </button>
 
         {/* Center: Apple Face ID Dynamic Circular Island & Progress */}
@@ -851,6 +858,20 @@ export function StudentBiometricsPage() {
         {/* Header Right Spacer (Keeps center title aligned) */}
         <div className="w-10 h-10" />
       </header>
+
+      {/* Header Notification if Biometrics Required for Exam */}
+      {isRequiredForExam && !isStepDone(4) && (
+        <div className="relative z-30 mx-3 mb-1 px-3 py-2 rounded-2xl liquid-glass-card border border-amber-400/40 bg-amber-500/15 backdrop-blur-md flex items-center gap-2 text-amber-200 text-xs font-vazir shadow-lg animate-in slide-in-from-top-2 duration-300">
+          <div className="w-5 h-5 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0 border border-amber-400/40">
+            <AlertTriangle className="w-3 h-3 text-amber-300" />
+          </div>
+          <span className="leading-relaxed">
+            {returnExam?.title
+              ? `برای ورود به آزمون «${returnExam.title}»، ابتدا ۳ مرحله احراز هویت بیومتریک را تکمیل نمایید.`
+              : "برای ورود به آزمون، تکمیل هر ۳ مرحله احراز هویت بیومتریک الزامی است."}
+          </span>
+        </div>
+      )}
 
       {/* ================= 4 Face ID Corner Brackets ================= */}
       <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
@@ -973,6 +994,44 @@ export function StudentBiometricsPage() {
             </div>
           </div>
         )}
+
+        {/* Step 4 Ultimate Registration Summary Card */}
+        {currentStep === 4 && (
+          <div className="liquid-glass-card w-full max-w-[280px] p-4 rounded-3xl space-y-3 pointer-events-auto border border-emerald-400/35 bg-black/50 backdrop-blur-xl shadow-2xl text-center animate-in zoom-in-95 duration-300">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold font-vazir text-white">
+                پروفایل بیومتریک تکمیل شد
+              </h3>
+              <p className="text-[11px] font-vazir text-emerald-200/90 mt-0.5">
+                تمامی الگوهای چهره، نگاه و حالت خنثی با موفقیت کالیبره شدند
+              </p>
+            </div>
+
+            <div className="space-y-1.5 pt-1 text-right">
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
+                <span className="text-white/80">۱. ثبت بردار چهره</span>
+                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
+                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
+                <span className="text-white/80">۲. کالیبراسیون نگاه</span>
+                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
+                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
+                <span className="text-white/80">۳. مبنای خنثی احساسات</span>
+                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
+                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= 4. Bottom Sleek Floating Dock ================= */}
@@ -997,7 +1056,7 @@ export function StudentBiometricsPage() {
                   <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
-                  چهره و بردار اصالت با موفقیت ثبت شد
+                  چهره با موفقیت ثبت شد
                 </span>
               </div>
             ) : faceStatus === "no_face" ? (
@@ -1209,7 +1268,7 @@ export function StudentBiometricsPage() {
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>در حال احراز و ثبت چهره...</span>
+                    <span>در حال ثبت چهره...</span>
                   </>
                 ) : (
                   <>
@@ -1314,11 +1373,11 @@ export function StudentBiometricsPage() {
               )}
               <button
                 type="button"
-                onClick={() => navigate("/StudentExams")}
+                onClick={() => navigate(returnTo || "/StudentExams")}
                 className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>تایید و ورود به آزمون‌ها</span>
+                <span>{returnTo ? "تایید و ورود به آزمون" : "تایید و ورود به آزمون‌ها"}</span>
               </button>
             </div>
           )}
@@ -1403,12 +1462,12 @@ export function StudentBiometricsPage() {
                 type="button"
                 onClick={() => {
                   setShowReRegistrationModal(false);
-                  navigate("/StudentExams");
+                  navigate(returnTo || "/StudentExams");
                 }}
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/25 active:scale-95"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>تایید و ورود به صفحه آزمون‌ها</span>
+                <span>{returnTo ? "تایید و ورود به آزمون" : "تایید و ورود به صفحه آزمون‌ها"}</span>
               </button>
 
               <button
