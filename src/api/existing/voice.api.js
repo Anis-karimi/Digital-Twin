@@ -82,6 +82,219 @@ export async function deleteAudio() {
 }
 
 /**
+ * Normalizes a word for comparison (Persian / Arabic characters and punctuation)
+ * without altering displayed text.
+ */
+function normalizeWordForComparison(w) {
+  return (w || "")
+    .replace(/\u064A/g, "\u06CC") // Arabic Yeh -> Persian Yeh
+    .replace(/\u0643/g, "\u06A9") // Arabic Kaf -> Persian Kaf
+    .replace(/\u0629/g, "\u0647") // Teh Marbuta -> Heh
+    .replace(/[\u200B-\u200D\uFEFF]/g, "") // Strip zero-width characters
+    .replace(/[.,،!؟?:;\-_]/g, "") // Strip punctuation
+    .trim()
+    .toLowerCase();
+}
+
+function cleanCharStr(s) {
+  return (s || "")
+    .replace(/\u064A/g, "\u06CC")
+    .replace(/\u0643/g, "\u06A9")
+    .replace(/\u0629/g, "\u0647")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[.,،!؟?:;\-_]/g, "")
+    .toLowerCase();
+}
+
+function splitWords(str) {
+  return (str || "").trim().split(/\s+/).filter(Boolean);
+}
+
+function lcsLen(s1, s2) {
+  const m = s1.length;
+  const n = s2.length;
+  let prev = new Array(n + 1).fill(0);
+  let curr = new Array(n + 1).fill(0);
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (s1[i - 1] === s2[j - 1]) {
+        curr[j] = prev[j - 1] + 1;
+      } else {
+        curr[j] = Math.max(prev[j], curr[j - 1]);
+      }
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+function charSimilarity(s1, s2) {
+  const c1 = cleanCharStr(s1);
+  const c2 = cleanCharStr(s2);
+  if (!c1 || !c2) return 0;
+  if (c1 === c2) return 1;
+  const lcs = lcsLen(c1, c2);
+  return (2 * lcs) / (c1.length + c2.length);
+}
+
+function isRevision(prevSeg, text) {
+  const segSim = charSimilarity(prevSeg, text);
+  if (segSim >= 0.70) return true;
+
+  const w1 = splitWords(prevSeg);
+  const w2 = splitWords(text);
+  if (w1.length === 0 || w2.length === 0) return false;
+
+  const c1_first = cleanCharStr(w1[0]);
+  const c2_first = cleanCharStr(w2[0]);
+  const firstWordMatch = (c1_first === c2_first || c1_first.startsWith(c2_first) || c2_first.startsWith(c1_first));
+
+  if (firstWordMatch && segSim >= 0.48) {
+    return true;
+  }
+
+  return false;
+}
+
+function findSuffixOverlap(existing, next) {
+  const c1 = cleanCharStr(existing);
+  const c2 = cleanCharStr(next);
+  if (!c1 || !c2) return { type: "none", overlapLen: 0 };
+
+  const searchWindow = Math.min(c1.length, c2.length + 30);
+  const tailOfC1 = c1.slice(c1.length - searchWindow);
+  if (tailOfC1.includes(c2)) {
+    return { type: "contained", overlapLen: c2.length };
+  }
+
+  const maxLen = Math.min(c1.length, c2.length);
+  for (let len = maxLen; len >= 4; len--) {
+    if (c1.slice(c1.length - len) === c2.slice(0, len)) {
+      return { type: "suffix", overlapLen: len };
+    }
+  }
+
+  return { type: "none", overlapLen: 0 };
+}
+
+function mapCleanCharIndexToOriginal(original, targetCleanCharCount) {
+  let count = 0;
+  for (let i = 0; i < original.length; i++) {
+    const ch = original[i];
+    if (cleanCharStr(ch)) {
+      count++;
+      if (count >= targetCleanCharCount) {
+        return i + 1;
+      }
+    }
+  }
+  return original.length;
+}
+
+/**
+ * Merges transcript parts, eliminating overlapping words at boundaries.
+ */
+export function mergeTranscriptParts(parts) {
+  return parts.filter(Boolean).map((p) => p.trim()).filter(Boolean).join(" ");
+}
+
+/**
+ * Intelligent tracker for streaming Speech-to-Text frames.
+ * Handles sliding window ASR, hypothesis revisions, progressive word growth,
+ * and chunk boundary deduplication.
+ */
+export class STTTranscriptTracker {
+  constructor() {
+    this.history = [];
+    this.lastUpdateTime = 0;
+  }
+
+  getFullTranscript() {
+    return this.history.filter(Boolean).map((p) => p.trim()).filter(Boolean).join(" ");
+  }
+
+  finalizeActive() {
+    return this.getFullTranscript();
+  }
+
+  feed(rawText, isExplicitFinal = false, now = Date.now()) {
+    const text = (rawText || "").trim();
+    if (!text) return this.getFullTranscript();
+
+    const timeDiff = this.lastUpdateTime ? now - this.lastUpdateTime : 0;
+    this.lastUpdateTime = now;
+
+    if (this.history.length === 0) {
+      this.history.push(text);
+      return this.getFullTranscript();
+    }
+
+    const lastIdx = this.history.length - 1;
+    const lastSeg = this.history[lastIdx];
+    const fullSoFar = this.getFullTranscript();
+
+    const cleanFull = cleanCharStr(fullSoFar);
+    const cleanText = cleanCharStr(text);
+
+    // Intentional repetition: identical phrase after long silence (> 2500ms)
+    const segSim = charSimilarity(lastSeg, text);
+    if (segSim === 1.0 && timeDiff > 2500) {
+      this.history.push(text);
+      return this.getFullTranscript();
+    }
+
+    // 1. Direct extension of full session text
+    if (cleanText.startsWith(cleanFull)) {
+      this.history = [text];
+      return this.getFullTranscript();
+    }
+
+    // 2. High revision of full session text
+    if (charSimilarity(fullSoFar, text) >= 0.75) {
+      this.history = [text];
+      return this.getFullTranscript();
+    }
+
+    // 3. Extension of last segment (e.g. "یک" -> "یک دو")
+    if (cleanText.startsWith(cleanCharStr(lastSeg))) {
+      this.history[lastIdx] = text;
+      return this.getFullTranscript();
+    }
+
+    // 4. Revision of last segment (e.g. "تعادل" -> "تاحالا", "وی هی تکرارش کرد" -> "وی تو کرت کرد")
+    if (isRevision(lastSeg, text)) {
+      this.history[lastIdx] = text;
+      return this.getFullTranscript();
+    }
+
+    // 5. Revision of second to last segment (if exists)
+    if (this.history.length >= 2 && isRevision(this.history[lastIdx - 1], text)) {
+      this.history[lastIdx - 1] = text;
+      return this.getFullTranscript();
+    }
+
+    // 6. Suffix / Boundary overlap with sliding window
+    const overlap = findSuffixOverlap(fullSoFar, text);
+    if (overlap.type === "contained") {
+      return this.getFullTranscript();
+    }
+
+    if (overlap.type === "suffix") {
+      const origCutIdx = mapCleanCharIndexToOriginal(text, overlap.overlapLen);
+      const remainingNewText = text.slice(origCutIdx).trim();
+      if (remainingNewText) {
+        this.history.push(remainingNewText);
+      }
+      return this.getFullTranscript();
+    }
+
+    // 7. Distinct new utterance
+    this.history.push(text);
+    return this.getFullTranscript();
+  }
+}
+
+/**
  * Creates and opens a WebSocket connection for real-time speech-to-text.
  * Supports Persian (fa, port 8881) and English (en, port 8882).
  * 
@@ -103,8 +316,9 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
   console.log(`[STT WebSocket] Connecting (${isEn ? "English :8882" : "Persian :8881"}) to:`, wsUrl);
   const ws = new WebSocket(wsUrl);
 
-  // Accumulates finalized sentences across speaker pauses
-  let committedTranscript = "";
+  const tracker = new STTTranscriptTracker();
+  let pauseTimer = null;
+  const PAUSE_THRESHOLD_MS = 1200; // 1.2s silence finalizes the active segment
 
   ws.onopen = (event) => {
     console.log(`[STT WebSocket] Connected (${isEn ? "en" : "fa"}) to:`, wsUrl);
@@ -113,72 +327,70 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
 
   ws.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data);
+      let data = {};
+      let incomingText = "";
+      let isExplicitFinal = false;
+
+      if (typeof event.data === "string") {
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          data = { text: event.data };
+        }
+      }
+
       console.log("[STT WebSocket] frame:", data);
 
-      // 1. Extract finalized text (Vosk: data.text, Whisper: data.text / transcript, custom: result)
-      let finalText = "";
-      if (typeof data.text === "string") {
-        finalText = data.text;
-      } else if (typeof data.transcript === "string") {
-        finalText = data.transcript;
-      } else if (typeof data.result === "string") {
-        finalText = data.result;
+      // Extract text from standard formats:
+      // - data.text (Whisper, Vosk final, custom STT)
+      // - data.transcript (Web Speech / custom)
+      // - data.result (string or Vosk array of { word })
+      // - data.partial (Vosk partial/interim)
+      if (typeof data.text === "string" && data.text.trim()) {
+        incomingText = data.text.trim();
+        isExplicitFinal = Boolean(data.is_final || data.final);
+      } else if (typeof data.transcript === "string" && data.transcript.trim()) {
+        incomingText = data.transcript.trim();
+        isExplicitFinal = Boolean(data.is_final || data.final);
+      } else if (typeof data.result === "string" && data.result.trim()) {
+        incomingText = data.result.trim();
+        isExplicitFinal = Boolean(data.is_final || data.final);
       } else if (Array.isArray(data.result)) {
-        // Vosk array of word objects
-        finalText = data.result
+        incomingText = data.result
           .map((w) => (typeof w === "object" ? w?.word : w))
           .filter(Boolean)
-          .join(" ");
+          .join(" ")
+          .trim();
+        isExplicitFinal = true;
+      } else if (typeof data.partial === "string" && data.partial.trim()) {
+        incomingText = data.partial.trim();
+        isExplicitFinal = false;
       }
 
-      // 2. Extract partial/interim text (Vosk: data.partial)
-      let partialText = "";
-      if (typeof data.partial === "string") {
-        partialText = data.partial;
+      if (!incomingText) return;
+
+      if (pauseTimer) {
+        clearTimeout(pauseTimer);
+        pauseTimer = null;
       }
 
-      finalText = finalText.trim();
-      partialText = partialText.trim();
+      const fullTranscript = tracker.feed(incomingText, isExplicitFinal);
 
-      // Case A: A completed utterance/phrase frame has arrived (after silence/pause)
-      if (finalText) {
-        if (!committedTranscript) {
-          committedTranscript = finalText;
-        } else if (finalText.startsWith(committedTranscript)) {
-          // If server sends cumulative text, adopt directly
-          committedTranscript = finalText;
-        } else {
-          // Server sends chunk per pause (standard Vosk/Kaldi behavior)
-          committedTranscript = `${committedTranscript} ${finalText}`;
-        }
-
-        if (onTranscript) {
-          onTranscript(committedTranscript, {
-            ...data,
-            isFinal: true,
-            chunk: finalText,
-            accumulated: committedTranscript,
-          });
-        }
+      if (onTranscript) {
+        onTranscript(fullTranscript, {
+          ...data,
+          isFinal: isExplicitFinal,
+          chunk: incomingText,
+          accumulated: fullTranscript,
+        });
       }
-      // Case B: Partial interim words while the speaker is actively talking
-      else if (partialText) {
-        const currentFull = committedTranscript
-          ? `${committedTranscript} ${partialText}`
-          : partialText;
 
-        if (onTranscript) {
-          onTranscript(currentFull, {
-            ...data,
-            isFinal: false,
-            chunk: partialText,
-            accumulated: currentFull,
-          });
-        }
-      }
+      // Schedule finalization of the active utterance when speaker pauses
+      pauseTimer = setTimeout(() => {
+        tracker.finalizeActive();
+      }, PAUSE_THRESHOLD_MS);
     } catch (err) {
-      console.warn("[STT WebSocket] Received non-JSON frame:", event.data);
+      console.warn("[STT WebSocket] Error handling frame:", err);
     }
   };
 
@@ -188,9 +400,23 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
   };
 
   ws.onclose = (event) => {
+    if (pauseTimer) {
+      clearTimeout(pauseTimer);
+      pauseTimer = null;
+    }
+    const finalTranscript = tracker.finalizeActive();
+    if (onTranscript && finalTranscript) {
+      onTranscript(finalTranscript, {
+        isFinal: true,
+        accumulated: finalTranscript,
+      });
+    }
     console.log(`[STT WebSocket] Closed (${isEn ? "en" : "fa"})`);
     if (onClose) onClose(event);
   };
+
+  ws.getTranscript = () => tracker.getFullTranscript();
+  ws.finalize = () => tracker.finalizeActive();
 
   return ws;
 }
@@ -200,6 +426,8 @@ export const voiceApi = {
   uploadAudio,
   deleteAudio,
   createSTTWebSocket,
+  STTTranscriptTracker,
+  mergeTranscriptParts,
 };
 
 export default voiceApi;
