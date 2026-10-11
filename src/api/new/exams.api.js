@@ -411,6 +411,7 @@ export async function generateGoalsFromFile(file, meta = {}) {
   if (meta.courseTitle) formData.append("course_title", meta.courseTitle);
   if (meta.examTitle) formData.append("exam_title", meta.examTitle);
   if (meta.maxGoals) formData.append("max_goals", String(meta.maxGoals));
+  if (meta.language) formData.append("language", meta.language);
 
   return requestWithFallback(
     "/exams/goals/generate-from-file",

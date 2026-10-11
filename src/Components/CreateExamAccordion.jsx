@@ -20,6 +20,7 @@ import {
   Paperclip,
   Trash2,
   UploadCloud,
+  Languages,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -235,6 +236,10 @@ export const CreateExamAccordion = ({
     }
     return 10;
   });
+  const [examLanguage, setExamLanguage] = useState(() => {
+    if (initialExam?.language) return initialExam.language;
+    return "fa";
+  });
   const [goalCount, setGoalCount] = useState(() => initialGoalsList.length || 2);
   const [goals, setGoals] = useState(() => initialGoalsList);
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -404,6 +409,7 @@ export const CreateExamAccordion = ({
         courseTitle,
         examTitle,
         maxGoals: requestedCount,
+        language: examLanguage,
       });
 
       if (response && response.goals && Array.isArray(response.goals) && response.goals.length > 0) {
@@ -589,6 +595,7 @@ export const CreateExamAccordion = ({
         window_start: startTime,
         window_end: endTime,
         mode: "quiz",
+        language: examLanguage,
         pass_score: 70,
         is_active: true,
         materials: attachedFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),
@@ -611,6 +618,7 @@ export const CreateExamAccordion = ({
           time: `${startTime} - ${endTime}`,
           duration: `${durationPerStudent} دقیقه هر دانشجو`,
           goals: validGoals,
+          language: examLanguage,
           studentCount: selectedStudentIds.length,
           materials: attachedFiles,
         };
@@ -632,6 +640,7 @@ export const CreateExamAccordion = ({
         duration: `${durationPerStudent} دقیقه هر دانشجو`,
         active: true,
         scheduled: true,
+        language: examLanguage,
         studentCount: selectedStudentIds.length,
         goals: validGoals,
         materials: attachedFiles,
@@ -1154,6 +1163,70 @@ export const CreateExamAccordion = ({
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* 3. Exam & Goals Language Selector */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 mt-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#2481cc]/10 text-[#2481cc] flex items-center justify-center shrink-0">
+                <Languages className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
+                  {isRTL ? "زبان برگزاری آزمون و اهداف" : "Exam & Goals Language"}
+                </span>
+                <span className="text-[10px] text-neutral-400 leading-tight">
+                  {isRTL
+                    ? examLanguage === "fa"
+                      ? "فارسی تخصصی (همراه با ذکر نام اصلی انگلیسی اصطلاحات جهت فهم دقیق)"
+                      : examLanguage === "en"
+                      ? "آزمون، سرفصل‌ها و مصاحبه به زبان انگلیسی"
+                      : "تشخیص هوشمند بر اساس زبان فایل منبع"
+                    : examLanguage === "fa"
+                    ? "Persian with canonical English technical terms preserved"
+                    : examLanguage === "en"
+                    ? "Full English oral interview & assessment"
+                    : "Auto-detect from source reference"}
+                </span>
+              </div>
+            </div>
+
+            {/* Language Selector Buttons */}
+            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg border border-neutral-200/70 dark:border-neutral-700/70 self-start sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setExamLanguage("fa")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                  examLanguage === "fa"
+                    ? "bg-[#2481cc] text-white shadow-sm font-bold"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                {isRTL ? "فارسی + کلمات انگلیسی" : "Persian + EN"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setExamLanguage("en")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                  examLanguage === "en"
+                    ? "bg-[#2481cc] text-white shadow-sm font-bold"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setExamLanguage("auto")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                  examLanguage === "auto"
+                    ? "bg-[#2481cc] text-white shadow-sm font-bold"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                {isRTL ? "خودکار" : "Auto"}
+              </button>
             </div>
           </div>
         </div>
