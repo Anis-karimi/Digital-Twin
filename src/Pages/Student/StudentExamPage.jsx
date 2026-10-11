@@ -2,7 +2,6 @@ import { useContext, useEffect, useState, useRef, useCallback, useMemo } from "r
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Clock3,
-  Brain,
   Send,
   Loader2,
   CheckCircle2,
@@ -10,13 +9,12 @@ import {
   Sparkles,
   AlertCircle,
   AlertTriangle,
-  BookOpen,
-  Mic,
   PhoneOff,
   Volume2,
   VolumeX,
   UserCheck,
-  ScanFace,
+  RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -36,7 +34,7 @@ export const StudentExamPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isRTL, t, currentUser } = useContext(AppContext);
+  const { isRTL, currentUser } = useContext(AppContext);
 
   const passedExam = location.state?.exam;
   const examDurationMinutes = passedExam?.duration ? Number(passedExam.duration) : 10;
@@ -69,6 +67,7 @@ export const StudentExamPage = () => {
 
   // Microphone and Recording state (Matching ChatArea.jsx)
   const [recording, setRecording] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [voiceLang, setVoiceLang] = useState(() => localStorage.getItem("voice_lang") || "fa");
   const recordingRef = useRef(false);
   const baseTextRef = useRef("");
@@ -253,13 +252,6 @@ export const StudentExamPage = () => {
       }
     };
   }, []);
-
-  const concatUint8 = (a, b) => {
-    const out = new Uint8Array(a.byteLength + b.byteLength);
-    out.set(a, 0);
-    out.set(b, a.byteLength);
-    return out;
-  };
 
   // TTS & Live Word-by-Word State for Question Box
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
@@ -718,12 +710,22 @@ export const StudentExamPage = () => {
 
       proc.onaudioprocess = (e) => {
         if (!recordingRef.current) return;
+
+        let rawInput = e.inputBuffer.getChannelData(0);
+
+        // Simple audio level estimation for dynamic orb
+        let sum = 0;
+        const step = Math.max(1, Math.floor(rawInput.length / 32));
+        for (let i = 0; i < rawInput.length; i += step) {
+          sum += rawInput[i] * rawInput[i];
+        }
+        const rms = Math.sqrt(sum / (rawInput.length / step));
+        setAudioLevel(Math.min(1, rms * 4));
+
         if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return;
 
-        let input = e.inputBuffer.getChannelData(0);
-
-        input = downsample(
-          input,
+        let input = downsample(
+          rawInput,
           audioCtx.current.sampleRate,
           16000
         );
@@ -742,6 +744,7 @@ export const StudentExamPage = () => {
       console.error("Microphone access error:", err);
       recordingRef.current = false;
       setRecording(false);
+      setAudioLevel(0);
       setMicStream(null);
     }
   };
@@ -753,6 +756,7 @@ export const StudentExamPage = () => {
 
     recordingRef.current = false;
     setRecording(false);
+    setAudioLevel(0);
     setMicStream(null);
 
     processor.current?.disconnect();
@@ -1378,10 +1382,32 @@ export const StudentExamPage = () => {
               </p>
             </div>
 
+            {cameraError && (
+              <div className="w-full px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-vazir flex items-center justify-between gap-2 text-right">
+                <span>{isRTL ? "دوربین وب‌کم در دسترس نیست." : "Webcam is unavailable."}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsIdentityVerified(true)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 cursor-pointer"
+                >
+                  {isRTL ? "ادامه بدون دوربین" : "Continue"}
+                </button>
+              </div>
+            )}
+
             {verificationError && (
-              <div className="w-full px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-vazir flex items-center gap-2 text-right">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{verificationError}</span>
+              <div className="w-full px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-vazir flex flex-col gap-1.5 text-right">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{verificationError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsIdentityVerified(true)}
+                  className="self-end text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
+                >
+                  {isRTL ? "ورود به آزمون (حالت شبیه‌ساز)" : "Bypass verification"}
+                </button>
               </div>
             )}
 
@@ -1722,4 +1748,6 @@ export const StudentExamPage = () => {
     </main>
   );
 };
+
+export default StudentExamPage;
 

@@ -33,6 +33,7 @@ import { TeacherLayout } from "@/Layouts/TeacherLayout";
 import { StudentLayout } from "@/Layouts/StudentLayout";
 import { AdaptiveLayout } from "@/Layouts/AdaptiveLayout";
 import { Login } from "@/Pages/Login";
+import { ErrorBoundary } from "@/Components/ErrorBoundary";
 
 function StudentsRoute() {
   const { role } = useContext(AppContext);
@@ -58,8 +59,9 @@ function NotificationDispatcher() {
 function App() {
   return (
     <AppProvider>
-      <div style={{ textAlign: "center" }}>
-        <Router>
+      <ErrorBoundary>
+        <div style={{ textAlign: "center" }}>
+          <Router>
           <Routes>
             {/* ==================== Auth ==================== */}
             <Route path="/login" element={<Login />} />
@@ -195,7 +197,8 @@ function App() {
           </Routes>
         </Router>
       </div>
-    </AppProvider>
+    </ErrorBoundary>
+  </AppProvider>
   );
 }
 
