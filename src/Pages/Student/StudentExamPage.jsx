@@ -15,6 +15,7 @@ import {
   UserCheck,
   RefreshCw,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -24,11 +25,11 @@ import { biometricsApi } from "@/api/new/biometrics.api";
 import { useBiometricTelemetry } from "@/features/biometrics/hooks/useBiometricTelemetry";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
-import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 import { ChatGptOrb } from "@/Components/ChatGptOrb";
+import { detectClientFace } from "@/features/biometrics/utils/clientFaceDetector";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -98,10 +99,21 @@ export const StudentExamPage = () => {
   const lastDistractionLogTimeRef = useRef(0);
 
   // Pre-exam Face Identity Verification Gate
+  const containerRef = useRef(null);
   const [isIdentityVerified, setIsIdentityVerified] = useState(false);
   const [isVerifyingIdentity, setIsVerifyingIdentity] = useState(false);
+  const [isVerifiedSuccess, setIsVerifiedSuccess] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [periodicAlert, setPeriodicAlert] = useState("");
+
+  // Auto-scan & Corner Brackets Face Tracking State (Apple Face ID aesthetic)
+  const [faceBox, setFaceBox] = useState(null); // { x, y, width, height } in container px
+  const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked" | "multiple_faces"
+  const [scanProgress, setScanProgress] = useState(0); // 0 to 100
+  const autoVerifyTriggeredRef = useRef(false);
+  const consecutiveQualityFramesRef = useRef(0);
+  const cooldownUntilRef = useRef(0);
+  const offscreenCanvasRef = useRef(null);
 
   // Capture low-res frame from videoRef for background 1 FPS telemetry
   const captureExamFrameBlob = useCallback((quality = 0.65, width = 320, height = 240) => {
@@ -131,12 +143,15 @@ export const StudentExamPage = () => {
 
   // 1. Initial Face Verification before letting student take the exam
   const handleVerifyIdentity = useCallback(async () => {
+    if (isVerifyingIdentity || isVerifiedSuccess) return;
     setIsVerifyingIdentity(true);
     setVerificationError("");
     try {
       const blob = await captureExamFrameBlob(0.85, 480, 360);
       if (!blob) {
         setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
+        cooldownUntilRef.current = Date.now() + 2500;
+        autoVerifyTriggeredRef.current = false;
         return;
       }
 
@@ -161,24 +176,267 @@ export const StudentExamPage = () => {
       }
 
       if (isMatch) {
-        setIsIdentityVerified(true);
+        setIsVerifiedSuccess(true);
         setVerificationError("");
+        setScanProgress(100);
+        // Wait 900ms to allow student to see the green checkmark & confirmation before starting exam
+        setTimeout(() => {
+          setIsIdentityVerified(true);
+        }, 900);
       } else if (lastErr) {
-        if (lastErr?.message?.includes("not enrolled")) {
+        const msg = lastErr?.message || "خطا در برقراری ارتباط با سرور احراز هویت.";
+        if (msg.includes("not enrolled")) {
           setVerificationError("پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ثبت هویت نمایید.");
         } else {
-          setVerificationError(lastErr?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
+          setVerificationError(msg);
         }
+        cooldownUntilRef.current = Date.now() + 3000;
+        consecutiveQualityFramesRef.current = 0;
+        setScanProgress(0);
+        autoVerifyTriggeredRef.current = false;
       } else {
-        setVerificationError("عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید.");
+        const mismatchMsg = "عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید.";
+        setVerificationError(mismatchMsg);
+        cooldownUntilRef.current = Date.now() + 3000;
+        consecutiveQualityFramesRef.current = 0;
+        setScanProgress(0);
+        autoVerifyTriggeredRef.current = false;
       }
     } catch (err) {
       console.warn("Identity verification error:", err);
-      setVerificationError(err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
+      const errMsg = err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.";
+      setVerificationError(errMsg);
+      cooldownUntilRef.current = Date.now() + 3000;
+      consecutiveQualityFramesRef.current = 0;
+      setScanProgress(0);
+      autoVerifyTriggeredRef.current = false;
     } finally {
       setIsVerifyingIdentity(false);
     }
-  }, [captureExamFrameBlob, candidateIds]);
+  }, [captureExamFrameBlob, candidateIds, isVerifyingIdentity, isVerifiedSuccess]);
+
+  // Continuous Face Tracking & Centering Loop (Apple Face ID aesthetic)
+  useEffect(() => {
+    if (isIdentityVerified || isCompleted || loading || cameraError) return;
+
+    if (!offscreenCanvasRef.current && typeof document !== "undefined") {
+      offscreenCanvasRef.current = document.createElement("canvas");
+    }
+
+    let isMounted = true;
+    let nativeDetector = null;
+    if (typeof window !== "undefined" && "FaceDetector" in window) {
+      try {
+        nativeDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
+      } catch (e) {
+        nativeDetector = null;
+      }
+    }
+
+    let isBusy = false;
+    let noFaceCounter = 0;
+
+    const detectCycle = async () => {
+      if (!isMounted || isBusy || isVerifiedSuccess) return;
+      const video = videoRef.current;
+      const container = containerRef.current;
+      if (!video || video.readyState < 2 || !container) return;
+
+      isBusy = true;
+      try {
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        const cw = container.clientWidth || 360;
+        const ch = container.clientHeight || 640;
+
+        const scale = Math.max(cw / vw, ch / vh);
+        const renderedW = vw * scale;
+        const renderedH = vh * scale;
+        const offsetX = (cw - renderedW) / 2;
+        const offsetY = (ch - renderedH) / 2;
+
+        let detectedBox = null;
+        let multipleFacesFound = false;
+
+        // 1. Native FaceDetector
+        if (nativeDetector) {
+          try {
+            const faces = await nativeDetector.detect(video);
+            if (faces && faces.length > 0) {
+              if (faces.length > 1) {
+                multipleFacesFound = true;
+              }
+              const bb = faces[0].boundingBox;
+              if (bb && bb.width > 20 && bb.height > 20) {
+                const mirroredX = vw - (bb.x + bb.width);
+                detectedBox = {
+                  x: offsetX + mirroredX * scale,
+                  y: offsetY + bb.y * scale,
+                  w: bb.width * scale,
+                  h: bb.height * scale,
+                };
+              }
+            }
+          } catch {}
+        }
+
+        // 2. High-speed Client Canvas Face & Head Tracker fallback
+        if (!detectedBox && offscreenCanvasRef.current) {
+          const clientFace = detectClientFace(video, offscreenCanvasRef.current);
+          if (clientFace) {
+            const mirroredNormX = 1.0 - (clientFace.normX + clientFace.normW);
+            detectedBox = {
+              x: offsetX + mirroredNormX * renderedW,
+              y: offsetY + clientFace.normY * renderedH,
+              w: clientFace.normW * renderedW,
+              h: clientFace.normH * renderedH,
+            };
+          }
+        }
+
+        if (multipleFacesFound && isMounted) {
+          setFaceStatus("multiple_faces");
+          setVerificationError("تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید.");
+          consecutiveQualityFramesRef.current = 0;
+          setScanProgress(0);
+          autoVerifyTriggeredRef.current = false;
+        } else if (detectedBox && isMounted) {
+          noFaceCounter = 0;
+          const maxFaceW = Math.round(cw * 0.58);
+          const minFaceW = Math.round(cw * 0.38);
+          const targetW = Math.max(minFaceW, Math.min(maxFaceW, detectedBox.w * 1.15));
+          const targetH = Math.round(targetW * 1.30);
+
+          const cx = detectedBox.x + detectedBox.w / 2;
+          const cy = detectedBox.y + detectedBox.h * 0.45;
+          const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
+          const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
+
+          setFaceBox((prev) => {
+            if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
+            const dx = Math.abs(targetX - prev.x);
+            const dy = Math.abs(targetY - prev.y);
+            const dw = Math.abs(targetW - prev.width);
+            const dh = Math.abs(targetH - prev.height);
+
+            const smoothX = dx < 3.0 ? prev.x : prev.x * 0.82 + targetX * 0.18;
+            const smoothY = dy < 3.0 ? prev.y : prev.y * 0.82 + targetY * 0.18;
+            const smoothW = dw < 3.5 ? prev.width : prev.width * 0.90 + targetW * 0.10;
+            const smoothH = dh < 3.5 ? prev.height : prev.height * 0.90 + targetH * 0.10;
+
+            return {
+              x: smoothX,
+              y: smoothY,
+              width: smoothW,
+              height: smoothH,
+            };
+          });
+          setFaceStatus("face_locked");
+
+          if (!isVerifyingIdentity && !isVerifiedSuccess) {
+            if (Date.now() < cooldownUntilRef.current) {
+              // Waiting for cooldown to expire
+            } else {
+              consecutiveQualityFramesRef.current = Math.min(30, consecutiveQualityFramesRef.current + 1);
+              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 26) * 100));
+              setScanProgress(prog);
+
+              if (prog >= 100 && !autoVerifyTriggeredRef.current) {
+                autoVerifyTriggeredRef.current = true;
+                handleVerifyIdentity();
+              }
+            }
+          }
+        } else if (isMounted) {
+          noFaceCounter++;
+          if (noFaceCounter >= 8) {
+            setFaceBox(null);
+            setFaceStatus("no_face");
+            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 2);
+            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 26) * 100));
+            setScanProgress(prog);
+          }
+        }
+      } catch (err) {
+        console.warn("Face tracker pulse:", err);
+      } finally {
+        isBusy = false;
+      }
+    };
+
+    let timer = null;
+    const runLoop = async () => {
+      if (!isMounted) return;
+      await detectCycle();
+      if (isMounted) {
+        timer = setTimeout(runLoop, nativeDetector ? 60 : 45);
+      }
+    };
+    runLoop();
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isIdentityVerified, isCompleted, loading, cameraError, isVerifyingIdentity, isVerifiedSuccess, handleVerifyIdentity]);
+
+  // Dynamic Corner Brackets Framing Calculations
+  const isLockedOnFace = (faceStatus === "face_locked" && faceBox) || isVerifiedSuccess;
+  const bracketSize = 56;
+  const cw = containerRef.current?.clientWidth || 360;
+  const ch = containerRef.current?.clientHeight || 640;
+
+  const guideW = Math.round(cw * 0.84);
+  const guideH = Math.min(Math.round(ch * 0.60), Math.round(guideW * 1.34));
+  const guideX = Math.round((cw - guideW) / 2);
+  const guideY = Math.round((ch - guideH) / 2 - 15);
+
+  const activeBox = (isLockedOnFace && faceBox) ? faceBox : {
+    x: guideX,
+    y: guideY,
+    width: guideW,
+    height: guideH,
+  };
+
+  const bracketPositions = {
+    topLeft: {
+      top: `${Math.round(activeBox.y)}px`,
+      left: `${Math.round(activeBox.x)}px`,
+    },
+    topRight: {
+      top: `${Math.round(activeBox.y)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+    },
+    bottomLeft: {
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      left: `${Math.round(activeBox.x)}px`,
+    },
+    bottomRight: {
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+    },
+  };
+
+  // Color states:
+  // - Verified Success: Green (#34d399)
+  // - Multiple Faces Warning: Rose (#f43f5e)
+  // - Face Locked & Tracking: Blue (#38bdf8)
+  // - Searching / Idle: Soft White / Gray
+  const bracketStroke = isVerifiedSuccess
+    ? "#34d399"
+    : faceStatus === "multiple_faces"
+    ? "#f43f5e"
+    : isLockedOnFace
+    ? "#38bdf8"
+    : "rgba(255, 255, 255, 0.85)";
+
+  const bracketFilter = isVerifiedSuccess
+    ? "drop-shadow(0 0 16px rgba(52, 211, 153, 0.95))"
+    : faceStatus === "multiple_faces"
+    ? "drop-shadow(0 0 14px rgba(244, 63, 94, 0.9))"
+    : isLockedOnFace
+    ? "drop-shadow(0 0 14px rgba(56, 189, 248, 0.9))"
+    : "drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))";
 
   // 2. Real-time Telemetry & Fast Gaze Deviation Reaction
   const handleTelemetryUpdate = useCallback((data) => {
@@ -593,16 +851,21 @@ export const StudentExamPage = () => {
         }
       }
     },
-    [isQuestionRTL, stopQuestionTTS, answerText]
+    [isQuestionRTL, stopQuestionTTS]
   );
 
-  // Auto-play TTS and sync word-by-word reveal whenever a new question is loaded
+  const lastAutoPlayedQuestionRef = useRef(null);
+
+  // Auto-play TTS strictly ONCE whenever a new question is loaded
   useEffect(() => {
     if (currentQuestion && !isCompleted && !loading && isIdentityVerified) {
-      setHasFinishedCurrentQuestion(false);
-      playQuestionTTS(currentQuestion);
-      // Auto-align voice input language with question language (fa for Persian, en for English)
-      setVoiceLang(isQuestionRTL ? "fa" : "en");
+      if (lastAutoPlayedQuestionRef.current !== currentQuestion) {
+        lastAutoPlayedQuestionRef.current = currentQuestion;
+        setHasFinishedCurrentQuestion(false);
+        playQuestionTTS(currentQuestion);
+        // Auto-align voice input language with question language (fa for Persian, en for English)
+        setVoiceLang(isQuestionRTL ? "fa" : "en");
+      }
     }
     return () => {
       stopQuestionTTS();
@@ -680,6 +943,11 @@ export const StudentExamPage = () => {
 
   const startRecording = async (selectedLang) => {
     if (recordingRef.current) return;
+
+    // Immediately stop reading question aloud when student activates mic to talk
+    stopQuestionTTS();
+    setHasFinishedCurrentQuestion(true);
+    setSpokenWordCount(questionWords.length);
 
     const activeLang = selectedLang || voiceLang || "fa";
     console.log(`🎙 Starting recording (${activeLang})...`);
@@ -1122,8 +1390,8 @@ export const StudentExamPage = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/75 pointer-events-none" />
       </div>
 
-      {/* ================= 2. Top Bar (Exit Button, Biometric Status & Timer) ================= */}
-      <header className="relative z-20 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between max-w-xl mx-auto">
+      {/* ================= 2. Top Bar (Exit Button, Face ID Island or Biometric Status & Timer) ================= */}
+      <header className="relative z-30 w-full pt-4 px-4 pb-1 shrink-0 flex items-center justify-between max-w-xl mx-auto">
         {/* Hang up / Exit Button */}
         <button
           type="button"
@@ -1135,42 +1403,223 @@ export const StudentExamPage = () => {
           <PhoneOff className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-2">
-          {/* Biometric Proctoring Status Indicator */}
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-medium transition-all ${
-              isDistracted
-                ? "bg-amber-500/30 border-amber-400 text-amber-200 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"
-                : biometricTelemetry?.is_focused
-                ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-300"
-                : "bg-black/50 border-white/15 text-slate-300"
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
+        {isIdentityVerified ? (
+          <div className="flex items-center gap-2">
+            {/* Biometric Proctoring Status Indicator */}
+            <div
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-medium transition-all ${
                 isDistracted
-                  ? "bg-amber-400 animate-ping"
+                  ? "bg-amber-500/30 border-amber-400 text-amber-200 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"
                   : biometricTelemetry?.is_focused
-                  ? "bg-emerald-400"
-                  : "bg-sky-400"
+                  ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-300"
+                  : "bg-black/50 border-white/15 text-slate-300"
               }`}
-            />
-            <span className="text-[11px] font-mono">
-              {isDistracted
-                ? (isRTL ? "عدم تمرکز" : "Distracted")
-                : biometricTelemetry
-                ? `${isRTL ? "توجه" : "Attn"}: ${Math.round(biometricTelemetry.attention_score || 95)}%`
-                : (isRTL ? "پایش فعال" : "Monitoring")}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isDistracted
+                    ? "bg-amber-400 animate-ping"
+                    : biometricTelemetry?.is_focused
+                    ? "bg-emerald-400"
+                    : "bg-sky-400"
+                }`}
+              />
+              <span className="text-[11px] font-mono">
+                {isDistracted
+                  ? (isRTL ? "عدم تمرکز" : "Distracted")
+                  : biometricTelemetry
+                  ? `${isRTL ? "توجه" : "Attn"}: ${Math.round(biometricTelemetry.attention_score || 95)}%`
+                  : (isRTL ? "پایش فعال" : "Monitoring")}
+              </span>
+            </div>
+
+            {/* Minimalist Floating Timer Pill */}
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-amber-300 font-mono text-xs font-bold shadow-lg">
+              <Clock3 className="w-3.5 h-3.5 text-amber-400" />
+              <span>{formatTimer(remainingSeconds)}</span>
+            </div>
+          </div>
+        ) : (
+          /* Apple Face ID Dynamic Circular Island & Progress during Pre-Exam Verification */
+          <div className="flex flex-col items-center">
+            <div className="apple-faceid-flipper relative w-12 h-12 flex items-center justify-center">
+              {/* Front Face: Dynamic Circular Progress Ring + Face ID Icon */}
+              <div
+                className={`absolute inset-0 flex items-center justify-center rounded-full transition-opacity duration-300 ${
+                  isVerifiedSuccess
+                    ? "animate-faceid-front-flip pointer-events-none"
+                    : "opacity-100"
+                }`}
+              >
+                <svg className="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 48 48">
+                  <defs>
+                    <linearGradient id="apple-top-scan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="60%" stopColor="#818cf8" />
+                      <stop offset="100%" stopColor="#34d399" />
+                    </linearGradient>
+                  </defs>
+                  {/* Background Ring Track */}
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="21"
+                    fill="rgba(15, 23, 42, 0.75)"
+                    stroke="rgba(255, 255, 255, 0.14)"
+                    strokeWidth="2.8"
+                    className="backdrop-blur-md"
+                  />
+                  {/* Active Dynamic Progress Ring */}
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="21"
+                    fill="none"
+                    stroke={faceStatus === "multiple_faces" ? "#f43f5e" : "url(#apple-top-scan-grad)"}
+                    strokeWidth="3.2"
+                    strokeDasharray="132"
+                    strokeDashoffset={132 - (132 * (scanProgress || 0)) / 100}
+                    strokeLinecap="round"
+                    className="transition-all duration-300 ease-out"
+                    style={{
+                      filter:
+                        scanProgress > 0
+                          ? `drop-shadow(0 0 6px ${faceStatus === "multiple_faces" ? "rgba(244,63,94,0.85)" : "rgba(56, 189, 248, 0.85)"})`
+                          : "none",
+                    }}
+                  />
+                </svg>
+
+                {/* Center Face ID Icon */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <img
+                    src="/face_logo.png"
+                    alt="Face Scan"
+                    className={`w-5 h-5 object-contain invert brightness-200 transition-all duration-300 ${
+                      faceStatus === "face_locked"
+                        ? "scale-105 opacity-100 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]"
+                        : "scale-90 opacity-60"
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Back Face: Apple Emerald Face ID Checkmark with 3D Flip */}
+              {isVerifiedSuccess && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full animate-faceid-back-flip bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 border border-emerald-300 shadow-[0_0_25px_rgba(52,211,153,0.95)]">
+                  <Check className="w-5 h-5 text-white stroke-[3.5] drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" />
+                </div>
+              )}
+            </div>
+
+            {/* Subtitle / Status Label */}
+            <span className="text-[10px] font-vazir mt-0.5 tracking-tight transition-colors duration-300 drop-shadow">
+              {isVerifiedSuccess ? (
+                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                  <span>تأیید شد</span>
+                </span>
+              ) : faceStatus === "multiple_faces" ? (
+                <span className="text-rose-400 font-bold">بیش از ۱ چهره</span>
+              ) : scanProgress > 0 ? (
+                <span className="text-sky-300 font-mono font-bold">
+                  {Math.round(scanProgress)}%
+                </span>
+              ) : (
+                <span className="text-white/70">احراز هویت چهره</span>
+              )}
             </span>
           </div>
+        )}
 
-          {/* Minimalist Floating Timer Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-amber-300 font-mono text-xs font-bold shadow-lg">
-            <Clock3 className="w-3.5 h-3.5 text-amber-400" />
-            <span>{formatTimer(remainingSeconds)}</span>
+        {/* Right Spacer (keeps center title aligned when not verified) */}
+        {!isIdentityVerified && <div className="w-10 h-10" />}
+      </header>
+
+      {/* ================= 4 Apple Face ID Corner Brackets ================= */}
+      {!isIdentityVerified && !loading && !cameraError && (
+        <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
+          {/* Top-Left Corner Bracket */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.topLeft,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 5 52 L 5 21 A 16 16 0 0 1 21 5 L 52 5"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+
+          {/* Top-Right Corner Bracket */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.topRight,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 4 5 L 35 5 A 16 16 0 0 1 51 21 L 51 52"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+
+          {/* Bottom-Left Corner Bracket */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.bottomLeft,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 5 4 L 5 35 A 16 16 0 0 0 21 51 L 52 51"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+
+          {/* Bottom-Right Corner Bracket */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.bottomRight,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 4 51 L 35 51 A 16 16 0 0 0 51 35 L 51 4"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
           </div>
         </div>
-      </header>
+      )}
 
       {/* Liquid-Glass Distraction Warning Banner */}
       {isDistracted && (
@@ -1388,83 +1837,103 @@ export const StudentExamPage = () => {
             </div>
           </div>
         ) : !isIdentityVerified ? (
-          /* ================= Pre-Exam Face Identity Verification Gate ================= */
-          <div className="m-auto w-full max-w-sm rounded-3xl liquid-glass-card border border-white/25 bg-black/60 backdrop-blur-2xl p-6 flex flex-col items-center justify-center text-center gap-4 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="relative w-20 h-20 rounded-full flex items-center justify-center bg-sky-500/15 border-2 border-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.4)]">
-              {isVerifyingIdentity ? (
-                <RefreshCw className="w-9 h-9 text-sky-400 animate-spin" />
-              ) : (
-                <ShieldCheck className="w-10 h-10 text-sky-400" />
-              )}
-              <div className="absolute inset-0 rounded-full border border-sky-400/40 animate-ping pointer-events-none" />
-            </div>
+          /* ================= Pre-Exam Apple Face ID Verification Gate ================= */
+          <div className="m-auto w-full max-w-[340px] flex flex-col items-center justify-between h-full py-6 z-20 pointer-events-none">
+            {/* Top Space for Face Corridor & Corner Brackets */}
+            <div className="flex-1 w-full" />
 
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-white font-vazir drop-shadow">
-                {isRTL ? "احراز هویت هوشمند دانشجو" : "Identity Verification"}
-              </h3>
-              <p className="text-xs text-slate-300 font-vazir leading-relaxed">
-                {isRTL
-                  ? "جهت ورود به آزمون، تطبیق چهره با الگوی بیومتریک ثبت‌شده شما در سامانه الزامی است. لطفاً مستقیماً به دوربین نگاه کنید."
-                  : "Please look directly at the camera to verify your face against the registered biometric profile."}
-              </p>
-            </div>
-
-            {cameraError && (
-              <div className="w-full px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-vazir flex items-center gap-2 text-right">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
-                  {isRTL
-                    ? "دوربین وب‌کم در دسترس نیست. برای احراز هویت، دسترسی به دوربین الزامی است."
-                    : "Webcam is unavailable. Camera access is required for identity verification."}
-                </span>
-              </div>
-            )}
-
-            {verificationError && (
-              <div className="w-full px-3 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-200 text-xs font-vazir flex flex-col gap-1.5 text-right">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span>{verificationError}</span>
-                </div>
-                {verificationError.includes("پروفایل بیومتریک") && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate("/StudentSettings/Biometrics", {
-                        state: {
-                          returnTo: `/StudentExam/${id}`,
-                          exam: passedExam,
-                          reason: "biometrics_required",
-                        },
-                      })
-                    }
-                    className="self-end text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
-                  >
-                    {isRTL ? "رفتن به بخش ثبت اطلاعات بیومتریک" : "Go to Biometrics Settings"}
-                  </button>
+            {/* Floating Liquid Glass Bottom Status Capsule */}
+            <div className="w-full pointer-events-auto liquid-glass-card rounded-3xl p-4 bg-black/60 backdrop-blur-2xl border border-white/20 shadow-2xl flex flex-col items-center text-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+              {/* Status & Feedback Indicator */}
+              <div className="flex items-center gap-2">
+                {isVerifiedSuccess ? (
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                  </div>
+                ) : isVerifyingIdentity ? (
+                  <RefreshCw className="w-5 h-5 text-sky-400 animate-spin" />
+                ) : faceStatus === "multiple_faces" ? (
+                  <AlertTriangle className="w-5 h-5 text-rose-400 animate-bounce" />
+                ) : faceStatus === "face_locked" ? (
+                  <ShieldCheck className="w-5 h-5 text-sky-400" />
+                ) : (
+                  <UserCheck className="w-5 h-5 text-slate-300" />
                 )}
+                <h3
+                  className={`text-xs sm:text-sm font-bold font-vazir ${
+                    isVerifiedSuccess
+                      ? "text-emerald-400"
+                      : faceStatus === "multiple_faces"
+                      ? "text-rose-400"
+                      : "text-white"
+                  }`}
+                >
+                  {isVerifiedSuccess
+                    ? (isRTL ? "هویت شما با موفقیت تأیید شد" : "Identity Verified")
+                    : faceStatus === "multiple_faces"
+                    ? (isRTL ? "بیش از یک چهره در کادر قرار دارد!" : "Multiple faces detected!")
+                    : isVerifyingIdentity
+                    ? (isRTL ? "در حال تطبیق هویت بیومتریک با سرور..." : "Verifying with server...")
+                    : faceStatus === "face_locked"
+                    ? (isRTL ? "چهره قفل شد، ثابت بمانید..." : "Face locked, hold steady...")
+                    : (isRTL ? "احراز هویت هوشمند دانشجو" : "Face Identity Verification")}
+                </h3>
               </div>
-            )}
 
-            <button
-              type="button"
-              onClick={handleVerifyIdentity}
-              disabled={isVerifyingIdentity || cameraLoading || cameraError}
-              className="w-full h-11 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isVerifyingIdentity ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>{isRTL ? "در حال تطبیق چهره با سرور..." : "Verifying with server..."}</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{isRTL ? "تایید هویت و ورود به آزمون" : "Verify & Begin Exam"}</span>
-                </>
+              <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[280px]">
+                {isVerifiedSuccess
+                  ? (isRTL ? "در حال ورود خودکار به سوالات آزمون شفاهی..." : "Entering exam room...")
+                  : faceStatus === "multiple_faces"
+                  ? (isRTL
+                      ? "تنها یک چهره باید در کادر تصویر باشد. لطفاً به تنهایی در برابر دوربین قرار گیرید."
+                      : "Only one face must be in the camera frame.")
+                  : verificationError
+                  ? verificationError
+                  : (isRTL
+                      ? "لطفاً مستقیماً به دوربین نگاه کنید تا چهره شما با الگوی ثبت‌شده تطبیق داده شود."
+                      : "Please look directly at camera to match your face with registered biometrics.")}
+              </p>
+
+              {verificationError && verificationError.includes("پروفایل بیومتریک") && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/StudentSettings/Biometrics", {
+                      state: {
+                        returnTo: `/StudentExam/${id}`,
+                        exam: passedExam,
+                        reason: "biometrics_required",
+                      },
+                    })
+                  }
+                  className="text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
+                >
+                  {isRTL ? "رفتن به بخش ثبت اطلاعات بیومتریک" : "Go to Biometrics Settings"}
+                </button>
               )}
-            </button>
+
+              {/* Action / Retry Button */}
+              {!isVerifiedSuccess && (
+                <button
+                  type="button"
+                  onClick={handleVerifyIdentity}
+                  disabled={isVerifyingIdentity || cameraLoading || cameraError}
+                  className="w-full h-10 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isVerifyingIdentity ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>{isRTL ? "در حال تطبیق با سرور..." : "Verifying with server..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>{isRTL ? "تایید هویت و ورود به آزمون" : "Verify & Begin Exam"}</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           /* ================= 5. Active Video Call Stage (Question + Answer) ================= */
@@ -1508,180 +1977,119 @@ export const StudentExamPage = () => {
               />
             </div>
 
-            {/* Upper Box: Live Question Chat Message Blob (Enters from Left) */}
+            {/* Upper Box: Live Question Message (Seamless Fluid Liquid Glass, No Clunky Bounding Box) */}
             <div
               key={`bot-q-${currentTurnIndex}`}
               className="w-full max-w-[360px] mx-auto chat-bubble-enter-left relative"
             >
-              <VoiceBeam
-                type="default"
-                scale={0.8}
-                reach={0.65}
-                spread={0.85}
-                bend={0}
-                strokeOpacity={0.85}
-                innerOpacity={0.25}
-                bloomOpacity={0.9}
-                idle={0}
-                level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
-                processing={isBufferingTTS}
-                className="w-full chat-bubble-ai"
-                style={{ borderRadius: "24px" }}
-              >
-                {/* Modern Frosted Glass Question Box */}
-                <div
-                  className="w-full chat-bubble-ai p-3.5 sm:p-4 flex flex-col gap-2.5 transition-all relative overflow-hidden"
-                  style={{
-                    borderRadius: "24px",
-                    background:
-                      "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(14, 165, 233, 0.06) 100%), rgba(15, 23, 42, 0.35)",
-                    backdropFilter: "blur(18px) saturate(190%)",
-                    WebkitBackdropFilter: "blur(18px) saturate(190%)",
-                    border: "1px solid rgba(255, 255, 255, 0.16)",
-                    boxShadow:
-                      "0 10px 30px -4px rgba(0, 0, 0, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2)",
-                  }}
-                >
-                  {/* Ambient Fluid Cyan Glow in background */}
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col gap-2.5 relative overflow-hidden">
+                {/* Ambient Fluid Cyan Glow in background */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                  {/* Chat Blob Header: Turn Tag + Difficulty + Replay Button (No Logo) */}
-                  <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
-                      <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                        {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                        {currentDifficulty > 0.6
-                          ? (isQuestionRTL ? "پیشرفته" : "Hard")
-                          : currentDifficulty > 0.35
-                          ? (isQuestionRTL ? "متوسط" : "Medium")
-                          : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                {/* Header: Turn Tag + Difficulty + Replay Button */}
+                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
+                    <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                      {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                      {currentDifficulty > 0.6
+                        ? (isQuestionRTL ? "پیشرفته" : "Hard")
+                        : currentDifficulty > 0.35
+                        ? (isQuestionRTL ? "متوسط" : "Medium")
+                        : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                    </span>
+                  </div>
+
+                  {/* Audio Replay / Mute Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isSpeakingQuestion || isBufferingTTS) {
+                        stopQuestionTTS();
+                      } else {
+                        playQuestionTTS(currentQuestion, true);
+                      }
+                    }}
+                    className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                      isSpeakingQuestion || isBufferingTTS
+                        ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
+                        : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                    }`}
+                    title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                  >
+                    {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Synchronized Word-by-Word Question Text */}
+                <div
+                  dir={isQuestionRTL ? "rtl" : "ltr"}
+                  className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
+                    isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
+                  }`}
+                >
+                  {isBufferingTTS ? (
+                    <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
+                      <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
+                        {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
                       </span>
                     </div>
+                  ) : questionWords.length > 0 ? (
+                    questionWords.map((word, idx) => {
+                      const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
+                      const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
 
-                    {/* Audio Replay / Mute Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isSpeakingQuestion || isBufferingTTS) {
-                          stopQuestionTTS();
-                        } else {
-                          playQuestionTTS(currentQuestion, true);
-                        }
-                      }}
-                      className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
-                        isSpeakingQuestion || isBufferingTTS
-                          ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
-                          : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
-                      }`}
-                      title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
-                    >
-                      {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* Synchronized Word-by-Word Question Text (Auto LTR for English regardless of app language) */}
-                  <div
-                    dir={isQuestionRTL ? "rtl" : "ltr"}
-                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
-                      isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
-                    }`}
-                  >
-                    {isBufferingTTS ? (
-                      <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
-                        <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
-                          {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
+                      return (
+                        <span
+                          key={idx}
+                          className={`inline-block me-1.5 transition-all duration-150 ${
+                            isCurrent
+                              ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
+                              : isVisible
+                              ? "text-white opacity-100"
+                              : "opacity-0 translate-y-0.5"
+                          }`}
+                        >
+                          {word}
                         </span>
-                      </div>
-                    ) : questionWords.length > 0 ? (
-                      questionWords.map((word, idx) => {
-                        const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
-                        const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
-
-                        return (
-                          <span
-                            key={idx}
-                            className={`inline-block me-1.5 transition-all duration-150 ${
-                              isCurrent
-                                ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
-                                : isVisible
-                                ? "text-white opacity-100"
-                                : "opacity-0 translate-y-0.5"
-                            }`}
-                          >
-                            {word}
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span className="text-slate-400">
-                        {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
-                      </span>
-                    )}
-                  </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-slate-400">
+                      {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                    </span>
+                  )}
                 </div>
-              </VoiceBeam>
+              </div>
             </div>
 
-            {/* Bottom Section: Response Field Box + Controls Row Below (Enters from Right after Bot finishes reading) */}
+            {/* Bottom Section: Response Field + Controls Row Below (Enters from Right after Bot finishes reading) */}
             {!isBotReading && (
               <div
                 key={`student-ans-${currentTurnIndex}`}
-                className="w-full max-w-[360px] mx-auto flex flex-col gap-3 chat-bubble-enter-right"
+                className="w-full max-w-[360px] mx-auto flex flex-col gap-2.5 chat-bubble-enter-right"
               >
-                {/* Dedicated Student Response Field (Bottom-Right corner stretched/pointed) */}
-                <div className="relative w-full">
-                  <VoiceBeam
-                    type="default"
-                    scale={0.8}
-                    reach={0.65}
-                    spread={0.85}
-                    bend={0}
-                    strokeOpacity={0.85}
-                    innerOpacity={0.25}
-                    bloomOpacity={0.9}
-                    idle={0}
-                    stream={micStream}
-                    level={recording ? 0.85 : 0}
-                    processing={isSubmitting}
-                    className="w-full chat-bubble-student"
-                    style={{ borderRadius: "24px" }}
-                  >
-                    <div
-                      className="w-full chat-bubble-student p-3.5 transition-all relative overflow-hidden"
-                      style={{
-                        borderRadius: "24px",
-                        background:
-                          "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(139, 92, 246, 0.06) 100%), rgba(15, 23, 42, 0.35)",
-                        backdropFilter: "blur(18px) saturate(190%)",
-                        WebkitBackdropFilter: "blur(18px) saturate(190%)",
-                        border: "1px solid rgba(255, 255, 255, 0.16)",
-                        boxShadow:
-                          "0 10px 30px -4px rgba(0, 0, 0, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2)",
-                      }}
-                    >
-                      {/* Ambient Fluid Violet Glow */}
-                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                {/* Seamless Fluid Student Response Field (No Boxy Borders) */}
+                <div className="w-full p-3 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden">
+                  <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                      <textarea
-                        dir={isAnswerRTL ? "rtl" : "ltr"}
-                        rows={2}
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        placeholder={
-                          isQuestionRTL
-                            ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
-                            : "Type response here or speak with mic..."
-                        }
-                        className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-300/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
-                          isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
-                        }`}
-                      />
-                    </div>
-                  </VoiceBeam>
+                  <textarea
+                    dir={isAnswerRTL ? "rtl" : "ltr"}
+                    rows={2}
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value)}
+                    placeholder={
+                      isQuestionRTL
+                        ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
+                        : "Type response here or speak with mic..."
+                    }
+                    className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
+                      isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
+                    }`}
+                  />
                 </div>
 
                 {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
