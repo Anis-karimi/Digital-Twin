@@ -7,7 +7,7 @@
  * - Full live camera bounded strictly to the 360px application frame
  */
 
-import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,

@@ -12,11 +12,11 @@ import { requestWithFallback } from "../client";
  */
 export async function getCurrentUserProfile() {
   return requestWithFallback("/auth/me", { method: "GET" }, () => ({
-    id: "usr_001",
-    name: "استاد دیجیتال",
-    nameEn: "Digital Teacher",
+    id: "2ec3a90b-4108-48e7-ad4f-5b0e604e14cc",
+    name: "دکتر محمد اله بخش",
+    nameEn: "Dr. Mohammad Allahbakhsh",
     role: "teacher",
-    email: "teacher@university.ac.ir",
+    email: "mohammad_allahbakhsh@um.ac.ir",
     avatar: null,
   }));
 }
