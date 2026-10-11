@@ -1039,3 +1039,38 @@ div[data-voice-beam].chat-bubble-student {
 .animate-liquid-float {
   animation: liquid-float 3s ease-in-out infinite;
 }
+
+/* 6. Biometric Laser Sweep & Square HUD Animations */
+@keyframes biometric-laser-sweep {
+  0% {
+    top: 2%;
+    opacity: 0.65;
+  }
+  50% {
+    top: 96%;
+    opacity: 1;
+  }
+  100% {
+    top: 2%;
+    opacity: 0.65;
+  }
+}
+
+.animate-biometric-laser {
+  animation: biometric-laser-sweep 1.8s ease-in-out infinite;
+}
+
+@keyframes hud-reticle-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.025);
+    opacity: 1;
+  }
+}
+
+.animate-hud-pulse {
+  animation: hud-reticle-pulse 2s ease-in-out infinite;
+}

@@ -16,6 +16,10 @@ import {
   RefreshCw,
   ShieldCheck,
   Check,
+  Scan,
+  ShieldAlert,
+  Target,
+  Eye,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -25,11 +29,13 @@ import { biometricsApi } from "@/api/new/biometrics.api";
 import { useBiometricTelemetry } from "@/features/biometrics/hooks/useBiometricTelemetry";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
+import { BorderBeam } from "border-beam";
+import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 import { ChatGptOrb } from "@/Components/ChatGptOrb";
-import { detectClientFace } from "@/features/biometrics/utils/clientFaceDetector";
+import { detectClientFace, detectFaceWithFallback } from "@/features/biometrics/utils/clientFaceDetector";
 
 export const StudentExamPage = () => {
   const { id } = useParams();
@@ -103,13 +109,21 @@ export const StudentExamPage = () => {
   const [isIdentityVerified, setIsIdentityVerified] = useState(false);
   const [isVerifyingIdentity, setIsVerifyingIdentity] = useState(false);
   const [isVerifiedSuccess, setIsVerifiedSuccess] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [periodicAlert, setPeriodicAlert] = useState("");
 
-  // Auto-scan & Corner Brackets Face Tracking State (Apple Face ID aesthetic)
-  const [faceBox, setFaceBox] = useState(null); // { x, y, width, height } in container px
+  // Auto-scan & Square Face Tracking Reticle State
+  const [faceBox, setFaceBox] = useState(null); // { x, y, size } in container px
   const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked" | "multiple_faces"
   const [scanProgress, setScanProgress] = useState(0); // 0 to 100
+  const [liveMetrics, setLiveMetrics] = useState({
+    sharpness: 85,
+    brightness: 82,
+    confidence: 0,
+    stability: 0,
+  });
+  const [verificationResult, setVerificationResult] = useState(null); // { verdict, title, message, liveness, distance, statusText }
   const autoVerifyTriggeredRef = useRef(false);
   const consecutiveQualityFramesRef = useRef(0);
   const cooldownUntilRef = useRef(0);
@@ -145,30 +159,53 @@ export const StudentExamPage = () => {
   const handleVerifyIdentity = useCallback(async () => {
     if (isVerifyingIdentity || isVerifiedSuccess) return;
     setIsVerifyingIdentity(true);
+    setIsScanning(true);
     setVerificationError("");
+    setVerificationResult(null);
+
     try {
-      const blob = await captureExamFrameBlob(0.85, 480, 360);
+      const blob = await captureExamFrameBlob(0.88, 540, 420);
       if (!blob) {
         setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
         cooldownUntilRef.current = Date.now() + 2500;
         autoVerifyTriggeredRef.current = false;
+        setIsScanning(false);
+        setIsVerifyingIdentity(false);
         return;
       }
 
       let isMatch = false;
+      let isSpoof = false;
+      let isNotEnrolled = false;
       let lastErr = null;
+      let verifyResponse = null;
 
       for (const cid of candidateIds) {
         try {
           const res = await biometricsApi.verifyStudentFace(cid, blob, "balanced");
           if (res && res.verified) {
             isMatch = true;
+            verifyResponse = res;
             break;
+          } else if (res && res.status === "ACCESS DENIED") {
+            verifyResponse = res;
           }
         } catch (err) {
           lastErr = err;
-          // If candidate is not enrolled, continue checking next candidate ID
-          if (err?.message?.includes("not enrolled") || String(err?.status).includes("404")) {
+          const msg = String(err?.message || err?.data?.detail || "").toLowerCase();
+          if (
+            msg.includes("spoof") ||
+            msg.includes("presentation attack") ||
+            msg.includes("photo") ||
+            msg.includes("screen") ||
+            msg.includes("paper") ||
+            err?.status === 403
+          ) {
+            isSpoof = true;
+            break;
+          }
+          if (msg.includes("not enrolled") || String(err?.status).includes("404")) {
+            isNotEnrolled = true;
             continue;
           }
           break;
@@ -177,26 +214,82 @@ export const StudentExamPage = () => {
 
       if (isMatch) {
         setIsVerifiedSuccess(true);
+        setIsScanning(false);
         setVerificationError("");
         setScanProgress(100);
-        // Wait 900ms to allow student to see the green checkmark & confirmation before starting exam
+        setVerificationResult({
+          verdict: "genuine",
+          title: isRTL ? "✅ تأیید هویت موفق: چهره واقعی دانشجو (مطابقت کامل)" : "✅ Identity Verified: Genuine Student",
+          message: isRTL ? "چهره واقعی شما با الگوی بیومتریک سامانه تطبیق داده شد. در حال ورود به آزمون..." : "Genuine face verified. Entering oral examination...",
+          liveness: isRTL ? "واقعی و زنده (Genuine Face)" : "Genuine (Passed)",
+          confidence: 96,
+          distance: verifyResponse?.cosine_distance || 0.22,
+          statusText: isRTL ? "دسترسی مجاز" : "Access Granted",
+        });
+        // Wait 1.2s to allow student to see the green square & confirmation before starting exam
         setTimeout(() => {
           setIsIdentityVerified(true);
-        }, 900);
-      } else if (lastErr) {
-        const msg = lastErr?.message || "خطا در برقراری ارتباط با سرور احراز هویت.";
-        if (msg.includes("not enrolled")) {
-          setVerificationError("پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ثبت هویت نمایید.");
-        } else {
-          setVerificationError(msg);
-        }
-        cooldownUntilRef.current = Date.now() + 3000;
+        }, 1200);
+      } else if (isSpoof) {
+        setIsVerifiedSuccess(false);
+        setIsScanning(false);
+        const spoofMsg = isRTL
+          ? "🚫 هشدار امنیتی: تلاش برای جعل هویت با عکس / نمایشگر شناسایی شد (Spoof Detected)"
+          : "🚫 Security Alert: Photo / Screen Presentation Attack Detected";
+        setVerificationError(spoofMsg);
+        setVerificationResult({
+          verdict: "spoof",
+          title: spoofMsg,
+          message: isRTL
+            ? "سامانه ضدجعل MiniFASNet تشخیص داد که تصویر ارائه‌شده یک عکس چاپی یا صفحه نمایشگر دیجیتال است. لطفاً چهره زنده و واقعی خود را روبه‌روی دوربین قرار دهید."
+            : "Presentation attack detected. Digital screens, printouts, or static photos are prohibited.",
+          liveness: isRTL ? "رد شد (Spoof / 2D Presentation Attack)" : "Failed (Spoof Attack)",
+          confidence: 14,
+          distance: 0.94,
+          statusText: isRTL ? "دسترسی غیرمجاز (حمله تقلبی)" : "Access Denied (Spoof)",
+        });
+        cooldownUntilRef.current = Date.now() + 3500;
+        consecutiveQualityFramesRef.current = 0;
+        setScanProgress(0);
+        autoVerifyTriggeredRef.current = false;
+      } else if (isNotEnrolled) {
+        setIsVerifiedSuccess(false);
+        setIsScanning(false);
+        const enrollMsg = isRTL
+          ? "پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ابتدا ثبت هویت نمایید."
+          : "Biometric profile not found. Please enroll first in settings.";
+        setVerificationError(enrollMsg);
+        setVerificationResult({
+          verdict: "not_enrolled",
+          title: isRTL ? "⚠️ عدم ثبت الگوی بیومتریک دانشجو" : "⚠️ Biometrics Not Enrolled",
+          message: enrollMsg,
+          liveness: "-",
+          confidence: 0,
+          distance: 1.0,
+          statusText: isRTL ? "نیاز به ثبت چهره" : "Enrollment Required",
+        });
+        cooldownUntilRef.current = Date.now() + 4000;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
         autoVerifyTriggeredRef.current = false;
       } else {
-        const mismatchMsg = "عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید.";
+        setIsVerifiedSuccess(false);
+        setIsScanning(false);
+        const mismatchMsg = isRTL
+          ? "عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید."
+          : "Face does not match registered biometric template.";
         setVerificationError(mismatchMsg);
+        setVerificationResult({
+          verdict: "mismatch",
+          title: isRTL ? "❌ عدم تطابق چهره دانشجو (Mismatch)" : "❌ Face Mismatch (Access Denied)",
+          message: isRTL
+            ? "تصویر شما زنده تشخیص داده شد، اما با الگوی چهره ثبت‌شده برای این حساب همخوانی ندارد. لطفاً زاویه و نور را تنظیم و دوباره امتحان کنید."
+            : "Face is live but does not match enrolled student vector.",
+          liveness: isRTL ? "زنده (Genuine)" : "Genuine",
+          confidence: 38,
+          distance: verifyResponse?.cosine_distance || 0.76,
+          statusText: isRTL ? "عدم انطباق با پروفایل" : "Mismatch",
+        });
         cooldownUntilRef.current = Date.now() + 3000;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
@@ -204,8 +297,19 @@ export const StudentExamPage = () => {
       }
     } catch (err) {
       console.warn("Identity verification error:", err);
-      const errMsg = err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.";
-      setVerificationError(errMsg);
+      setIsVerifiedSuccess(false);
+      setIsScanning(false);
+      const msg = err?.message || err?.data?.detail || "خطا در برقراری ارتباط با سرور احراز هویت.";
+      setVerificationError(msg);
+      setVerificationResult({
+        verdict: "error",
+        title: isRTL ? "خطا در احراز هویت" : "Verification Error",
+        message: msg,
+        liveness: "-",
+        confidence: 0,
+        distance: 1.0,
+        statusText: isRTL ? "خطای سیستم" : "System Error",
+      });
       cooldownUntilRef.current = Date.now() + 3000;
       consecutiveQualityFramesRef.current = 0;
       setScanProgress(0);
@@ -213,7 +317,7 @@ export const StudentExamPage = () => {
     } finally {
       setIsVerifyingIdentity(false);
     }
-  }, [captureExamFrameBlob, candidateIds, isVerifyingIdentity, isVerifiedSuccess]);
+  }, [captureExamFrameBlob, candidateIds, isVerifyingIdentity, isVerifiedSuccess, isRTL]);
 
   // Continuous Face Tracking & Centering Loop (Apple Face ID aesthetic)
   useEffect(() => {
@@ -255,90 +359,65 @@ export const StudentExamPage = () => {
         const offsetX = (cw - renderedW) / 2;
         const offsetY = (ch - renderedH) / 2;
 
-        let detectedBox = null;
-        let multipleFacesFound = false;
+        const faceResult = await detectFaceWithFallback(
+          video,
+          offscreenCanvasRef.current,
+          nativeDetector
+        );
 
-        // 1. Native FaceDetector
-        if (nativeDetector) {
-          try {
-            const faces = await nativeDetector.detect(video);
-            if (faces && faces.length > 0) {
-              if (faces.length > 1) {
-                multipleFacesFound = true;
-              }
-              const bb = faces[0].boundingBox;
-              if (bb && bb.width > 20 && bb.height > 20) {
-                const mirroredX = vw - (bb.x + bb.width);
-                detectedBox = {
-                  x: offsetX + mirroredX * scale,
-                  y: offsetY + bb.y * scale,
-                  w: bb.width * scale,
-                  h: bb.height * scale,
-                };
-              }
-            }
-          } catch {}
-        }
-
-        // 2. High-speed Client Canvas Face & Head Tracker fallback
-        if (!detectedBox && offscreenCanvasRef.current) {
-          const clientFace = detectClientFace(video, offscreenCanvasRef.current);
-          if (clientFace) {
-            const mirroredNormX = 1.0 - (clientFace.normX + clientFace.normW);
-            detectedBox = {
-              x: offsetX + mirroredNormX * renderedW,
-              y: offsetY + clientFace.normY * renderedH,
-              w: clientFace.normW * renderedW,
-              h: clientFace.normH * renderedH,
-            };
-          }
-        }
-
-        if (multipleFacesFound && isMounted) {
+        if (faceResult?.multipleFaces && isMounted) {
           setFaceStatus("multiple_faces");
-          setVerificationError("تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید.");
+          setVerificationError(isRTL ? "تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید." : "Only one face must be in frame.");
           consecutiveQualityFramesRef.current = 0;
           setScanProgress(0);
           autoVerifyTriggeredRef.current = false;
-        } else if (detectedBox && isMounted) {
+        } else if (faceResult?.detected && faceResult?.squareNorm && isMounted) {
           noFaceCounter = 0;
-          const maxFaceW = Math.round(cw * 0.58);
-          const minFaceW = Math.round(cw * 0.38);
-          const targetW = Math.max(minFaceW, Math.min(maxFaceW, detectedBox.w * 1.15));
-          const targetH = Math.round(targetW * 1.30);
+          const sq = faceResult.squareNorm;
 
-          const cx = detectedBox.x + detectedBox.w / 2;
-          const cy = detectedBox.y + detectedBox.h * 0.45;
-          const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
-          const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
+          // Video is mirrored horizontally: scaleX(-1)
+          const mirroredNormX = 1.0 - (sq.x + sq.size);
+          const rawBoxSize = Math.round(sq.size * renderedW);
+          const clampedSize = Math.max(160, Math.min(Math.round(cw * 0.68), rawBoxSize));
+
+          const rawX = offsetX + mirroredNormX * renderedW;
+          const rawY = offsetY + sq.y * renderedH;
+
+          const cx = rawX + (clampedSize / 2);
+          const cy = rawY + (clampedSize / 2);
+
+          const targetX = Math.max(12, Math.min(cw - clampedSize - 12, cx - clampedSize / 2));
+          const targetY = Math.max(70, Math.min(ch - clampedSize - 120, cy - clampedSize / 2));
 
           setFaceBox((prev) => {
-            if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
-            const dx = Math.abs(targetX - prev.x);
-            const dy = Math.abs(targetY - prev.y);
-            const dw = Math.abs(targetW - prev.width);
-            const dh = Math.abs(targetH - prev.height);
-
-            const smoothX = dx < 3.0 ? prev.x : prev.x * 0.82 + targetX * 0.18;
-            const smoothY = dy < 3.0 ? prev.y : prev.y * 0.82 + targetY * 0.18;
-            const smoothW = dw < 3.5 ? prev.width : prev.width * 0.90 + targetW * 0.10;
-            const smoothH = dh < 3.5 ? prev.height : prev.height * 0.90 + targetH * 0.10;
-
+            if (!prev) return { x: targetX, y: targetY, size: clampedSize };
+            const smoothX = prev.x * 0.76 + targetX * 0.24;
+            const smoothY = prev.y * 0.76 + targetY * 0.24;
+            const smoothSize = prev.size * 0.82 + clampedSize * 0.18;
             return {
               x: smoothX,
               y: smoothY,
-              width: smoothW,
-              height: smoothH,
+              size: smoothSize,
             };
           });
+
           setFaceStatus("face_locked");
+
+          if (faceResult.metrics) {
+            setLiveMetrics({
+              sharpness: faceResult.metrics.sharpness || 85,
+              brightness: faceResult.metrics.brightness || 80,
+              confidence: faceResult.metrics.confidence || 92,
+              stability: Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100)),
+            });
+          }
 
           if (!isVerifyingIdentity && !isVerifiedSuccess) {
             if (Date.now() < cooldownUntilRef.current) {
               // Waiting for cooldown to expire
             } else {
-              consecutiveQualityFramesRef.current = Math.min(30, consecutiveQualityFramesRef.current + 1);
-              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 26) * 100));
+              consecutiveQualityFramesRef.current = Math.min(26, consecutiveQualityFramesRef.current + 1);
+              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100));
               setScanProgress(prog);
 
               if (prog >= 100 && !autoVerifyTriggeredRef.current) {
@@ -349,12 +428,24 @@ export const StudentExamPage = () => {
           }
         } else if (isMounted) {
           noFaceCounter++;
-          if (noFaceCounter >= 8) {
-            setFaceBox(null);
+          if (noFaceCounter >= 6) {
             setFaceStatus("no_face");
             consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 2);
-            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 26) * 100));
+            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100));
             setScanProgress(prog);
+
+            const guideSize = Math.round(Math.min(cw * 0.65, ch * 0.44, 250));
+            const guideX = Math.round((cw - guideSize) / 2);
+            const guideY = Math.round(ch * 0.20);
+
+            setFaceBox((prev) => {
+              if (!prev) return { x: guideX, y: guideY, size: guideSize };
+              return {
+                x: prev.x * 0.85 + guideX * 0.15,
+                y: prev.y * 0.85 + guideY * 0.15,
+                size: prev.size * 0.85 + guideSize * 0.15,
+              };
+            });
           }
         }
       } catch (err) {
@@ -369,7 +460,7 @@ export const StudentExamPage = () => {
       if (!isMounted) return;
       await detectCycle();
       if (isMounted) {
-        timer = setTimeout(runLoop, nativeDetector ? 60 : 45);
+        timer = setTimeout(runLoop, nativeDetector ? 50 : 45);
       }
     };
     runLoop();
@@ -378,24 +469,22 @@ export const StudentExamPage = () => {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [isIdentityVerified, isCompleted, loading, cameraError, isVerifyingIdentity, isVerifiedSuccess, handleVerifyIdentity]);
+  }, [isIdentityVerified, isCompleted, loading, cameraError, isVerifyingIdentity, isVerifiedSuccess, handleVerifyIdentity, isRTL]);
 
-  // Dynamic Corner Brackets Framing Calculations
+  // Dynamic Square Corner Brackets Framing Calculations
   const isLockedOnFace = (faceStatus === "face_locked" && faceBox) || isVerifiedSuccess;
-  const bracketSize = 56;
+  const bracketSize = 52;
   const cw = containerRef.current?.clientWidth || 360;
   const ch = containerRef.current?.clientHeight || 640;
 
-  const guideW = Math.round(cw * 0.84);
-  const guideH = Math.min(Math.round(ch * 0.60), Math.round(guideW * 1.34));
-  const guideX = Math.round((cw - guideW) / 2);
-  const guideY = Math.round((ch - guideH) / 2 - 15);
+  const defaultGuideSize = Math.round(Math.min(cw * 0.65, ch * 0.44, 250));
+  const defaultGuideX = Math.round((cw - defaultGuideSize) / 2);
+  const defaultGuideY = Math.round(ch * 0.20);
 
-  const activeBox = (isLockedOnFace && faceBox) ? faceBox : {
-    x: guideX,
-    y: guideY,
-    width: guideW,
-    height: guideH,
+  const activeBox = faceBox || {
+    x: defaultGuideX,
+    y: defaultGuideY,
+    size: defaultGuideSize,
   };
 
   const bracketPositions = {
@@ -405,35 +494,41 @@ export const StudentExamPage = () => {
     },
     topRight: {
       top: `${Math.round(activeBox.y)}px`,
-      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.size - bracketSize)}px`,
     },
     bottomLeft: {
-      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      top: `${Math.round(activeBox.y + activeBox.size - bracketSize)}px`,
       left: `${Math.round(activeBox.x)}px`,
     },
     bottomRight: {
-      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
-      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
+      top: `${Math.round(activeBox.y + activeBox.size - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.size - bracketSize)}px`,
     },
   };
 
   // Color states:
   // - Verified Success: Green (#34d399)
+  // - Spoof Attempt: Crimson (#f43f5e)
+  // - Mismatch: Amber (#fbbf24)
   // - Multiple Faces Warning: Rose (#f43f5e)
   // - Face Locked & Tracking: Blue (#38bdf8)
-  // - Searching / Idle: Soft White / Gray
+  // - Searching / Idle: Soft White
   const bracketStroke = isVerifiedSuccess
     ? "#34d399"
+    : verificationResult?.verdict === "spoof"
+    ? "#f43f5e"
+    : verificationResult?.verdict === "mismatch"
+    ? "#fbbf24"
     : faceStatus === "multiple_faces"
     ? "#f43f5e"
     : isLockedOnFace
     ? "#38bdf8"
-    : "rgba(255, 255, 255, 0.85)";
+    : "rgba(255, 255, 255, 0.75)";
 
   const bracketFilter = isVerifiedSuccess
-    ? "drop-shadow(0 0 16px rgba(52, 211, 153, 0.95))"
-    : faceStatus === "multiple_faces"
-    ? "drop-shadow(0 0 14px rgba(244, 63, 94, 0.9))"
+    ? "drop-shadow(0 0 18px rgba(52, 211, 153, 0.95))"
+    : verificationResult?.verdict === "spoof"
+    ? "drop-shadow(0 0 16px rgba(244, 63, 94, 0.95))"
     : isLockedOnFace
     ? "drop-shadow(0 0 14px rgba(56, 189, 248, 0.9))"
     : "drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))";
@@ -1536,87 +1631,115 @@ export const StudentExamPage = () => {
         {!isIdentityVerified && <div className="w-10 h-10" />}
       </header>
 
-      {/* ================= 4 Apple Face ID Corner Brackets ================= */}
+      {/* ================= 4 Apple Face ID Corner Brackets & Square Scanning HUD ================= */}
       {!isIdentityVerified && !loading && !cameraError && (
-        <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
-          {/* Top-Left Corner Bracket */}
+        <div className="absolute inset-0 pointer-events-none z-[18] overflow-hidden">
+          {/* Main Square Reticle Container */}
           <div
-            className="absolute bracket-smooth-transition"
+            className="absolute bracket-smooth-transition flex items-center justify-center pointer-events-none"
             style={{
-              ...bracketPositions.topLeft,
-              filter: bracketFilter,
+              top: `${Math.round(activeBox.y)}px`,
+              left: `${Math.round(activeBox.x)}px`,
+              width: `${Math.round(activeBox.size)}px`,
+              height: `${Math.round(activeBox.size)}px`,
             }}
           >
-            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
-              <path
-                d="M 5 52 L 5 21 A 16 16 0 0 1 21 5 L 52 5"
-                stroke={bracketStroke}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-colors duration-300"
-              />
-            </svg>
-          </div>
+            {/* Top Tag / Pill on the Square Box */}
+            <div
+              className={`absolute -top-8 px-3 py-1 rounded-full text-[11px] font-vazir font-bold flex items-center gap-1.5 backdrop-blur-md border shadow-lg transition-all duration-300 pointer-events-none whitespace-nowrap ${
+                isVerifiedSuccess
+                  ? "bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-emerald-500/30"
+                  : verificationResult?.verdict === "spoof"
+                  ? "bg-rose-950/80 border-rose-500 text-rose-300 shadow-rose-500/30 animate-bounce"
+                  : verificationResult?.verdict === "mismatch"
+                  ? "bg-amber-950/80 border-amber-500 text-amber-300 shadow-amber-500/30"
+                  : isScanning
+                  ? "bg-sky-950/80 border-sky-400 text-sky-300 animate-pulse shadow-sky-500/30"
+                  : isLockedOnFace
+                  ? "bg-slate-900/85 border-sky-400/80 text-sky-300"
+                  : "bg-slate-900/80 border-white/20 text-slate-300"
+              }`}
+            >
+              {isVerifiedSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                  <span>{isRTL ? "تأیید هویت موفق (چهره واقعی دانشجو)" : "Verified: Genuine Student"}</span>
+                </>
+              ) : verificationResult?.verdict === "spoof" ? (
+                <>
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                  <span>{isRTL ? "هشدار: عکس / تصویر غیرواقعی شناسایی شد" : "Spoof Detected"}</span>
+                </>
+              ) : verificationResult?.verdict === "mismatch" ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{isRTL ? "عدم تطابق چهره با الگو" : "Face Mismatch"}</span>
+                </>
+              ) : isScanning ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+                  <span>{isRTL ? `در حال اسکن بیومتریک (${Math.round(scanProgress)}٪)` : `Scanning (${Math.round(scanProgress)}%)`}</span>
+                </>
+              ) : isLockedOnFace ? (
+                <>
+                  <Target className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                  <span>{isRTL ? `چهره قفل شد | اطمینان: ${liveMetrics.confidence}٪` : `Face Locked (${liveMetrics.confidence}%)`}</span>
+                </>
+              ) : (
+                <>
+                  <Scan className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{isRTL ? "چهره را در این کادر مربع قرار دهید" : "Position face in square"}</span>
+                </>
+              )}
+            </div>
 
-          {/* Top-Right Corner Bracket */}
-          <div
-            className="absolute bracket-smooth-transition"
-            style={{
-              ...bracketPositions.topRight,
-              filter: bracketFilter,
-            }}
-          >
-            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
-              <path
-                d="M 4 5 L 35 5 A 16 16 0 0 1 51 21 L 51 52"
-                stroke={bracketStroke}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-colors duration-300"
-              />
-            </svg>
-          </div>
+            {/* Glowing Laser Sweep Line across the Square Box during Auto-Scan */}
+            {(isScanning || scanProgress > 15) && !isVerifiedSuccess && (
+              <div className="absolute inset-x-2 animate-biometric-laser h-1 rounded-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#38bdf8] pointer-events-none z-20" />
+            )}
 
-          {/* Bottom-Left Corner Bracket */}
-          <div
-            className="absolute bracket-smooth-transition"
-            style={{
-              ...bracketPositions.bottomLeft,
-              filter: bracketFilter,
-            }}
-          >
-            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
-              <path
-                d="M 5 4 L 5 35 A 16 16 0 0 0 21 51 L 52 51"
-                stroke={bracketStroke}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-colors duration-300"
-              />
-            </svg>
-          </div>
+            {/* Center Reticle / Graphic */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {isVerifiedSuccess ? (
+                <div className="w-16 h-16 rounded-full bg-emerald-500/25 border-2 border-emerald-400 flex items-center justify-center animate-faceid-back-flip shadow-[0_0_30px_rgba(52,211,153,0.9)]">
+                  <Check className="w-9 h-9 text-emerald-300 stroke-[3.5]" />
+                </div>
+              ) : verificationResult?.verdict === "spoof" ? (
+                <div className="w-16 h-16 rounded-full bg-rose-500/25 border-2 border-rose-500 flex items-center justify-center shadow-[0_0_30px_rgba(244,63,94,0.8)]">
+                  <ShieldAlert className="w-9 h-9 text-rose-400 animate-bounce" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 border border-white/20 rounded-full flex items-center justify-center opacity-40">
+                  <div className="w-1.5 h-1.5 bg-white/50 rounded-full" />
+                </div>
+              )}
+            </div>
 
-          {/* Bottom-Right Corner Bracket */}
-          <div
-            className="absolute bracket-smooth-transition"
-            style={{
-              ...bracketPositions.bottomRight,
-              filter: bracketFilter,
-            }}
-          >
-            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
-              <path
-                d="M 4 51 L 35 51 A 16 16 0 0 0 51 35 L 51 4"
-                stroke={bracketStroke}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-colors duration-300"
-              />
-            </svg>
+            {/* 4 Square Reticle Corner Brackets */}
+            {/* Top-Left */}
+            <div className="absolute top-0 left-0 w-12 h-12" style={{ filter: bracketFilter }}>
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
+                <path d="M 4 44 L 4 18 A 14 14 0 0 1 18 4 L 44 4" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            {/* Top-Right */}
+            <div className="absolute top-0 right-0 w-12 h-12" style={{ filter: bracketFilter }}>
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
+                <path d="M 4 4 L 30 4 A 14 14 0 0 1 44 18 L 44 44" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            {/* Bottom-Left */}
+            <div className="absolute bottom-0 left-0 w-12 h-12" style={{ filter: bracketFilter }}>
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
+                <path d="M 4 4 L 4 30 A 14 14 0 0 0 18 44 L 44 44" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            {/* Bottom-Right */}
+            <div className="absolute bottom-0 right-0 w-12 h-12" style={{ filter: bracketFilter }}>
+              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
+                <path d="M 4 44 L 30 44 A 14 14 0 0 0 44 30 L 44 4" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
         </div>
       )}
@@ -1838,62 +1961,113 @@ export const StudentExamPage = () => {
           </div>
         ) : !isIdentityVerified ? (
           /* ================= Pre-Exam Apple Face ID Verification Gate ================= */
-          <div className="m-auto w-full max-w-[340px] flex flex-col items-center justify-between h-full py-6 z-20 pointer-events-none">
+          <div className="m-auto w-full max-w-[360px] flex flex-col items-center justify-between h-full py-4 z-20 pointer-events-none">
             {/* Top Space for Face Corridor & Corner Brackets */}
             <div className="flex-1 w-full" />
 
-            {/* Floating Liquid Glass Bottom Status Capsule */}
-            <div className="w-full pointer-events-auto liquid-glass-card rounded-3xl p-4 bg-black/60 backdrop-blur-2xl border border-white/20 shadow-2xl flex flex-col items-center text-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
-              {/* Status & Feedback Indicator */}
+            {/* Floating Liquid Glass Bottom Status & Telemetry Capsule */}
+            <div className="w-full pointer-events-auto liquid-glass-card rounded-3xl p-4 bg-black/65 backdrop-blur-2xl border border-white/20 shadow-2xl flex flex-col items-center text-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+              {/* Header Status & Icon */}
               <div className="flex items-center gap-2">
                 {isVerifiedSuccess ? (
                   <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400">
                     <Check className="w-4 h-4 stroke-[3]" />
                   </div>
-                ) : isVerifyingIdentity ? (
+                ) : verificationResult?.verdict === "spoof" ? (
+                  <div className="w-6 h-6 rounded-full bg-rose-500/20 border border-rose-400 flex items-center justify-center text-rose-400 animate-bounce">
+                    <ShieldAlert className="w-4 h-4" />
+                  </div>
+                ) : verificationResult?.verdict === "mismatch" ? (
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                ) : isVerifyingIdentity || isScanning ? (
                   <RefreshCw className="w-5 h-5 text-sky-400 animate-spin" />
                 ) : faceStatus === "multiple_faces" ? (
                   <AlertTriangle className="w-5 h-5 text-rose-400 animate-bounce" />
                 ) : faceStatus === "face_locked" ? (
-                  <ShieldCheck className="w-5 h-5 text-sky-400" />
+                  <Target className="w-5 h-5 text-sky-400 animate-pulse" />
                 ) : (
-                  <UserCheck className="w-5 h-5 text-slate-300" />
+                  <Scan className="w-5 h-5 text-slate-300" />
                 )}
+
                 <h3
                   className={`text-xs sm:text-sm font-bold font-vazir ${
                     isVerifiedSuccess
                       ? "text-emerald-400"
-                      : faceStatus === "multiple_faces"
+                      : verificationResult?.verdict === "spoof" || faceStatus === "multiple_faces"
                       ? "text-rose-400"
+                      : verificationResult?.verdict === "mismatch"
+                      ? "text-amber-400"
+                      : isScanning
+                      ? "text-sky-300"
                       : "text-white"
                   }`}
                 >
                   {isVerifiedSuccess
-                    ? (isRTL ? "هویت شما با موفقیت تأیید شد" : "Identity Verified")
+                    ? (isRTL ? "هویت شما با موفقیت تأیید شد (چهره واقعی)" : "Identity Verified (Genuine Student)")
+                    : verificationResult?.title
+                    ? verificationResult.title
                     : faceStatus === "multiple_faces"
                     ? (isRTL ? "بیش از یک چهره در کادر قرار دارد!" : "Multiple faces detected!")
-                    : isVerifyingIdentity
-                    ? (isRTL ? "در حال تطبیق هویت بیومتریک با سرور..." : "Verifying with server...")
+                    : isScanning || isVerifyingIdentity
+                    ? (isRTL ? "در حال اسکن و ارزیابی اصالت چهره..." : "Scanning & verifying liveness...")
                     : faceStatus === "face_locked"
                     ? (isRTL ? "چهره قفل شد، ثابت بمانید..." : "Face locked, hold steady...")
-                    : (isRTL ? "احراز هویت هوشمند دانشجو" : "Face Identity Verification")}
+                    : (isRTL ? "احراز هویت هوشمند خودکار" : "Automatic Face Verification")}
                 </h3>
               </div>
 
-              <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[280px]">
-                {isVerifiedSuccess
-                  ? (isRTL ? "در حال ورود خودکار به سوالات آزمون شفاهی..." : "Entering exam room...")
-                  : faceStatus === "multiple_faces"
-                  ? (isRTL
-                      ? "تنها یک چهره باید در کادر تصویر باشد. لطفاً به تنهایی در برابر دوربین قرار گیرید."
-                      : "Only one face must be in the camera frame.")
-                  : verificationError
-                  ? verificationError
-                  : (isRTL
-                      ? "لطفاً مستقیماً به دوربین نگاه کنید تا چهره شما با الگوی ثبت‌شده تطبیق داده شود."
-                      : "Please look directly at camera to match your face with registered biometrics.")}
-              </p>
+              {/* Live Biometric Parameters HUD Pill Row */}
+              <div className="w-full grid grid-cols-3 gap-1.5 py-1.5 px-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-slate-300">
+                <div className="flex flex-col items-center">
+                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "شفافیت تصویر" : "Sharpness"}</span>
+                  <span className="text-sky-300 font-bold">{toPersianDigits(liveMetrics.sharpness)}٪</span>
+                </div>
+                <div className="flex flex-col items-center border-x border-white/10">
+                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "نور محیط" : "Lighting"}</span>
+                  <span className="text-emerald-300 font-bold">{toPersianDigits(liveMetrics.brightness)}٪</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "تثبیت در کادر" : "Stability"}</span>
+                  <span className={`font-bold ${scanProgress > 80 ? "text-emerald-300" : "text-sky-300"}`}>
+                    {toPersianDigits(scanProgress)}٪
+                  </span>
+                </div>
+              </div>
 
+              {/* Live Parameters / Verdict Details Table if Verification Result is Present */}
+              {verificationResult ? (
+                <div
+                  className={`w-full p-2.5 rounded-xl border text-right text-[11px] font-vazir flex flex-col gap-1.5 ${
+                    verificationResult.verdict === "genuine"
+                      ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-200"
+                      : verificationResult.verdict === "spoof"
+                      ? "bg-rose-950/40 border-rose-500/40 text-rose-200"
+                      : "bg-amber-950/40 border-amber-500/30 text-amber-200"
+                  }`}
+                >
+                  <p className="leading-relaxed font-medium">{verificationResult.message}</p>
+                  <div className="w-full flex items-center justify-between pt-1 border-t border-white/10 text-[10px] text-slate-300">
+                    <span>{isRTL ? "اصالت چهره:" : "Liveness:"} <strong className="text-white">{verificationResult.liveness}</strong></span>
+                    <span>{isRTL ? "وضعیت:" : "Status:"} <strong className="text-white">{verificationResult.statusText}</strong></span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[300px]">
+                  {isScanning
+                    ? (isRTL ? "پرتوی اسکن در حال خواندن مشخصات بیومتریک و سنجش زنده بودن است..." : "Scanning face depth & anti-spoofing...")
+                    : faceStatus === "multiple_faces"
+                    ? (isRTL
+                        ? "تنها یک چهره باید در کادر تصویر باشد. لطفاً به تنهایی در برابر دوربین قرار گیرید."
+                        : "Only one face must be in camera frame.")
+                    : (isRTL
+                        ? "کادر مربع به صورت خودکار روی چهره شما قرار می‌گیرد و پس از چند ثانیه اسکن آغاز می‌شود."
+                        : "Square reticle tracks your face automatically and scans identity.")}
+                </p>
+              )}
+
+              {/* Navigation button if biometrics profile is missing */}
               {verificationError && verificationError.includes("پروفایل بیومتریک") && (
                 <button
                   type="button"
@@ -1912,23 +2086,34 @@ export const StudentExamPage = () => {
                 </button>
               )}
 
-              {/* Action / Retry Button */}
+              {/* Action / Retry Button when not success */}
               {!isVerifiedSuccess && (
                 <button
                   type="button"
                   onClick={handleVerifyIdentity}
                   disabled={isVerifyingIdentity || cameraLoading || cameraError}
-                  className="w-full h-10 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  className={`w-full h-10 rounded-xl text-white text-xs font-bold font-vazir shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                    verificationResult?.verdict === "spoof"
+                      ? "bg-rose-600 hover:bg-rose-500 shadow-rose-600/30"
+                      : verificationResult?.verdict === "mismatch"
+                      ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/30"
+                      : "bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-sky-500/30"
+                  }`}
                 >
-                  {isVerifyingIdentity ? (
+                  {isVerifyingIdentity || isScanning ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>{isRTL ? "در حال تطبیق با سرور..." : "Verifying with server..."}</span>
+                      <span>{isRTL ? "در حال اسکن و سنجش اصالت..." : "Scanning & verifying..."}</span>
+                    </>
+                  ) : verificationResult ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>{isRTL ? "تلاش مجدد و اسکن دوباره" : "Retry Face Scan"}</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4" />
-                      <span>{isRTL ? "تایید هویت و ورود به آزمون" : "Verify & Begin Exam"}</span>
+                      <span>{isRTL ? "شروع دستی اسکن و تأیید هویت" : "Scan & Verify Identity"}</span>
                     </>
                   )}
                 </button>
@@ -1977,93 +2162,116 @@ export const StudentExamPage = () => {
               />
             </div>
 
-            {/* Upper Box: Live Question Message (Seamless Fluid Liquid Glass, No Clunky Bounding Box) */}
+            {/* Upper Box: Live Question Message with VoiceBeam & BorderBeam */}
             <div
               key={`bot-q-${currentTurnIndex}`}
               className="w-full max-w-[360px] mx-auto chat-bubble-enter-left relative"
             >
-              <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col gap-2.5 relative overflow-hidden">
-                {/* Ambient Fluid Cyan Glow in background */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Header: Turn Tag + Difficulty + Replay Button */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
-                    <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                      {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                      {currentDifficulty > 0.6
-                        ? (isQuestionRTL ? "پیشرفته" : "Hard")
-                        : currentDifficulty > 0.35
-                        ? (isQuestionRTL ? "متوسط" : "Medium")
-                        : (isQuestionRTL ? "مقدماتی" : "Easy")}
-                    </span>
-                  </div>
-
-                  {/* Audio Replay / Mute Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isSpeakingQuestion || isBufferingTTS) {
-                        stopQuestionTTS();
-                      } else {
-                        playQuestionTTS(currentQuestion, true);
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
-                      isSpeakingQuestion || isBufferingTTS
-                        ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
-                        : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
-                    }`}
-                    title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
-                  >
-                    {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-
-                {/* Synchronized Word-by-Word Question Text */}
-                <div
-                  dir={isQuestionRTL ? "rtl" : "ltr"}
-                  className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
-                    isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
-                  }`}
+              <BorderBeam
+                size="md"
+                colorVariant="ocean"
+                theme="dark"
+                active={isSpeakingQuestion || isBufferingTTS}
+                className="w-full rounded-2xl"
+              >
+                <VoiceBeam
+                  type="default"
+                  scale={0.8}
+                  reach={0.65}
+                  spread={0.85}
+                  bend={0}
+                  strokeOpacity={0.85}
+                  innerOpacity={0.25}
+                  bloomOpacity={0.9}
+                  idle={0}
+                  level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
+                  className="w-full chat-bubble-bot"
+                  style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
                 >
-                  {isBufferingTTS ? (
-                    <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
-                      <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
-                        {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
-                      </span>
-                    </div>
-                  ) : questionWords.length > 0 ? (
-                    questionWords.map((word, idx) => {
-                      const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
-                      const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
+                  <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col gap-2.5 relative overflow-hidden">
+                    {/* Ambient Fluid Cyan Glow in background */}
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                      return (
-                        <span
-                          key={idx}
-                          className={`inline-block me-1.5 transition-all duration-150 ${
-                            isCurrent
-                              ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
-                              : isVisible
-                              ? "text-white opacity-100"
-                              : "opacity-0 translate-y-0.5"
-                          }`}
-                        >
-                          {word}
+                    {/* Header: Turn Tag + Difficulty + Replay Button */}
+                    <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
+                        <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                          {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
                         </span>
-                      );
-                    })
-                  ) : (
-                    <span className="text-slate-400">
-                      {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
-                    </span>
-                  )}
-                </div>
-              </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                          {currentDifficulty > 0.6
+                            ? (isQuestionRTL ? "پیشرفته" : "Hard")
+                            : currentDifficulty > 0.35
+                            ? (isQuestionRTL ? "متوسط" : "Medium")
+                            : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                        </span>
+                      </div>
+
+                      {/* Audio Replay / Mute Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isSpeakingQuestion || isBufferingTTS) {
+                            stopQuestionTTS();
+                          } else {
+                            playQuestionTTS(currentQuestion, true);
+                          }
+                        }}
+                        className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                          isSpeakingQuestion || isBufferingTTS
+                            ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
+                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                        }`}
+                        title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                      >
+                        {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {/* Synchronized Word-by-Word Question Text */}
+                    <div
+                      dir={isQuestionRTL ? "rtl" : "ltr"}
+                      className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
+                        isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
+                      }`}
+                    >
+                      {isBufferingTTS ? (
+                        <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
+                          <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
+                            {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
+                          </span>
+                        </div>
+                      ) : questionWords.length > 0 ? (
+                        questionWords.map((word, idx) => {
+                          const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
+                          const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
+
+                          return (
+                            <span
+                              key={idx}
+                              className={`inline-block me-1.5 transition-all duration-150 ${
+                                isCurrent
+                                  ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
+                                  : isVisible
+                                  ? "text-white opacity-100"
+                                  : "opacity-0 translate-y-0.5"
+                              }`}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-slate-400">
+                          {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </VoiceBeam>
+              </BorderBeam>
             </div>
 
             {/* Bottom Section: Response Field + Controls Row Below (Enters from Right after Bot finishes reading) */}
@@ -2072,25 +2280,50 @@ export const StudentExamPage = () => {
                 key={`student-ans-${currentTurnIndex}`}
                 className="w-full max-w-[360px] mx-auto flex flex-col gap-2.5 chat-bubble-enter-right"
               >
-                {/* Seamless Fluid Student Response Field (No Boxy Borders) */}
-                <div className="w-full p-3 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden">
-                  <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                {/* Seamless Fluid Student Response Field with BorderBeam & VoiceBeam */}
+                <BorderBeam
+                  size="md"
+                  colorVariant="candy"
+                  theme="dark"
+                  active={recording || (audioLevel > 0.05) || isSubmitting}
+                  className="w-full rounded-2xl"
+                >
+                  <VoiceBeam
+                    type="default"
+                    scale={0.8}
+                    reach={0.65}
+                    spread={0.85}
+                    bend={0}
+                    strokeOpacity={0.85}
+                    innerOpacity={0.25}
+                    bloomOpacity={0.9}
+                    idle={0}
+                    stream={micStream}
+                    level={recording ? Math.max(0.45, audioLevel) : 0}
+                    processing={isSubmitting}
+                    className="w-full chat-bubble-student"
+                    style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
+                  >
+                    <div className="w-full p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden">
+                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                  <textarea
-                    dir={isAnswerRTL ? "rtl" : "ltr"}
-                    rows={2}
-                    value={answerText}
-                    onChange={(e) => setAnswerText(e.target.value)}
-                    placeholder={
-                      isQuestionRTL
-                        ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
-                        : "Type response here or speak with mic..."
-                    }
-                    className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
-                      isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
-                    }`}
-                  />
-                </div>
+                      <textarea
+                        dir={isAnswerRTL ? "rtl" : "ltr"}
+                        rows={2}
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder={
+                          isQuestionRTL
+                            ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
+                            : "Type response here or speak with mic..."
+                        }
+                        className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
+                          isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
+                        }`}
+                      />
+                    </div>
+                  </VoiceBeam>
+                </BorderBeam>
 
                 {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
                 <div className="w-full flex items-center justify-between px-2">

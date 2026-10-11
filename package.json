@@ -21,6 +21,7 @@
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.23",
     "axios": "^1.17.0",
+    "border-beam": "^1.4.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
