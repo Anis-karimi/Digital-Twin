@@ -3,21 +3,21 @@ import React, { useMemo } from "react";
 /**
  * ChatGptOrb
  * 
- * SOTA ChatGPT Voice Mode Dynamic AI Orb:
- * - Multi-layer fluid chromatic mesh with radiant center core
- * - Fluid breathing / pulsation in idle mode
- * - Sound wave halo and ripples when speaking or listening
- * - Swirling orbital aurora when thinking / submitting
+ * SOTA VisionOS & Apple Intelligence Fluid AI Voice Orb:
+ * - Multi-layer chromatic fluid core with organic breathing rhythm
+ * - Soft soundwave audio-reactive halo (no harsh ping borders)
+ * - Swirling orbital aurora when thinking / generating questions
+ * - Crystalline glass refraction bezel with smooth specular highlights
  * 
  * @param {Object} props
- * @param {"idle"|"speaking"|"listening"|"thinking"} [props.state="idle"]
- * @param {number} [props.size=68] Diameter in pixels
+ * @param {"idle"|"speaking"|"listening"|"thinking"} [props.state="idle"] Current AI voice state
+ * @param {number} [props.size=64] Diameter in pixels
  * @param {number} [props.voiceLevel=0] Real-time audio amplitude (0 to 1)
- * @param {string} [props.className=""]
+ * @param {string} [props.className=""] Optional additional CSS classes
  */
 export const ChatGptOrb = ({
   state = "idle",
-  size = 68,
+  size = 64,
   voiceLevel = 0,
   className = "",
 }) => {
@@ -28,7 +28,7 @@ export const ChatGptOrb = ({
   // Dynamic scale multiplier based on voice activity
   const voiceScale = useMemo(() => {
     if (isSpeaking || isListening) {
-      return 1 + Math.min(0.25, Math.max(0, voiceLevel) * 0.4);
+      return 1 + Math.min(0.2, Math.max(0, voiceLevel) * 0.35);
     }
     return 1;
   }, [isSpeaking, isListening, voiceLevel]);
@@ -37,51 +37,51 @@ export const ChatGptOrb = ({
     <div
       className={`relative flex items-center justify-center select-none pointer-events-none ${className}`}
       style={{
-        width: size * 1.5,
-        height: size * 1.5,
+        width: size * 1.4,
+        height: size * 1.4,
       }}
     >
-      {/* Outer Soundwave Ripples (when speaking or listening) */}
+      {/* Layer 1: Soft Ambient Diffusion Aura */}
+      <div
+        className={`absolute rounded-full transition-all duration-700 blur-2xl ${
+          isSpeaking
+            ? "bg-gradient-to-tr from-sky-400/40 via-blue-500/35 to-indigo-500/40 scale-125"
+            : isListening
+            ? "bg-gradient-to-tr from-purple-500/40 via-violet-500/35 to-rose-400/40 scale-120"
+            : isThinking
+            ? "bg-gradient-to-tr from-amber-400/35 via-sky-400/40 to-indigo-500/35 animate-spin scale-115"
+            : "bg-gradient-to-tr from-sky-500/25 via-indigo-500/20 to-teal-400/25 scale-100"
+        }`}
+        style={{
+          width: size,
+          height: size,
+          animationDuration: isThinking ? "3.5s" : undefined,
+        }}
+      />
+
+      {/* Layer 2: Organic Soundwave Ripple Rings (Smooth Audio Halo) */}
       {(isSpeaking || isListening) && (
         <>
           <div
-            className="absolute rounded-full border border-sky-400/40 animate-ping"
+            className="absolute rounded-full border border-sky-400/30 dark:border-sky-300/25 animate-pulse"
             style={{
-              width: size * 1.15,
-              height: size * 1.15,
-              animationDuration: isSpeaking ? "1.4s" : "2s",
+              width: size * (1.1 + voiceLevel * 0.25),
+              height: size * (1.1 + voiceLevel * 0.25),
+              transition: "width 0.15s ease-out, height 0.15s ease-out",
             }}
           />
           <div
-            className="absolute rounded-full border border-purple-400/30 animate-pulse"
+            className="absolute rounded-full border border-indigo-400/20 dark:border-indigo-300/15"
             style={{
-              width: size * 1.35,
-              height: size * 1.35,
-              filter: "blur(2px)",
+              width: size * (1.25 + voiceLevel * 0.35),
+              height: size * (1.25 + voiceLevel * 0.35),
+              transition: "width 0.25s ease-out, height 0.25s ease-out",
             }}
           />
         </>
       )}
 
-      {/* Ambient Diffusion Bloom / Aurora Glow */}
-      <div
-        className={`absolute rounded-full transition-all duration-500 blur-xl ${
-          isSpeaking
-            ? "bg-gradient-to-tr from-sky-400/50 via-indigo-500/50 to-emerald-400/50 scale-125"
-            : isListening
-            ? "bg-gradient-to-tr from-purple-500/50 via-rose-500/40 to-sky-400/50 scale-115"
-            : isThinking
-            ? "bg-gradient-to-tr from-amber-400/40 via-sky-500/50 to-indigo-500/40 animate-spin scale-120"
-            : "bg-gradient-to-tr from-sky-500/30 via-indigo-500/30 to-teal-400/30 scale-100"
-        }`}
-        style={{
-          width: size,
-          height: size,
-          animationDuration: isThinking ? "4s" : undefined,
-        }}
-      />
-
-      {/* Core Orb Container */}
+      {/* Layer 3: Main Glass Orb Chamber */}
       <div
         className="relative rounded-full flex items-center justify-center overflow-hidden transition-transform duration-200"
         style={{
@@ -89,49 +89,49 @@ export const ChatGptOrb = ({
           height: size,
           transform: `scale(${voiceScale})`,
           boxShadow: isSpeaking
-            ? "0 0 35px rgba(56, 189, 248, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.8)"
+            ? "0 0 25px rgba(56, 189, 248, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.3)"
             : isListening
-            ? "0 0 30px rgba(168, 85, 247, 0.6), inset 0 0 18px rgba(255, 255, 255, 0.7)"
+            ? "0 0 22px rgba(168, 85, 247, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.3)"
             : isThinking
-            ? "0 0 25px rgba(245, 158, 11, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.6)"
-            : "0 0 20px rgba(56, 189, 248, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.5)",
+            ? "0 0 20px rgba(245, 158, 11, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.3)"
+            : "0 0 15px rgba(56, 189, 248, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.5), inset 0 -2px 4px rgba(0, 0, 0, 0.25)",
         }}
       >
-        {/* Dynamic Multi-Stop Gradient Mesh */}
+        {/* Dynamic Fluid Gradient Core */}
         <div
           className={`absolute inset-0 rounded-full transition-all duration-700 ${
             isThinking
               ? "animate-spin"
               : isSpeaking
               ? "animate-pulse"
-              : "animate-liquid-float"
+              : ""
           }`}
           style={{
             background: isSpeaking
-              ? "radial-gradient(circle at 35% 35%, #ffffff 0%, #38bdf8 30%, #6366f1 65%, #0f172a 100%)"
+              ? "radial-gradient(circle at 40% 30%, #e0f2fe 0%, #38bdf8 35%, #4f46e5 75%, #1e1b4b 100%)"
               : isListening
-              ? "radial-gradient(circle at 35% 35%, #ffffff 0%, #c084fc 30%, #e11d48 65%, #0f172a 100%)"
+              ? "radial-gradient(circle at 40% 30%, #fae8ff 0%, #c084fc 35%, #7c3aed 75%, #31104b 100%)"
               : isThinking
-              ? "radial-gradient(circle at 35% 35%, #ffffff 0%, #facc15 30%, #0284c7 70%, #0f172a 100%)"
-              : "radial-gradient(circle at 35% 35%, #ffffff 0%, #38bdf8 35%, #4f46e5 70%, #090d16 100%)",
-            animationDuration: isThinking ? "2.5s" : isSpeaking ? "1.8s" : "3.5s",
+              ? "radial-gradient(circle at 40% 30%, #fef08a 0%, #38bdf8 45%, #6366f1 80%, #0f172a 100%)"
+              : "radial-gradient(circle at 40% 30%, #bae6fd 0%, #0ea5e9 40%, #312e81 80%, #030712 100%)",
+            animationDuration: isThinking ? "3s" : isSpeaking ? "2s" : undefined,
           }}
         />
 
-        {/* Liquid Glass Highlight Arc */}
+        {/* VisionOS High-Refraction Rim & Top Sheen */}
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
             background:
-              "linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.35) 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.5)",
+              "linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.25) 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.35)",
           }}
         />
 
-        {/* Center Glowing White Hotspot */}
+        {/* Luminous Inner Core Ambient Focus */}
         <div
-          className={`w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_15px_#ffffff] transition-all duration-300 ${
-            isSpeaking || isListening ? "scale-125 opacity-95" : "scale-100 opacity-80"
+          className={`w-4 h-4 rounded-full bg-white/90 blur-xs transition-transform duration-300 ${
+            isSpeaking || isListening ? "scale-110 opacity-90" : "scale-100 opacity-70"
           }`}
         />
       </div>

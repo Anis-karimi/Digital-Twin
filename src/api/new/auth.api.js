@@ -147,6 +147,77 @@ export async function updateUserSettings(settings) {
   );
 }
 
+/**
+ * Fetches dynamic courses directory with corresponding teachers and enrolled students.
+ * @endpoint GET /auth/login-directory
+ * @returns {Promise<Array<Object>>}
+ */
+export async function getLoginDirectory() {
+  return requestWithFallback(
+    "/auth/login-directory",
+    { method: "GET" },
+    () => [
+      {
+        id: "c0000000-0000-4000-8000-000000000001",
+        title: "سیستم عامل",
+        department: "مهندسی کامپیوتر",
+        degree: "کارشناسی",
+        units: 3,
+        teacher: {
+          id: "10000000-0000-4000-8000-000000000001",
+          name: "دکتر محمد اله بخش",
+          username: "mohammad_allahbakhsh",
+          role: "TEACHER",
+          defaultToken: "sso_token_dr_allahbakhsh",
+          avatar: null,
+        },
+        students: [
+          {
+            id: "20000000-0000-4000-8000-000000000105",
+            name: "علیرضا رضایی",
+            username: "alireza_rezaei",
+            role: "STUDENT",
+            defaultToken: "sso_token_alireza_rezaei",
+            avatar: null,
+          },
+          {
+            id: "20000000-0000-4000-8000-000000000101",
+            name: "زهرا ملایی",
+            username: "student_101",
+            role: "STUDENT",
+            defaultToken: "sso_token_student_101",
+            avatar: null,
+          },
+          {
+            id: "20000000-0000-4000-8000-000000000100",
+            name: "انیس کریمی",
+            username: "student_100",
+            role: "STUDENT",
+            defaultToken: "sso_token_student_100",
+            avatar: null,
+          },
+          {
+            id: "20000000-0000-4000-8000-000000000102",
+            name: "محمد محمدی",
+            username: "student_102",
+            role: "STUDENT",
+            defaultToken: "sso_token_student_102",
+            avatar: null,
+          },
+          {
+            id: "20000000-0000-4000-8000-000000000103",
+            name: "سارا امینی",
+            username: "student_103",
+            role: "STUDENT",
+            defaultToken: "sso_token_student_103",
+            avatar: null,
+          },
+        ],
+      },
+    ]
+  );
+}
+
 export const authApi = {
   getCurrentUserProfile,
   login,
@@ -155,6 +226,8 @@ export const authApi = {
   updateProfile,
   getUserSettings,
   updateUserSettings,
+  getLoginDirectory,
 };
 
 export default authApi;
+

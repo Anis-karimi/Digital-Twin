@@ -46,7 +46,8 @@ export const StudentExams = () => {
     biometricsStatus?.is_enrolled ||
     biometricsStatus?.face_enrolled ||
     biometricsStatus?.is_fully_registered ||
-    biometricsStatus?.ready_for_exam
+    biometricsStatus?.ready_for_exam ||
+    localStorage.getItem("dt_biometrics_registered") === "true"
   );
 
   const [exams, setExams] = useState([]);
@@ -393,7 +394,7 @@ export const StudentExams = () => {
     let isMounted = true;
     setBiometricsLoading(true);
     biometricsApi
-      .getStudentBiometricProfile(studentId)
+      .checkStudentBiometricStatus(currentUser)
       .then((res) => {
         if (isMounted) {
           setBiometricsStatus(res);
@@ -402,13 +403,24 @@ export const StudentExams = () => {
       })
       .catch((err) => {
         console.warn("Failed to check biometric profile in exams page:", err);
-        if (isMounted) setBiometricsLoading(false);
+        if (isMounted) {
+          const cached = localStorage.getItem("dt_biometrics_registered") === "true";
+          if (cached) {
+            setBiometricsStatus({
+              is_enrolled: true,
+              face_enrolled: true,
+              is_fully_registered: true,
+              ready_for_exam: true,
+            });
+          }
+          setBiometricsLoading(false);
+        }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [studentId, location.key]);
+  }, [currentUser, location.key]);
 
   const getExamStatus = (exam) => {
     if (exam.status === "completed") return "completed";

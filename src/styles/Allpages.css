@@ -708,17 +708,17 @@ div[data-voice-beam].chat-bubble-student {
   position: relative;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(255, 255, 255, 0.05) 40%,
-    rgba(10, 15, 25, 0.45) 100%
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
+    rgba(15, 23, 42, 0.35) 100%
   );
-  backdrop-filter: blur(36px) saturate(220%) brightness(115%);
-  -webkit-backdrop-filter: blur(36px) saturate(220%) brightness(115%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(28px) saturate(190%) brightness(105%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(105%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 
-    0 24px 50px -12px rgba(0, 0, 0, 0.75),
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.75),
-    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.45);
+    0 16px 36px -10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.25);
 }
 
 /* Polished Specular Top Highlight for Liquid Glass Elements */

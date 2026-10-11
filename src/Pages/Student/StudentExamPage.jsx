@@ -84,13 +84,12 @@ export const StudentExamPage = () => {
   const [micStream, setMicStream] = useState(null);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // Student identifier for biometrics telemetry
-  const studentId = String(
-    currentUser?.id ||
-    currentUser?.student_id ||
-    currentUser?.username ||
-    "20000000-0000-4000-8000-000000000105"
-  );
+  // Student identifiers for biometrics telemetry & verification
+  const candidateIds = useMemo(() => {
+    return biometricsApi.getCandidateBiometricIds(currentUser);
+  }, [currentUser]);
+
+  const studentId = candidateIds[0] || "20000000-0000-4000-8000-000000000105";
 
   // Biometrics & Distraction Proctoring State
   const [isDistracted, setIsDistracted] = useState(false);
@@ -141,24 +140,45 @@ export const StudentExamPage = () => {
         return;
       }
 
-      const res = await biometricsApi.verifyStudentFace(studentId, blob, "balanced");
-      if (res && res.verified) {
+      let isMatch = false;
+      let lastErr = null;
+
+      for (const cid of candidateIds) {
+        try {
+          const res = await biometricsApi.verifyStudentFace(cid, blob, "balanced");
+          if (res && res.verified) {
+            isMatch = true;
+            break;
+          }
+        } catch (err) {
+          lastErr = err;
+          // If candidate is not enrolled, continue checking next candidate ID
+          if (err?.message?.includes("not enrolled") || String(err?.status).includes("404")) {
+            continue;
+          }
+          break;
+        }
+      }
+
+      if (isMatch) {
         setIsIdentityVerified(true);
         setVerificationError("");
+      } else if (lastErr) {
+        if (lastErr?.message?.includes("not enrolled")) {
+          setVerificationError("پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ثبت هویت نمایید.");
+        } else {
+          setVerificationError(lastErr?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
+        }
       } else {
         setVerificationError("عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید.");
       }
     } catch (err) {
       console.warn("Identity verification error:", err);
-      if (err?.message?.includes("not enrolled")) {
-        setVerificationError("پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ثبت هویت نمایید.");
-      } else {
-        setVerificationError(err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
-      }
+      setVerificationError(err?.message || "خطا در برقراری ارتباط با سرور احراز هویت.");
     } finally {
       setIsVerifyingIdentity(false);
     }
-  }, [captureExamFrameBlob, studentId]);
+  }, [captureExamFrameBlob, candidateIds]);
 
   // 2. Real-time Telemetry & Fast Gaze Deviation Reaction
   const handleTelemetryUpdate = useCallback((data) => {
@@ -886,12 +906,14 @@ export const StudentExamPage = () => {
       try {
         // 1. Verify biometric identity registration before launching exam
         try {
-          const bioStatus = await biometricsApi.getStudentBiometricProfile(studentId);
+          const bioStatus = await biometricsApi.checkStudentBiometricStatus(currentUser);
           const isBioReady = Boolean(
-            bioStatus?.is_fully_registered &&
-            (bioStatus?.is_enrolled || bioStatus?.face_enrolled) &&
-            (bioStatus?.is_gaze_calibrated || bioStatus?.gaze_calibrated) &&
-            (bioStatus?.is_neutral_calibrated || bioStatus?.neutral_calibrated)
+            bioStatus?.is_fully_registered ||
+            bioStatus?.ready_for_exam ||
+            bioStatus?.is_enrolled ||
+            bioStatus?.face_enrolled ||
+            localStorage.getItem("dt_biometrics_registered") === "true" ||
+            candidateIds.some((cid) => localStorage.getItem(`dt_biometrics_${cid}`) === "true")
           );
           if (!isBioReady) {
             navigate("/StudentSettings/Biometrics", {
@@ -1216,25 +1238,31 @@ export const StudentExamPage = () => {
               >
                 {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams"}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setError("");
-                  setSessionId("demo-oral-exam");
-                  const defaultQ =
-                    passedExam?.topic
-                      ? isRTL
-                        ? `سلام! به آزمون شفاهی خوش آمدید. لطفاً در خصوص مبحث «${passedExam.topic}»، مفاهیم کلیدی و نحوه پیاده‌سازی آن را به طور خلاصه شرح دهید.`
-                        : `Welcome to the oral exam. Regarding "${passedExam.topic}", please explain the key concepts and their implementation.`
-                      : isRTL
-                      ? "سلام! به آزمون شفاهی خوش آمدید. لطفاً تفاوت میان فرآیند (Process) و ریسه (Thread) را در سیستم‌های عامل توضیح دهید و بگویید اشتراک منابع چگونه بین آن‌ها مدیریت می‌شود؟"
-                      : "Welcome to the oral exam. Please explain the difference between a process and a thread in modern operating systems, and how resource sharing is handled.";
-                  setCurrentQuestion(defaultQ);
-                }}
-                className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-sky-600/90 hover:bg-sky-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
-              >
-                {isRTL ? "ورود به محیط آزمایشی (دمو)" : "Enter Demo Room"}
-              </button>
+              {error?.includes("بیومتریک") || error?.includes("احراز هویت") ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/StudentSettings/Biometrics", {
+                      state: {
+                        returnTo: `/StudentExam/${id}`,
+                        exam: passedExam,
+                        reason: "biometrics_required",
+                      },
+                    })
+                  }
+                  className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
+                >
+                  {isRTL ? "تکمیل احراز هویت بیومتریک" : "Complete Biometrics"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
+                >
+                  {isRTL ? "تلاش مجدد برای ورود" : "Retry Launch"}
+                </button>
+              )}
             </div>
           </div>
         ) : isCompleted ? (
@@ -1383,15 +1411,13 @@ export const StudentExamPage = () => {
             </div>
 
             {cameraError && (
-              <div className="w-full px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-vazir flex items-center justify-between gap-2 text-right">
-                <span>{isRTL ? "دوربین وب‌کم در دسترس نیست." : "Webcam is unavailable."}</span>
-                <button
-                  type="button"
-                  onClick={() => setIsIdentityVerified(true)}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shrink-0 cursor-pointer"
-                >
-                  {isRTL ? "ادامه بدون دوربین" : "Continue"}
-                </button>
+              <div className="w-full px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-vazir flex items-center gap-2 text-right">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  {isRTL
+                    ? "دوربین وب‌کم در دسترس نیست. برای احراز هویت، دسترسی به دوربین الزامی است."
+                    : "Webcam is unavailable. Camera access is required for identity verification."}
+                </span>
               </div>
             )}
 
@@ -1401,13 +1427,23 @@ export const StudentExamPage = () => {
                   <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                   <span>{verificationError}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsIdentityVerified(true)}
-                  className="self-end text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
-                >
-                  {isRTL ? "ورود به آزمون (حالت شبیه‌ساز)" : "Bypass verification"}
-                </button>
+                {verificationError.includes("پروفایل بیومتریک") && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate("/StudentSettings/Biometrics", {
+                        state: {
+                          returnTo: `/StudentExam/${id}`,
+                          exam: passedExam,
+                          reason: "biometrics_required",
+                        },
+                      })
+                    }
+                    className="self-end text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
+                  >
+                    {isRTL ? "رفتن به بخش ثبت اطلاعات بیومتریک" : "Go to Biometrics Settings"}
+                  </button>
+                )}
               </div>
             )}
 
@@ -1492,25 +1528,22 @@ export const StudentExamPage = () => {
                 className="w-full chat-bubble-ai"
                 style={{ borderRadius: "24px" }}
               >
-                {/* Liquid Glass Question Box */}
+                {/* Modern Frosted Glass Question Box */}
                 <div
                   className="w-full chat-bubble-ai p-3.5 sm:p-4 flex flex-col gap-2.5 transition-all relative overflow-hidden"
                   style={{
                     borderRadius: "24px",
                     background:
-                      "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(56, 189, 248, 0.08) 100%), rgba(15, 23, 42, 0.22)",
-                    backdropFilter: "blur(14px) saturate(180%)",
-                    WebkitBackdropFilter: "blur(14px) saturate(180%)",
-                    border: "1px solid rgba(255, 255, 255, 0.28)",
+                      "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(14, 165, 233, 0.06) 100%), rgba(15, 23, 42, 0.35)",
+                    backdropFilter: "blur(18px) saturate(190%)",
+                    WebkitBackdropFilter: "blur(18px) saturate(190%)",
+                    border: "1px solid rgba(255, 255, 255, 0.16)",
                     boxShadow:
-                      "0 12px 36px -4px rgba(0, 0, 0, 0.35), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2)",
+                      "0 10px 30px -4px rgba(0, 0, 0, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2)",
                   }}
                 >
-                  {/* Glossy Liquid Glass Top Sheen */}
-                  <div className="absolute top-0 inset-x-0 h-[40%] bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none rounded-t-[23px]" />
-
                   {/* Ambient Fluid Cyan Glow in background */}
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
 
                   {/* Chat Blob Header: Turn Tag + Difficulty + Replay Button (No Logo) */}
                   <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
@@ -1622,19 +1655,16 @@ export const StudentExamPage = () => {
                       style={{
                         borderRadius: "24px",
                         background:
-                          "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(139, 92, 246, 0.08) 100%), rgba(15, 23, 42, 0.22)",
-                        backdropFilter: "blur(14px) saturate(180%)",
-                        WebkitBackdropFilter: "blur(14px) saturate(180%)",
-                        border: "1px solid rgba(255, 255, 255, 0.28)",
+                          "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(139, 92, 246, 0.06) 100%), rgba(15, 23, 42, 0.35)",
+                        backdropFilter: "blur(18px) saturate(190%)",
+                        WebkitBackdropFilter: "blur(18px) saturate(190%)",
+                        border: "1px solid rgba(255, 255, 255, 0.16)",
                         boxShadow:
-                          "0 12px 36px -4px rgba(0, 0, 0, 0.35), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2)",
+                          "0 10px 30px -4px rgba(0, 0, 0, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2)",
                       }}
                     >
-                      {/* Glossy Liquid Glass Top Sheen */}
-                      <div className="absolute top-0 inset-x-0 h-[40%] bg-gradient-to-b from-white/20 via-white/5 to-transparent pointer-events-none rounded-t-[23px]" />
-
                       {/* Ambient Fluid Violet Glow */}
-                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/15 rounded-full blur-2xl pointer-events-none" />
+                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
                       <textarea
                         dir={isAnswerRTL ? "rtl" : "ltr"}

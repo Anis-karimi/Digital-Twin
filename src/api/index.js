@@ -9,7 +9,7 @@ export { API_CONFIG } from "./config";
 export { httpRequest, requestWithFallback, handleApiError, ApiError } from "./client";
 
 // Existing Backend Endpoints
-export { adminApi, getAdminSettings } from "./existing/admin.api";
+export { adminApi, getAdminSettings } from "./new/admin.api";
 export { chatApi, askAI, generateChatPdf } from "./existing/chat.api";
 export { voiceApi, streamTTS, uploadAudio, deleteAudio, createSTTWebSocket } from "./existing/voice.api";
 export { userApi, getUserFiles, uploadPhoto } from "./existing/user.api";
@@ -21,13 +21,13 @@ export { coursesApi, getCourses, getCourseById, getCourseDetails, updateCourseDe
 export { studentsApi, getStudentsByCourse, getStudentById, toggleBlockStudent, removeStudentFromCourse } from "./new/students.api";
 export { notificationsApi, getJoinRequests, getStudentNotifications, acceptJoinRequest, rejectJoinRequest, getSystemMessages, getUnreadNotificationsCount } from "./new/notifications.api";
 export { chatHistoryApi, getChatHistory, saveChatMessage, saveConversationTurn, sendMessageWithRAG, submitMessageFeedback, clearChatHistory } from "./new/chatHistory.api";
-export { authApi, getCurrentUserProfile, login, logout, updateProfile } from "./new/auth.api";
+export { authApi, getCurrentUserProfile, login, logout, updateProfile, getLoginDirectory } from "./new/auth.api";
 export { examsApi, getTeacherExams, saveGeneratedQuiz, submitQuizAnswers, getQuizResults } from "./new/exams.api";
 export { navigationApi, getLessonTabs, getAvailableCourses, requestJoinCourse } from "./new/navigation.api";
 export { biometricsApi, enrollStudentFace, verifyStudentFace, calibrateGaze, calibrateNeutralBaseline, sendBiometricTelemetry, getStudentBiometricProfile, logExamDistraction } from "./new/biometrics.api";
 
 // Unified API Object
-import { adminApi } from "./existing/admin.api";
+import { adminApi } from "./new/admin.api";
 import { chatApi } from "./existing/chat.api";
 import { voiceApi } from "./existing/voice.api";
 import { userApi } from "./existing/user.api";

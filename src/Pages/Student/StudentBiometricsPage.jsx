@@ -151,12 +151,11 @@ export function StudentBiometricsPage() {
   const isRequiredForExam = location.state?.reason === "biometrics_required" || Boolean(returnTo);
   const { currentUser, isRTL } = useContext(AppContext);
 
-  const studentId = String(
-    currentUser?.id ||
-    currentUser?.student_id ||
-    currentUser?.username ||
-    "20000000-0000-4000-8000-000000000105"
-  );
+  const candidateIds = useMemo(() => {
+    return biometricsApi.getCandidateBiometricIds(currentUser);
+  }, [currentUser]);
+
+  const studentId = candidateIds[0] || "20000000-0000-4000-8000-000000000105";
 
   const [currentStep, setCurrentStep] = useState(1);
   const [profileStatus, setProfileStatus] = useState(null);
@@ -316,19 +315,23 @@ export function StudentBiometricsPage() {
   // Load profile from backend
   const loadProfile = async (shouldShowRegistrationModal = false) => {
     try {
-      const data = await biometricsApi.getStudentBiometricProfile(studentId);
+      const data = await biometricsApi.checkStudentBiometricStatus(currentUser);
       if (data) {
         setProfileStatus(data);
         const isEnrolled = Boolean(data.is_enrolled || data.face_enrolled);
         const isGazeDone = Boolean(data.is_gaze_calibrated || data.gaze_calibrated);
         const isNeutralDone = Boolean(data.is_neutral_calibrated || data.neutral_calibrated);
         const isAlreadyDone = Boolean(
-          data.is_fully_registered &&
-          isEnrolled &&
-          isGazeDone &&
-          isNeutralDone
+          data.is_fully_registered ||
+          (isEnrolled && isGazeDone && isNeutralDone)
         );
         if (isAlreadyDone) {
+          try {
+            localStorage.setItem("dt_biometrics_registered", "true");
+            for (const cid of candidateIds) {
+              localStorage.setItem(`dt_biometrics_${cid}`, "true");
+            }
+          } catch {}
           setCurrentStep(4);
           if (shouldShowRegistrationModal) {
             setShowReRegistrationModal(true);
@@ -343,8 +346,23 @@ export function StudentBiometricsPage() {
   const handleResetBiometrics = async () => {
     setIsResetting(true);
     try {
-      const res = await biometricsApi.resetStudentBiometrics(studentId);
-      if (res?.status === "success") {
+      let resetSuccess = false;
+      for (const cid of candidateIds) {
+        try {
+          const res = await biometricsApi.resetStudentBiometrics(cid);
+          if (res?.status === "success") {
+            resetSuccess = true;
+          }
+        } catch {}
+      }
+      try {
+        localStorage.removeItem("dt_biometrics_registered");
+        for (const cid of candidateIds) {
+          localStorage.removeItem(`dt_biometrics_${cid}`);
+        }
+      } catch {}
+
+      if (resetSuccess) {
         setEnrollStatus({ success: false, message: "" });
         setProfileStatus(null);
         setShowReRegistrationModal(false);
@@ -582,6 +600,12 @@ export function StudentBiometricsPage() {
       }
       const res = await biometricsApi.enrollStudentFace(studentId, blob, "balanced", "opencv");
       if (res?.status === "enrolled" || res?.user_id) {
+        try {
+          localStorage.setItem("dt_biometrics_registered", "true");
+          for (const cid of candidateIds) {
+            localStorage.setItem(`dt_biometrics_${cid}`, "true");
+          }
+        } catch {}
         setEnrollStatus({
           success: true,
           message: "چهره و بردار اصالت با موفقیت تایید شد",

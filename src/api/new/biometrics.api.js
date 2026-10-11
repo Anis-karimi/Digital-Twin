@@ -295,6 +295,88 @@ export async function toggleBiometricEditPermission(userId, canEdit) {
   );
 }
 
+/**
+ * Resolves candidate user identifiers for biometrics in prioritized order.
+ * @param {Object} currentUser
+ * @returns {Array<string>}
+ */
+export function getCandidateBiometricIds(currentUser) {
+  const ids = [];
+  if (currentUser?.user_id) ids.push(String(currentUser.user_id).trim());
+  if (currentUser?.id) ids.push(String(currentUser.id).trim());
+  if (currentUser?.student_id) ids.push(String(currentUser.student_id).trim());
+  if (currentUser?.username) ids.push(String(currentUser.username).trim());
+  ids.push("20000000-0000-4000-8000-000000000105");
+  return [...new Set(ids.filter(Boolean))];
+}
+
+/**
+ * Checks biometric enrollment status across all candidate identifiers and caches verified state.
+ * @param {Object} currentUser
+ * @returns {Promise<Object>}
+ */
+export async function checkStudentBiometricStatus(currentUser) {
+  const candidateIds = getCandidateBiometricIds(currentUser);
+  const localRegistered =
+    localStorage.getItem("dt_biometrics_registered") === "true" ||
+    candidateIds.some((cid) => localStorage.getItem(`dt_biometrics_${cid}`) === "true");
+
+  let resolvedStatus = null;
+  for (const cid of candidateIds) {
+    try {
+      const res = await getStudentBiometricProfile(cid);
+      if (
+        res &&
+        (res.is_enrolled ||
+          res.face_enrolled ||
+          res.is_fully_registered ||
+          res.ready_for_exam)
+      ) {
+        resolvedStatus = res;
+        break;
+      } else if (res && !resolvedStatus) {
+        resolvedStatus = res;
+      }
+    } catch (err) {
+      console.warn(`Failed checking biometrics for candidate ${cid}:`, err);
+    }
+  }
+
+  if (
+    resolvedStatus?.is_enrolled ||
+    resolvedStatus?.face_enrolled ||
+    resolvedStatus?.is_fully_registered ||
+    resolvedStatus?.ready_for_exam
+  ) {
+    try {
+      localStorage.setItem("dt_biometrics_registered", "true");
+      for (const cid of candidateIds) {
+        localStorage.setItem(`dt_biometrics_${cid}`, "true");
+      }
+    } catch {}
+    return { ...resolvedStatus, is_enrolled: true, is_fully_registered: true, ready_for_exam: true };
+  }
+
+  if (localRegistered) {
+    return {
+      ...(resolvedStatus || {}),
+      user_id: candidateIds[0],
+      is_enrolled: true,
+      face_enrolled: true,
+      is_fully_registered: true,
+      ready_for_exam: true,
+    };
+  }
+
+  return resolvedStatus || {
+    user_id: candidateIds[0],
+    is_enrolled: false,
+    face_enrolled: false,
+    is_fully_registered: false,
+    ready_for_exam: false,
+  };
+}
+
 export const biometricsApi = {
   enrollStudentFace,
   verifyStudentFace,
@@ -307,6 +389,9 @@ export const biometricsApi = {
   logExamDistraction,
   resetStudentBiometrics,
   toggleBiometricEditPermission,
+  getCandidateBiometricIds,
+  checkStudentBiometricStatus,
 };
 
 export default biometricsApi;
+

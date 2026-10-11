@@ -4,90 +4,100 @@ import { toPersianDigits } from "@/utils/dateUtils";
 /**
  * LiquidCircularGauge
  * 
- * Luxury Apple visionOS Liquid Glass Circular Gauge:
- * - Pure crystal-clear glassmorphism disc (zero dark box background)
- * - Radiant neon fluid stroke with dynamic progress sweeping
- * - Specular rim highlights and internal glass reflections
- * - Reactive stress state shifting dynamically to ruby red on elevation
+ * Precision VisionOS-Grade Glassmorphism Biometric Gauge:
+ * - Ultra-clear frosted glass disc with subtle optical refraction
+ * - High-precision gradient progress ring with smooth rounded terminals
+ * - Dynamic theme adaptation for Mastery, Stress, and Focus
+ * - Clean, legible typography with Persian digit localization
  * 
  * @param {Object} props
- * @param {number} props.percentage Value between 0 and 100
- * @param {"certainty"|"stress"|"composure"} [props.type="certainty"]
- * @param {number} [props.size=58] Diameter in pixels
- * @param {boolean} [props.isRTL=true]
+ * @param {number} [props.percentage=50] Value between 0 and 100
+ * @param {"certainty"|"stress"|"composure"} [props.type="certainty"] Metric type
+ * @param {number} [props.size=54] Diameter in pixels
+ * @param {boolean} [props.isRTL=true] RTL layout direction
  */
 export const LiquidCircularGauge = ({
   percentage = 50,
   type = "certainty",
-  size = 58,
+  size = 54,
   isRTL = true,
 }) => {
   const uniqueId = useId().replace(/:/g, "_");
   const clampedPercent = Math.min(100, Math.max(0, Math.round(percentage)));
 
-  // Radius and circumference for the progress circle
-  const radius = 38;
-  const circumference = 2 * Math.PI * radius; // ~238.76
+  // Radius and circumference
+  const radius = 37;
+  const circumference = 2 * Math.PI * radius; // ~232.48
   const strokeDashoffset = circumference - (clampedPercent / 100) * circumference;
 
-  // Dynamic theme colors
+  // Refined chromatic palette for each metric
   const theme = useMemo(() => {
     if (type === "stress") {
       if (clampedPercent > 65) {
-        // High Stress -> Radiant Crimson / Ruby Red
+        // High Stress -> Radiant Crimson / Rose
         return {
-          primary: "#ef4444",
-          secondary: "#dc2626",
-          light: "#f87171",
-          glow: "rgba(239, 68, 68, 0.85)",
-          track: "rgba(239, 68, 68, 0.22)",
+          primary: "#f43f5e",
+          secondary: "#e11d48",
+          light: "#fda4af",
+          glow: "rgba(244, 63, 94, 0.45)",
+          track: "rgba(244, 63, 94, 0.16)",
+          chipText: isRTL ? "بالا" : "High",
+          chipBg: "bg-rose-500/20 text-rose-300 border-rose-500/30",
           pulse: true,
         };
       }
       if (clampedPercent > 40) {
-        // Moderate Stress -> Amber / Sunset Orange
+        // Moderate Stress -> Warm Amber
         return {
           primary: "#f59e0b",
           secondary: "#d97706",
-          light: "#fbbf24",
-          glow: "rgba(245, 158, 11, 0.7)",
-          track: "rgba(245, 158, 11, 0.2)",
+          light: "#fde68a",
+          glow: "rgba(245, 158, 11, 0.4)",
+          track: "rgba(245, 158, 11, 0.15)",
+          chipText: isRTL ? "متوسط" : "Normal",
+          chipBg: "bg-amber-500/20 text-amber-300 border-amber-500/30",
           pulse: false,
         };
       }
-      // Low Stress -> Calm Mint / Emerald Teal
+      // Low Stress -> Serene Emerald Mint
       return {
         primary: "#10b981",
         secondary: "#059669",
-        light: "#34d399",
-        glow: "rgba(16, 185, 129, 0.65)",
-        track: "rgba(16, 185, 129, 0.2)",
+        light: "#6ee7b7",
+        glow: "rgba(16, 185, 129, 0.4)",
+        track: "rgba(16, 185, 129, 0.15)",
+        chipText: isRTL ? "طبیعی" : "Optimal",
+        chipBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
         pulse: false,
       };
     }
 
     if (type === "composure") {
-      // Purple / Violet theme for Composure & Focus
+      // Focus & Composure -> Royal Violet / Indigo
       return {
-        primary: "#a855f7",
+        primary: "#8b5cf6",
         secondary: "#7c3aed",
-        light: "#c084fc",
-        glow: "rgba(168, 85, 247, 0.75)",
-        track: "rgba(168, 85, 247, 0.2)",
+        light: "#c4b5fd",
+        glow: "rgba(139, 92, 246, 0.45)",
+        track: "rgba(139, 92, 246, 0.16)",
+        chipText: isRTL ? "متمرکز" : "Focused",
+        chipBg: "bg-purple-500/20 text-purple-300 border-purple-500/30",
         pulse: false,
       };
     }
 
-    // Default / Certainty: Sky Blue / Cyan theme
+    // Default: Certainty & Scientific Mastery -> Vivid Sky Blue / Cyan
     return {
       primary: "#0ea5e9",
       secondary: "#0284c7",
-      light: "#38bdf8",
-      glow: "rgba(14, 165, 233, 0.75)",
-      track: "rgba(14, 165, 233, 0.2)",
+      light: "#7dd3fc",
+      glow: "rgba(14, 165, 233, 0.45)",
+      track: "rgba(14, 165, 233, 0.16)",
+      chipText: isRTL ? "عالی" : "Great",
+      chipBg: "bg-sky-500/20 text-sky-300 border-sky-500/30",
       pulse: false,
     };
-  }, [type, clampedPercent]);
+  }, [type, clampedPercent, isRTL]);
 
   const formattedPercent = isRTL
     ? `${toPersianDigits(clampedPercent)}٪`
@@ -102,19 +112,19 @@ export const LiquidCircularGauge = ({
         width: size,
         height: size,
         background:
-          "linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.14) 100%)",
-        backdropFilter: "blur(20px) saturate(190%)",
-        WebkitBackdropFilter: "blur(20px) saturate(190%)",
-        border: "1px solid rgba(255, 255, 255, 0.35)",
-        boxShadow: `0 8px 24px -2px rgba(0, 0, 0, 0.45), 0 0 16px ${theme.glow}, inset 0 2px 3px rgba(255, 255, 255, 0.65), inset 0 -1.5px 2px rgba(0, 0, 0, 0.25)`,
+          "radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(15, 23, 42, 0.25) 100%)",
+        backdropFilter: "blur(16px) saturate(180%)",
+        WebkitBackdropFilter: "blur(16px) saturate(180%)",
+        border: "1px solid rgba(255, 255, 255, 0.22)",
+        boxShadow: `0 4px 14px -1px rgba(0, 0, 0, 0.25), 0 0 10px ${theme.glow}, inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0, 0, 0, 0.2)`,
       }}
     >
       <svg
         viewBox="0 0 100 100"
-        className="w-full h-full overflow-hidden rounded-full pointer-events-none p-1"
+        className="w-full h-full overflow-hidden rounded-full pointer-events-none p-0.5"
       >
         <defs>
-          {/* Glowing Stroke Gradient */}
+          {/* Subtle Linear Stroke Gradient */}
           <linearGradient
             id={`ringGrad_${uniqueId}`}
             x1="0%"
@@ -123,25 +133,25 @@ export const LiquidCircularGauge = ({
             y2="100%"
           >
             <stop offset="0%" stopColor={theme.light} />
-            <stop offset="60%" stopColor={theme.primary} />
+            <stop offset="65%" stopColor={theme.primary} />
             <stop offset="100%" stopColor={theme.secondary} />
           </linearGradient>
 
-          {/* Top Lens Reflection */}
+          {/* Top Specular Rim Reflection */}
           <linearGradient
-            id={`topSheen_${uniqueId}`}
+            id={`topRim_${uniqueId}`}
             x1="0%"
             y1="0%"
             x2="0%"
             y2="100%"
           >
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         {/* Ambient Inner Glass Chamber */}
-        <circle cx="50" cy="50" r="44" fill="rgba(255, 255, 255, 0.04)" />
+        <circle cx="50" cy="50" r="45" fill="rgba(255, 255, 255, 0.02)" />
 
         {/* Background Track Ring */}
         <circle
@@ -150,7 +160,7 @@ export const LiquidCircularGauge = ({
           r={radius}
           fill="none"
           stroke={theme.track}
-          strokeWidth="6"
+          strokeWidth="4"
         />
 
         {/* Active Progress Line */}
@@ -160,31 +170,24 @@ export const LiquidCircularGauge = ({
           r={radius}
           fill="none"
           stroke={`url(#ringGrad_${uniqueId})`}
-          strokeWidth="6.5"
+          strokeWidth="4.5"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           transform="rotate(-90 50 50)"
           style={{
-            transition: "stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
-            filter: `drop-shadow(0 0 6px ${theme.glow})`,
+            transition: "stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            filter: `drop-shadow(0 0 4px ${theme.glow})`,
           }}
         />
 
-        {/* Outer Delicate Glass Bezel Rim */}
-        <circle
+        {/* Delicate Glass Specular Cap */}
+        <ellipse
           cx="50"
-          cy="50"
-          r="46"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.28)"
-          strokeWidth="0.8"
-        />
-
-        {/* Top Gloss Arc */}
-        <path
-          d="M 26 22 Q 50 32 74 22 Q 50 16 26 22 Z"
-          fill={`url(#topSheen_${uniqueId})`}
+          cy="22"
+          rx="22"
+          ry="6"
+          fill={`url(#topRim_${uniqueId})`}
         />
       </svg>
 
@@ -192,10 +195,10 @@ export const LiquidCircularGauge = ({
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
         <span
           className={`font-black tracking-tight text-white ${
-            size < 60 ? "text-[12px]" : "text-sm"
+            size < 56 ? "text-[11px]" : "text-xs"
           } ${isRTL ? "font-vazir" : "font-inter"}`}
           style={{
-            textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5)",
+            textShadow: "0 1px 2px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.4)",
           }}
         >
           {formattedPercent}

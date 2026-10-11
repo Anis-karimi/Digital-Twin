@@ -31,7 +31,12 @@ import { ReviewAnswers } from "@/Pages/ReviewAnswersPage";
 import { AppProvider, AppContext } from "@/Context/AppContext";
 import { TeacherLayout } from "@/Layouts/TeacherLayout";
 import { StudentLayout } from "@/Layouts/StudentLayout";
+import { AdminLayout } from "@/Layouts/AdminLayout";
 import { AdaptiveLayout } from "@/Layouts/AdaptiveLayout";
+import { AdminCoursesPage } from "@/Pages/Admin/AdminCoursesPage";
+import { AdminUsersPage } from "@/Pages/Admin/AdminUsersPage";
+import { AdminCreateCoursePage } from "@/Pages/Admin/AdminCreateCoursePage";
+import { AdminSettingsPage } from "@/Pages/Admin/AdminSettingsPage";
 import { Login } from "@/Pages/Login";
 import { ErrorBoundary } from "@/Components/ErrorBoundary";
 
@@ -184,6 +189,20 @@ function App() {
               <Route path="/StudentNotifications" element={<StudentNotification />} />
               <Route path="/studentnotifications" element={<StudentNotification />} />
             </Route>
+            {/* ==================== Admin ==================== */}
+            <Route element={<AdminLayout />}>
+              <Route path="/Admin" element={<AdminCoursesPage />} />
+              <Route path="/admin" element={<AdminCoursesPage />} />
+              <Route path="/AdminCourses" element={<AdminCoursesPage />} />
+              <Route path="/admincourses" element={<AdminCoursesPage />} />
+              <Route path="/AdminUsers" element={<AdminUsersPage />} />
+              <Route path="/adminusers" element={<AdminUsersPage />} />
+              <Route path="/AdminCreateCourse" element={<AdminCreateCoursePage />} />
+              <Route path="/admincreatecourse" element={<AdminCreateCoursePage />} />
+              <Route path="/AdminSettings" element={<AdminSettingsPage />} />
+              <Route path="/adminsettings" element={<AdminSettingsPage />} />
+            </Route>
+
             {/* =================== Quiz Pages =================== */}
 
             <Route path="/QuizFirstPage" element={<QuizFirstPage />} />
