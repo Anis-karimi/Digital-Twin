@@ -29,7 +29,6 @@ import { biometricsApi } from "@/api/new/biometrics.api";
 import { useBiometricTelemetry } from "@/features/biometrics/hooks/useBiometricTelemetry";
 import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
-import { BorderBeam } from "border-beam";
 import { VoiceBeam } from "voice-glow";
 import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
@@ -2162,116 +2161,110 @@ export const StudentExamPage = () => {
               />
             </div>
 
-            {/* Upper Box: Live Question Message with VoiceBeam & BorderBeam */}
+            {/* Upper Box: Live Question Message with VoiceBeam */}
             <div
               key={`bot-q-${currentTurnIndex}`}
               className="w-full max-w-[360px] mx-auto chat-bubble-enter-left relative"
             >
-              <BorderBeam
-                size="md"
+              <VoiceBeam
+                type="default"
                 colorVariant="ocean"
                 theme="dark"
-                active={isSpeakingQuestion || isBufferingTTS}
-                className="w-full rounded-2xl"
+                scale={0.8}
+                reach={0.65}
+                spread={0.85}
+                bend={0}
+                strokeOpacity={0.85}
+                innerOpacity={0.25}
+                bloomOpacity={0.9}
+                idle={0.15}
+                level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
+                className="w-full chat-bubble-bot"
+                style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
               >
-                <VoiceBeam
-                  type="default"
-                  scale={0.8}
-                  reach={0.65}
-                  spread={0.85}
-                  bend={0}
-                  strokeOpacity={0.85}
-                  innerOpacity={0.25}
-                  bloomOpacity={0.9}
-                  idle={0}
-                  level={isSpeakingQuestion ? Math.max(0.4, ttsVoiceLevel) : (isBufferingTTS ? 0.35 : 0)}
-                  className="w-full chat-bubble-bot"
-                  style={{ borderRadius: "18px 18px 18px 0px", borderBottomLeftRadius: "0px" }}
-                >
-                  <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col gap-2.5 relative overflow-hidden">
-                    {/* Ambient Fluid Cyan Glow in background */}
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col gap-2.5 relative overflow-hidden">
+                  {/* Ambient Fluid Cyan Glow in background */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                    {/* Header: Turn Tag + Difficulty + Replay Button */}
-                    <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
-                        <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                          {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
-                        </span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                          {currentDifficulty > 0.6
-                            ? (isQuestionRTL ? "پیشرفته" : "Hard")
-                            : currentDifficulty > 0.35
-                            ? (isQuestionRTL ? "متوسط" : "Medium")
-                            : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                  {/* Header: Turn Tag + Difficulty + Replay Button */}
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/10 relative z-10">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
+                      <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                        {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
+                        {currentDifficulty > 0.6
+                          ? (isQuestionRTL ? "پیشرفته" : "Hard")
+                          : currentDifficulty > 0.35
+                          ? (isQuestionRTL ? "متوسط" : "Medium")
+                          : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                      </span>
+                    </div>
+
+                    {/* Audio Replay / Mute Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSpeakingQuestion || isBufferingTTS) {
+                          stopQuestionTTS();
+                        } else {
+                          playQuestionTTS(currentQuestion, true);
+                        }
+                      }}
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                        isSpeakingQuestion || isBufferingTTS
+                          ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
+                          : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                      }`}
+                      title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                    >
+                      {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {/* Synchronized Word-by-Word Question Text */}
+                  <div
+                    dir={isQuestionRTL ? "rtl" : "ltr"}
+                    className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
+                      isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
+                    }`}
+                  >
+                    {isBufferingTTS ? (
+                      <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
+                        <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
+                          {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
                         </span>
                       </div>
+                    ) : questionWords.length > 0 ? (
+                      questionWords.map((word, idx) => {
+                        const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
+                        const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
 
-                      {/* Audio Replay / Mute Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isSpeakingQuestion || isBufferingTTS) {
-                            stopQuestionTTS();
-                          } else {
-                            playQuestionTTS(currentQuestion, true);
-                          }
-                        }}
-                        className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
-                          isSpeakingQuestion || isBufferingTTS
-                            ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
-                            : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
-                        }`}
-                        title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
-                      >
-                        {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-
-                    {/* Synchronized Word-by-Word Question Text */}
-                    <div
-                      dir={isQuestionRTL ? "rtl" : "ltr"}
-                      className={`text-xs sm:text-sm leading-relaxed text-white font-medium select-text relative z-10 [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] ${
-                        isQuestionRTL ? "font-vazir text-right" : "font-inter text-left"
-                      }`}
-                    >
-                      {isBufferingTTS ? (
-                        <div className="flex items-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
-                          <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
-                            {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
+                        return (
+                          <span
+                            key={idx}
+                            className={`inline-block me-1.5 transition-all duration-150 ${
+                              isCurrent
+                                ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
+                                : isVisible
+                                ? "text-white opacity-100"
+                                : "opacity-0 translate-y-0.5"
+                            }`}
+                          >
+                            {word}
                           </span>
-                        </div>
-                      ) : questionWords.length > 0 ? (
-                        questionWords.map((word, idx) => {
-                          const isVisible = !isSpeakingQuestion || idx < spokenWordCount;
-                          const isCurrent = isSpeakingQuestion && idx === spokenWordCount - 1;
-
-                          return (
-                            <span
-                              key={idx}
-                              className={`inline-block me-1.5 transition-all duration-150 ${
-                                isCurrent
-                                  ? "text-sky-300 font-bold scale-105 drop-shadow-[0_2px_8px_rgba(56,189,248,0.8)]"
-                                  : isVisible
-                                  ? "text-white opacity-100"
-                                  : "opacity-0 translate-y-0.5"
-                              }`}
-                            >
-                              {word}
-                            </span>
-                          );
-                        })
-                      ) : (
-                        <span className="text-slate-400">
-                          {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
-                        </span>
-                      )}
-                    </div>
+                        );
+                      })
+                    ) : (
+                      <span className="text-slate-400">
+                        {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                      </span>
+                    )}
                   </div>
-                </VoiceBeam>
-              </BorderBeam>
+                </div>
+              </VoiceBeam>
             </div>
 
             {/* Bottom Section: Response Field + Controls Row Below (Enters from Right after Bot finishes reading) */}
@@ -2280,50 +2273,44 @@ export const StudentExamPage = () => {
                 key={`student-ans-${currentTurnIndex}`}
                 className="w-full max-w-[360px] mx-auto flex flex-col gap-2.5 chat-bubble-enter-right"
               >
-                {/* Seamless Fluid Student Response Field with BorderBeam & VoiceBeam */}
-                <BorderBeam
-                  size="md"
+                {/* Seamless Fluid Student Response Field with VoiceBeam */}
+                <VoiceBeam
+                  type="default"
                   colorVariant="candy"
                   theme="dark"
-                  active={recording || (audioLevel > 0.05) || isSubmitting}
-                  className="w-full rounded-2xl"
+                  scale={0.8}
+                  reach={0.65}
+                  spread={0.85}
+                  bend={0}
+                  strokeOpacity={0.85}
+                  innerOpacity={0.25}
+                  bloomOpacity={0.9}
+                  idle={recording ? 0.2 : 0.05}
+                  stream={micStream}
+                  level={recording ? Math.max(0.45, audioLevel) : 0}
+                  processing={isSubmitting}
+                  className="w-full chat-bubble-student"
+                  style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
                 >
-                  <VoiceBeam
-                    type="default"
-                    scale={0.8}
-                    reach={0.65}
-                    spread={0.85}
-                    bend={0}
-                    strokeOpacity={0.85}
-                    innerOpacity={0.25}
-                    bloomOpacity={0.9}
-                    idle={0}
-                    stream={micStream}
-                    level={recording ? Math.max(0.45, audioLevel) : 0}
-                    processing={isSubmitting}
-                    className="w-full chat-bubble-student"
-                    style={{ borderRadius: "18px 18px 0px 18px", borderBottomRightRadius: "0px" }}
-                  >
-                    <div className="w-full p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden">
-                      <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                  <div className="w-full p-3 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden">
+                    <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                      <textarea
-                        dir={isAnswerRTL ? "rtl" : "ltr"}
-                        rows={2}
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        placeholder={
-                          isQuestionRTL
-                            ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
-                            : "Type response here or speak with mic..."
-                        }
-                        className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
-                          isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
-                        }`}
-                      />
-                    </div>
-                  </VoiceBeam>
-                </BorderBeam>
+                    <textarea
+                      dir={isAnswerRTL ? "rtl" : "ltr"}
+                      rows={2}
+                      value={answerText}
+                      onChange={(e) => setAnswerText(e.target.value)}
+                      placeholder={
+                        isQuestionRTL
+                          ? "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید..."
+                          : "Type response here or speak with mic..."
+                      }
+                      className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/70 focus:outline-none resize-none leading-relaxed [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
+                        isAnswerRTL ? "font-vazir text-right" : "font-inter text-left"
+                      }`}
+                    />
+                  </div>
+                </VoiceBeam>
 
                 {/* Controls Row: Mic/Orb Button Centered Horizontally + Compact Send Button on Right */}
                 <div className="w-full flex items-center justify-between px-2">
