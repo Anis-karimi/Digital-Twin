@@ -158,17 +158,17 @@ export async function getLoginDirectory() {
     { method: "GET" },
     () => [
       {
-        id: "c0000000-0000-4000-8000-000000000001",
+        id: "bbd22574-beac-4bdc-8cc4-afdc663a10d5",
         title: "سیستم عامل",
         department: "مهندسی کامپیوتر",
         degree: "کارشناسی",
         units: 3,
         teacher: {
-          id: "10000000-0000-4000-8000-000000000001",
+          id: "2ec3a90b-4108-48e7-ad4f-5b0e604e14cc",
           name: "دکتر محمد اله بخش",
           username: "mohammad_allahbakhsh",
           role: "TEACHER",
-          defaultToken: "sso_token_dr_allahbakhsh",
+          defaultToken: "sso_token_mohammad_allahbakhsh",
           avatar: null,
         },
         students: [

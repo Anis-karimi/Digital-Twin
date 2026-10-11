@@ -31,23 +31,23 @@ export const AdminSettingsPage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full min-h-dvh flex flex-col overflow-x-hidden transition-colors duration-200"
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden relative transition-colors duration-200"
     >
       {/* Top Header */}
-      <header className="w-full h-[65px] flex items-center justify-between px-4 md:px-6 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/10 dark:bg-neutral-scale1200 flex items-center justify-center text-white">
-            <Shield className="w-5 h-5 text-white" />
+      <header className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-white/10 dark:bg-neutral-scale1200 flex items-center justify-center text-white shrink-0">
+            <Shield className="w-4 h-4 text-white" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1
-              className={`text-white text-base md:text-lg font-bold leading-tight ${
+              className={`text-white text-sm font-bold leading-tight truncate ${
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
               {isRTL ? "تنظیمات و وضعیت سیستم" : "System Settings"}
             </h1>
-            <p className="text-white/70 text-[11px] leading-tight">
+            <p className="text-white/70 text-[10px] leading-tight truncate">
               {isRTL ? "مدیریت دسترسی و پیکربندی سامانه" : "Administration & Configuration"}
             </p>
           </div>
@@ -55,10 +55,10 @@ export const AdminSettingsPage = () => {
       </header>
 
       {/* Main Container */}
-      <div className="w-full max-w-2xl mx-auto flex-1 px-4 py-5 flex flex-col gap-4 pb-28">
+      <div className="w-full flex-1 overflow-y-auto overflow-x-hidden px-3.5 py-3 flex flex-col gap-3 pb-[85px]">
         {/* Admin Profile Card */}
-        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 md:p-5 flex items-center gap-4 shadow-xs">
-          <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold text-lg shrink-0 border border-purple-200 dark:border-purple-800/40">
+        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex items-center gap-3 shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold text-base shrink-0 border border-purple-200 dark:border-purple-800/40">
             ADM
           </div>
           <div className="min-w-0 flex-1">
@@ -78,23 +78,23 @@ export const AdminSettingsPage = () => {
         </section>
 
         {/* Display & Language Settings */}
-        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
+        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
           <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1">
             {isRTL ? "تنظیمات کاربری و ظاهر" : "Appearance & Language"}
           </h3>
 
           {/* Theme Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1100 flex items-center justify-center">
-                {isDark ? <Moon className="w-4 h-4 text-amber-300" /> : <Sun className="w-4 h-4 text-amber-500" />}
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1100 flex items-center justify-center shrink-0">
+                {isDark ? <Moon className="w-3.5 h-3.5 text-amber-300" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
               </div>
               <div>
                 <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
-                  {isRTL ? "حالت تیره و روشن (پوسته)" : "Theme Mode"}
+                  {isRTL ? "حالت پوسته" : "Theme Mode"}
                 </span>
                 <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">
-                  {isDark ? (isRTL ? "حالت تاریک فعال است" : "Dark mode active") : (isRTL ? "حالت روشن فعال است" : "Light mode active")}
+                  {isDark ? (isRTL ? "تاریک" : "Dark") : (isRTL ? "روشن" : "Light")}
                 </span>
               </div>
             </div>
@@ -102,24 +102,24 @@ export const AdminSettingsPage = () => {
             <button
               type="button"
               onClick={toggleTheme}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
             >
               {isDark ? (isRTL ? "روشن" : "Light") : (isRTL ? "تاریک" : "Dark")}
             </button>
           </div>
 
           {/* Language Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1100 flex items-center justify-center">
-                <Globe className="w-4 h-4 text-blue-500" />
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1100 flex items-center justify-center shrink-0">
+                <Globe className="w-3.5 h-3.5 text-blue-500" />
               </div>
               <div>
                 <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
                   {isRTL ? "زبان سامانه" : "Interface Language"}
                 </span>
                 <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">
-                  {language === "fa" ? "فارسی (پیش‌فرض)" : "English"}
+                  {language === "fa" ? "فارسی" : "English"}
                 </span>
               </div>
             </div>
@@ -127,7 +127,7 @@ export const AdminSettingsPage = () => {
             <button
               type="button"
               onClick={toggleLanguage}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
             >
               {language === "fa" ? "English" : "فارسی"}
             </button>
@@ -135,39 +135,39 @@ export const AdminSettingsPage = () => {
         </section>
 
         {/* System Diagnostic Information */}
-        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
+        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
           <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-neutral-scale500" />
             <span>{isRTL ? "وضعیت سرویس‌های سامانه" : "System Status"}</span>
           </h3>
 
           <div className="grid grid-cols-3 gap-2">
-            <div className="p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
-              <Server className="w-4 h-4 text-emerald-500 mb-1" />
-              <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "سرویس اصلی" : "Main Svc"}</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "آنلاین" : "Online"}</span>
+            <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
+              <Server className="w-3.5 h-3.5 text-emerald-500 mb-1" />
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "سرویس اصلی" : "Main Svc"}</span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "آنلاین" : "Online"}</span>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
-              <Database className="w-4 h-4 text-emerald-500 mb-1" />
-              <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "پایگاه داده" : "PostgreSQL"}</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "متصل" : "Ready"}</span>
+            <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
+              <Database className="w-3.5 h-3.5 text-emerald-500 mb-1" />
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "داده‌گاه" : "PostgreSQL"}</span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "متصل" : "Ready"}</span>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
-              <Cpu className="w-4 h-4 text-emerald-500 mb-1" />
-              <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "موتور هوش مصنوعی" : "AI Models"}</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "فعال" : "Active"}</span>
+            <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
+              <Cpu className="w-3.5 h-3.5 text-emerald-500 mb-1" />
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "مدل هوش" : "AI Models"}</span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "فعال" : "Active"}</span>
             </div>
           </div>
         </section>
 
         {/* Logout Action */}
-        <section className="pt-2">
+        <section className="pt-1">
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-300 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-300 font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs text-xs"
           >
             <LogOut className="w-4 h-4" />
             <span>{isRTL ? "خروج از حساب مدیریت" : "Sign Out"}</span>

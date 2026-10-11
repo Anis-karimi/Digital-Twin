@@ -82,24 +82,24 @@ export const AdminUsersPage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full min-h-dvh flex flex-col overflow-x-hidden transition-colors duration-200"
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden relative transition-colors duration-200"
     >
       {/* Top Header */}
-      <header className="w-full h-[65px] flex items-center justify-between px-4 md:px-6 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/10 dark:bg-neutral-scale1200 flex items-center justify-center text-white">
-            <Users className="w-5 h-5 text-white" />
+      <header className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-white/10 dark:bg-neutral-scale1200 flex items-center justify-center text-white shrink-0">
+            <Users className="w-4 h-4 text-white" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1
-              className={`text-white text-base md:text-lg font-bold leading-tight ${
+              className={`text-white text-sm font-bold leading-tight truncate ${
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
               {isRTL ? "مدیریت کاربران سامانه" : "Users Management"}
             </h1>
-            <p className="text-white/70 text-[11px] leading-tight">
-              {isRTL ? `${totalCount} کاربر ثبت شده` : `${totalCount} registered users`}
+            <p className="text-white/70 text-[10px] leading-tight truncate">
+              {isRTL ? `${toPersianDigits(totalCount)} کاربر ثبت شده` : `${totalCount} registered users`}
             </p>
           </div>
         </div>
@@ -108,101 +108,101 @@ export const AdminUsersPage = () => {
           type="button"
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center justify-center text-white transition-all cursor-pointer"
+          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
         >
-          {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-white" />}
+          {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-white" />}
         </button>
       </header>
 
       {/* Main Container */}
-      <div className="w-full max-w-4xl mx-auto flex-1 px-4 py-5 flex flex-col gap-4 pb-24">
+      <div className="w-full flex-1 overflow-y-auto overflow-x-hidden px-3.5 py-3 flex flex-col gap-3 pb-[85px]">
         {/* Role Metric Summary Pills */}
-        <section className="grid grid-cols-4 gap-2">
+        <section className="grid grid-cols-4 gap-1.5">
           <button
             type="button"
             onClick={() => setSelectedRole("ALL")}
-            className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
               selectedRole === "ALL"
                 ? "bg-primery-700 text-white border-primery-800 shadow-xs"
                 : "bg-neutral-scale70 dark:bg-neutral-scale1300 border-neutral-scale100 dark:border-neutral-scale1100 text-neutral-scale1800 dark:text-neutral-scale70"
             }`}
           >
-            <span className="text-base md:text-lg font-bold">{totalCount}</span>
-            <span className="text-[10px] mt-0.5 opacity-80">{isRTL ? "همه" : "All"}</span>
+            <span className="text-sm font-bold">{isRTL ? toPersianDigits(totalCount) : totalCount}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "همه" : "All"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSelectedRole("STUDENT")}
-            className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
               selectedRole === "STUDENT"
                 ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
                 : "bg-neutral-scale70 dark:bg-neutral-scale1300 border-neutral-scale100 dark:border-neutral-scale1100 text-emerald-700 dark:text-emerald-400"
             }`}
           >
-            <span className="text-base md:text-lg font-bold">{studentsCount}</span>
-            <span className="text-[10px] mt-0.5 opacity-80">{isRTL ? "دانشجویان" : "Students"}</span>
+            <span className="text-sm font-bold">{isRTL ? toPersianDigits(studentsCount) : studentsCount}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "دانشجو" : "Student"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSelectedRole("TEACHER")}
-            className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
               selectedRole === "TEACHER"
                 ? "bg-blue-600 text-white border-blue-700 shadow-xs"
                 : "bg-neutral-scale70 dark:bg-neutral-scale1300 border-neutral-scale100 dark:border-neutral-scale1100 text-blue-700 dark:text-blue-400"
             }`}
           >
-            <span className="text-base md:text-lg font-bold">{teachersCount}</span>
-            <span className="text-[10px] mt-0.5 opacity-80">{isRTL ? "اساتید" : "Teachers"}</span>
+            <span className="text-sm font-bold">{isRTL ? toPersianDigits(teachersCount) : teachersCount}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "استاد" : "Teacher"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSelectedRole("ADMIN")}
-            className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+            className={`p-2 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
               selectedRole === "ADMIN"
                 ? "bg-purple-600 text-white border-purple-700 shadow-xs"
                 : "bg-neutral-scale70 dark:bg-neutral-scale1300 border-neutral-scale100 dark:border-neutral-scale1100 text-purple-700 dark:text-purple-400"
             }`}
           >
-            <span className="text-base md:text-lg font-bold">{adminsCount}</span>
-            <span className="text-[10px] mt-0.5 opacity-80">{isRTL ? "مدیران" : "Admins"}</span>
+            <span className="text-sm font-bold">{isRTL ? toPersianDigits(adminsCount) : adminsCount}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "مدیر" : "Admin"}</span>
           </button>
         </section>
 
         {/* Search Bar */}
-        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-3 shadow-xs">
+        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-2.5 shadow-xs">
           <div className="relative w-full">
             <Search
-              className={`w-4 h-4 absolute top-1/2 -translate-y-1/2 text-neutral-scale600 dark:text-neutral-scale500 ${
-                isRTL ? "right-3" : "left-3"
+              className={`w-3.5 h-3.5 absolute top-1/2 -translate-y-1/2 text-neutral-scale600 dark:text-neutral-scale500 ${
+                isRTL ? "right-2.5" : "left-2.5"
               }`}
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isRTL ? "جستجوی کاربر بر اساس نام یا نام کاربری..." : "Search users by name or username..."}
-              className={`w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl py-2 text-xs md:text-sm text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale500 focus:outline-none focus:border-primery-600 transition-colors ${
-                isRTL ? "pr-9 pl-3 text-right" : "pl-9 pr-3 text-left"
+              placeholder={isRTL ? "جستجوی کاربر یا نام کاربری..." : "Search users..."}
+              className={`w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-lg py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale500 focus:outline-none focus:border-primery-600 transition-colors ${
+                isRTL ? "pr-8 pl-2.5 text-right" : "pl-8 pr-2.5 text-left"
               }`}
             />
           </div>
         </section>
 
         {/* Users List */}
-        <section className="flex flex-col gap-2.5">
+        <section className="flex flex-col gap-2">
           {loading ? (
-            <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
-              <div className="w-8 h-8 border-3 border-primery-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-full py-12 flex flex-col items-center justify-center gap-2">
+              <div className="w-7 h-7 border-2 border-primery-600 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400">
                 {isRTL ? "در حال دریافت کاربران..." : "Loading users..."}
               </p>
             </div>
           ) : users.length === 0 ? (
-            <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-2">
-              <Users className="w-8 h-8 text-neutral-scale500" />
+            <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-6 text-center flex flex-col items-center justify-center gap-2">
+              <Users className="w-7 h-7 text-neutral-scale500" />
               <p className="text-xs font-semibold text-neutral-scale700 dark:text-neutral-scale400">
                 {isRTL ? "کاربری با این مشخصات یافت نشد." : "No users found."}
               </p>
@@ -221,50 +221,43 @@ export const AdminUsersPage = () => {
               return (
                 <div
                   key={user.user_id}
-                  className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-2xl p-3 md:p-4 flex items-center justify-between gap-3 shadow-xs hover:border-primery-300 dark:hover:border-neutral-scale900 transition-all"
+                  className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-2.5 flex items-center justify-between gap-2.5 shadow-xs hover:border-primery-300 dark:hover:border-neutral-scale900 transition-all"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     {/* User Avatar Initials */}
-                    <div className="w-10 h-10 rounded-full bg-primery-100 dark:bg-neutral-scale1200 text-primery-800 dark:text-primery-300 font-bold flex items-center justify-center text-xs shrink-0 select-none">
+                    <div className="w-9 h-9 rounded-full bg-primery-100 dark:bg-neutral-scale1200 text-primery-800 dark:text-primery-300 font-bold flex items-center justify-center text-xs shrink-0 select-none">
                       {initials}
                     </div>
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale70 truncate">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70 truncate">
                           {user.full_name}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${roleInfo.colorClass}`}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-0.5 ${roleInfo.colorClass}`}
                         >
-                          <RoleIcon className="w-3 h-3" />
+                          <RoleIcon className="w-2.5 h-2.5" />
                           <span>{roleInfo.label}</span>
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400 font-mono mt-0.5 truncate">
+                      <p className="text-[10px] text-neutral-scale700 dark:text-neutral-scale400 font-mono mt-0.5 truncate">
                         @{user.username}
                       </p>
                     </div>
                   </div>
 
-                  {/* Right side: Status badge & last seen */}
+                  {/* Right side: Status badge */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     {user.is_active ? (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
                         <span>{isRTL ? "فعال" : "Active"}</span>
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1200 text-neutral-scale600 flex items-center gap-1">
-                        <XCircle className="w-3 h-3" />
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1200 text-neutral-scale600 flex items-center gap-0.5">
+                        <XCircle className="w-2.5 h-2.5" />
                         <span>{isRTL ? "غیرفعال" : "Inactive"}</span>
-                      </span>
-                    )}
-
-                    {user.created_at && (
-                      <span className="text-[10px] text-neutral-scale500 dark:text-neutral-scale500 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        <span>{user.created_at.slice(0, 10)}</span>
                       </span>
                     )}
                   </div>

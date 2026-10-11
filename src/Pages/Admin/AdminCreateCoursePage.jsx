@@ -123,28 +123,28 @@ export const AdminCreateCoursePage = () => {
   return (
     <main
       dir={isRTL ? "rtl" : "ltr"}
-      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full min-h-dvh flex flex-col overflow-x-hidden transition-colors duration-200"
+      className="bg-[#f1f0f0] dark:bg-neutral-scale1400 w-full md:w-[360px] h-dvh mx-auto flex flex-col overflow-hidden relative transition-colors duration-200"
     >
       {/* Top Header */}
-      <header className="w-full h-[65px] flex items-center justify-between px-4 md:px-6 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-3">
+      <header className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1000 shrink-0 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => navigate("/Admin")}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all cursor-pointer"
+            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
             aria-label="Back to courses"
           >
-            <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
+            <ArrowLeft className={`w-3.5 h-3.5 ${isRTL ? "rotate-180" : ""}`} />
           </button>
-          <div>
+          <div className="min-w-0">
             <h1
-              className={`text-white text-base md:text-lg font-bold leading-tight ${
+              className={`text-white text-sm font-bold leading-tight truncate ${
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
               {isRTL ? "ثبت اطلاعات درس جدید" : "Register New Course"}
             </h1>
-            <p className="text-white/70 text-[11px] leading-tight">
+            <p className="text-white/70 text-[10px] leading-tight truncate">
               {isRTL ? "افزودن درس و انتساب به استاد" : "Add course & assign instructor"}
             </p>
           </div>
@@ -154,14 +154,14 @@ export const AdminCreateCoursePage = () => {
           type="button"
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center justify-center text-white transition-all cursor-pointer"
+          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
         >
-          {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-white" />}
+          {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-white" />}
         </button>
       </header>
 
       {/* Main Form Container */}
-      <div className="w-full max-w-2xl mx-auto flex-1 px-4 py-5 flex flex-col gap-4 pb-28">
+      <div className="w-full flex-1 overflow-y-auto overflow-x-hidden px-3.5 py-3 flex flex-col gap-3 pb-[85px]">
         {/* Notifications */}
         {errorMessage && (
           <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">

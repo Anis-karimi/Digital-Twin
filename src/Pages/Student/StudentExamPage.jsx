@@ -1481,7 +1481,7 @@ export const StudentExamPage = () => {
                     ? "listening"
                     : "idle"
                 }
-                size={62}
+                size={68}
                 voiceLevel={isSpeakingQuestion ? ttsVoiceLevel : recording ? audioLevel : 0}
               />
             </div>
