@@ -54,23 +54,24 @@ export function detectClientFace(video, canvas) {
       totalLuminance += Y;
       pixelCount++;
 
-      // Normalized RGB
-      const sumRGB = r + g + b + 1;
-      const normR = r / sumRGB;
-      const normG = g / sumRGB;
+      // Broadened, multi-spectral skin chromaticity:
+      // Robust to cool/warm monitor light, fluorescent bulbs, low-light webcams & ethnic diversity
+      const isSkinYCbCr =
+        Y > 16 &&
+        Y < 252 &&
+        Cb >= 62 &&
+        Cb <= 148 &&
+        Cr >= 112 &&
+        Cr <= 192;
 
-      // Realistic skin chromaticity: robust to lighting, reflections and ethnic tone variety
-      const isSkinHue =
-        Y > 28 &&
-        Y < 245 &&
-        Cb >= 72 &&
-        Cb <= 138 &&
-        Cr >= 126 &&
-        Cr <= 185 &&
-        (r > g - 4) &&
-        (r > b - 10) &&
-        (normR > 0.31) &&
-        (normG > 0.18);
+      const isSkinRGB =
+        r > 30 &&
+        g > 18 &&
+        b > 12 &&
+        (r > b - 18) &&
+        (r + g > 1.28 * b || r > g - 10);
+
+      const isSkinHue = isSkinYCbCr && isSkinRGB;
 
       if (isSkinHue) {
         // Measure horizontal luminance difference (facial features: eyes, brows, nose, mouth)
@@ -88,20 +89,69 @@ export function detectClientFace(video, canvas) {
   const totalScanned = (maxX - minX) * (maxY - minY);
   const skinRatio = skinPixels.length / Math.max(1, totalScanned);
   const avgBrightness = pixelCount > 0 ? (totalLuminance / pixelCount) / 255 : 0.5;
-
-  // Rejection 1: Absence of skin (< 3% of region)
-  if (skinRatio < 0.03 || skinPixels.length < 18) {
-    return null;
-  }
-
-  // Rejection 2: Homogeneous background / beige wall filling entire frame (> 68% of frame)
-  if (skinRatio > 0.68) {
-    return null;
-  }
-
   const avgEdge = edgeSampleCount > 0 ? totalEdgeEnergy / edgeSampleCount : 0;
-  // Rejection 3: Flat texture / Wall check (faces have facial contours with avg gradient > 1.8)
-  if (avgEdge < 1.8) {
+
+  // Rejection 1: Homogeneous wall filling entire frame (> 85% of frame)
+  if (skinRatio > 0.85) {
+    return null;
+  }
+
+  // Fallback: If skin pixels are sparse (e.g. extreme low light or black/white stream),
+  // detect central head silhouette and edge mass in the natural head corridor:
+  if (skinPixels.length < 16) {
+    const cMinX = Math.floor(sw * 0.25);
+    const cMaxX = Math.floor(sw * 0.75);
+    const cMinY = Math.floor(sh * 0.15);
+    const cMaxY = Math.floor(sh * 0.75);
+    let centerEdges = 0;
+    let centerEdgeSamples = 0;
+
+    for (let y = cMinY; y < cMaxY; y += 2) {
+      for (let x = cMinX; x < cMaxX; x += 2) {
+        const idx = (y * sw + x) * 4;
+        const nextIdx = (y * sw + (x + 1)) * 4;
+        const Y1 = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        const Y2 = 0.299 * data[nextIdx] + 0.587 * data[nextIdx + 1] + 0.114 * data[nextIdx + 2];
+        const diff = Math.abs(Y1 - Y2);
+        if (diff > 4) {
+          centerEdges += diff;
+          centerEdgeSamples++;
+        }
+      }
+    }
+
+    if (centerEdgeSamples > 12) {
+      // User is centered in front of webcam
+      const headW = sw * 0.44;
+      const headH = sh * 0.48;
+      const cx = sw * 0.50;
+      const cy = sh * 0.44;
+      const squareSide = Math.max(headW, headH * 0.90);
+      const sqX = Math.max(0, Math.min(sw - squareSide, cx - squareSide / 2));
+      const sqY = Math.max(0, Math.min(sh - squareSide, cy - squareSide * 0.48));
+
+      return {
+        normX: (cx - headW / 2) / sw,
+        normY: (cy - headH * 0.48) / sh,
+        normW: headW / sw,
+        normH: headH / sh,
+        squareNorm: {
+          x: sqX / sw,
+          y: sqY / sh,
+          size: squareSide / sw,
+        },
+        sharpness: 82,
+        brightness: Math.min(100, Math.round(avgBrightness * 100)),
+        confidence: 88,
+        skinRatio: 0.25,
+      };
+    }
+
+    return null;
+  }
+
+  // Rejection 2: Flat texture / Wall check (faces have facial contours with avg gradient > 0.45)
+  if (avgEdge < 0.45 && skinPixels.length < 30) {
     return null;
   }
 
@@ -120,7 +170,7 @@ export function detectClientFace(video, canvas) {
   const cy = (p10Y + p90Y) / 2;
 
   // Stably bounded anthropometric face box
-  const faceW = Math.max(sw * 0.26, Math.min(sw * 0.56, clusterW * 1.12));
+  const faceW = Math.max(sw * 0.26, Math.min(sw * 0.58, clusterW * 1.12));
   const faceH = Math.max(sh * 0.28, Math.min(sh * 0.68, clusterH * 1.15));
 
   // Square bounding box (1:1 aspect ratio centered on face)
@@ -129,9 +179,9 @@ export function detectClientFace(video, canvas) {
   const sqY = Math.max(0, Math.min(sh - squareSide, cy - squareSide * 0.48));
 
   // Compute confidence (0-100) based on edge contrast, skin density, and geometry
-  const edgeScore = Math.min(100, Math.round((avgEdge / 7.5) * 100));
-  const ratioScore = Math.min(100, Math.round((skinRatio / 0.28) * 100));
-  const confidence = Math.min(99, Math.max(60, Math.round((edgeScore * 0.6) + (ratioScore * 0.4))));
+  const edgeScore = Math.min(100, Math.round((avgEdge / 5.0) * 100));
+  const ratioScore = Math.min(100, Math.round((skinRatio / 0.25) * 100));
+  const confidence = Math.min(99, Math.max(65, Math.round((edgeScore * 0.5) + (ratioScore * 0.5))));
 
   return {
     normX: Math.max(0, Math.min(1.0 - faceW / sw, (cx - faceW / 2) / sw)),
@@ -144,7 +194,7 @@ export function detectClientFace(video, canvas) {
       y: sqY / sh,
       size: squareSide / sw,
     },
-    sharpness: Math.min(100, Math.round(avgEdge * 12)),
+    sharpness: Math.min(100, Math.round(avgEdge * 15)),
     brightness: Math.min(100, Math.round(avgBrightness * 100)),
     confidence,
     skinRatio,

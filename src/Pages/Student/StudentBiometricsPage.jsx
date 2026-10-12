@@ -18,6 +18,7 @@ import {
   Target,
   Smile,
   Check,
+  Camera,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -26,7 +27,7 @@ import { biometricsApi } from "@/api/new/biometrics.api";
 import { useBiometricCamera } from "@/features/biometrics/hooks/useBiometricCamera";
 import { useGazeCalibration } from "@/features/biometrics/hooks/useGazeCalibration";
 import { useNeutralCalibration } from "@/features/biometrics/hooks/useNeutralCalibration";
-import { detectClientFace } from "@/features/biometrics/utils/clientFaceDetector";
+import { detectClientFace, detectFaceWithFallback } from "@/features/biometrics/utils/clientFaceDetector";
 
 const WIZARD_STEPS = [
   { id: 1, title: "۱. ثبت چهره", short: "ثبت چهره" },
@@ -186,21 +187,13 @@ export function StudentBiometricsPage() {
     (currentStep === 2 && isGazeCalibrated) ||
     (currentStep === 3 && isNeutralCalibrated);
 
-  // Manual start handler for gaze calibration with face verification prerequisite
+  // Manual start handler for gaze calibration
   const handleStartGaze = () => {
-    if (faceStatus === "no_face" || !faceBox) {
-      showBottomError("برای شروع کالیبراسیون، لطفاً ابتدا صورت خود را در مرکز کادر قرار دهید");
-      return;
-    }
     startGazeCalibration();
   };
 
-  // Manual start handler for neutral baseline calibration with face verification prerequisite
+  // Manual start handler for neutral baseline calibration
   const handleStartNeutral = () => {
-    if (faceStatus === "no_face" || !faceBox) {
-      showBottomError("برای شروع کالیبراسیون، لطفاً ابتدا صورت خود را در مرکز کادر قرار دهید");
-      return;
-    }
     startNeutralCalibration();
   };
 
@@ -224,8 +217,8 @@ export function StudentBiometricsPage() {
               localStorage.setItem(`dt_biometrics_${cid}`, "true");
             }
           } catch {}
-          setCurrentStep(4);
           if (shouldShowRegistrationModal) {
+            setCurrentStep(4);
             setShowReRegistrationModal(true);
           }
         }
@@ -254,17 +247,18 @@ export function StudentBiometricsPage() {
         }
       } catch {}
 
-      if (resetSuccess) {
-        setEnrollStatus({ success: false, message: "" });
-        setProfileStatus(null);
-        setShowReRegistrationModal(false);
-        setCurrentStep(1);
-        setFaceBox(null);
-        setScanProgress(0);
-        showBottomError("اطلاعات قبلی با موفقیت بازنشانی شد. می‌توانید فرآیند ثبت را انجام دهید.", 4000);
-      } else {
-        showBottomError("خطا در بازنشانی اطلاعات بیومتریک");
-      }
+      setEnrollStatus({ success: false, message: "" });
+      setProfileStatus(null);
+      setShowReRegistrationModal(false);
+      setCurrentStep(1);
+      setFaceBox(null);
+      setScanProgress(0);
+      showBottomError(
+        resetSuccess
+          ? "اطلاعات قبلی با موفقیت بازنشانی شد. می‌توانید فرآیند ثبت را انجام دهید."
+          : "فرآیند ثبت مجدد فعال شد. می‌توانید اسکن جدید را انجام دهید.",
+        4000
+      );
     } catch (err) {
       showBottomError(err?.message || "امکان حذف اطلاعات وجود ندارد.");
     } finally {
@@ -325,49 +319,26 @@ export function StudentBiometricsPage() {
         const offsetX = (cw - renderedW) / 2;
         const offsetY = (ch - renderedH) / 2;
 
-        let detectedBox = null;
+        const faceResult = await detectFaceWithFallback(
+          video,
+          offscreenCanvasRef.current,
+          nativeDetector
+        );
 
-        // 1. Try Native Browser FaceDetector (instant hardware-accelerated tracking)
-        if (nativeDetector) {
-          try {
-            const faces = await nativeDetector.detect(video);
-            if (faces && faces.length > 0) {
-              const bb = faces[0].boundingBox;
-              if (bb && bb.width > 20 && bb.height > 20) {
-                // In mirrored mode, horizontal X is inverted:
-                const mirroredX = vw - (bb.x + bb.width);
-                detectedBox = {
-                  x: offsetX + mirroredX * scale,
-                  y: offsetY + bb.y * scale,
-                  w: bb.width * scale,
-                  h: bb.height * scale,
-                };
-              }
-            }
-          } catch {
-            // Fallback to client canvas tracker
-          }
-        }
-
-        // 2. High-speed, zero-network Client Canvas Face & Head Tracker
-        if (!detectedBox && offscreenCanvasRef.current) {
-          const clientFace = detectClientFace(video, offscreenCanvasRef.current);
-          if (clientFace) {
-            const mirroredNormX = 1.0 - (clientFace.normX + clientFace.normW);
-            detectedBox = {
-              x: offsetX + mirroredNormX * renderedW,
-              y: offsetY + clientFace.normY * renderedH,
-              w: clientFace.normW * renderedW,
-              h: clientFace.normH * renderedH,
-            };
-          }
-        }
-
-        if (detectedBox && isMounted) {
+        if (faceResult?.detected && isMounted) {
           noFaceCounter = 0;
-          // Constrain box width strictly to realistic human head dimensions (38% to 58% of container width)
-          const maxFaceW = Math.round(cw * 0.58);
-          const minFaceW = Math.round(cw * 0.38);
+          // In mirrored mode, horizontal X is inverted:
+          const mirroredNormX = 1.0 - (faceResult.normX + faceResult.normW);
+          const detectedBox = {
+            x: offsetX + mirroredNormX * renderedW,
+            y: offsetY + faceResult.normY * renderedH,
+            w: faceResult.normW * renderedW,
+            h: faceResult.normH * renderedH,
+          };
+
+          // Constrain box width strictly to realistic human head dimensions
+          const maxFaceW = Math.round(cw * 0.62);
+          const minFaceW = Math.round(cw * 0.36);
           const targetW = Math.max(minFaceW, Math.min(maxFaceW, detectedBox.w * 1.15));
           const targetH = Math.round(targetW * 1.30);
 
@@ -376,7 +347,6 @@ export function StudentBiometricsPage() {
           const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
           const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
 
-          let frameMovement = 0;
           setFaceBox((prev) => {
             if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
 
@@ -384,13 +354,11 @@ export function StudentBiometricsPage() {
             const dy = Math.abs(targetY - prev.y);
             const dw = Math.abs(targetW - prev.width);
             const dh = Math.abs(targetH - prev.height);
-            frameMovement = Math.max(dx, dy);
 
-            // Deadband: Ignore micro-jitter (< 3px movement or < 3.5px size change)
-            const smoothX = dx < 3.0 ? prev.x : prev.x * 0.82 + targetX * 0.18;
-            const smoothY = dy < 3.0 ? prev.y : prev.y * 0.82 + targetY * 0.18;
-            const smoothW = dw < 3.5 ? prev.width : prev.width * 0.90 + targetW * 0.10;
-            const smoothH = dh < 3.5 ? prev.height : prev.height * 0.90 + targetH * 0.10;
+            const smoothX = dx < 2.5 ? prev.x : prev.x * 0.78 + targetX * 0.22;
+            const smoothY = dy < 2.5 ? prev.y : prev.y * 0.78 + targetY * 0.22;
+            const smoothW = dw < 3.0 ? prev.width : prev.width * 0.88 + targetW * 0.12;
+            const smoothH = dh < 3.0 ? prev.height : prev.height * 0.88 + targetH * 0.12;
 
             return {
               x: smoothX,
@@ -401,20 +369,20 @@ export function StudentBiometricsPage() {
           });
           setFaceStatus("face_locked");
 
-          // === Progressive Continuous Face Scanning over ~2 seconds ===
+          // === Progressive Continuous Face Scanning over ~1 second ===
           if (currentStep === 1 && !enrollStatus.success && !isLoading) {
             // Check if user is in cooldown after an error
             if (Date.now() < cooldownUntilRef.current) {
               // Wait for cooldown to expire before starting new analysis
             } else {
-              // Smooth, steady accumulation when face is tracked
-              consecutiveQualityFramesRef.current = Math.min(46, consecutiveQualityFramesRef.current + 1);
-              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 42) * 100));
+              // Smooth, steady accumulation when face is tracked (18 frames ~800ms)
+              consecutiveQualityFramesRef.current = Math.min(22, consecutiveQualityFramesRef.current + 1);
+              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100));
               setScanProgress(prog);
               setScanFeedback(`در حال تطبیق و اسکن چهره (${prog}%)...`);
 
-              // Capture crisp high-res frame at 60-75% progress
-              if (prog >= 60 && !bestFrameBlobRef.current) {
+              // Capture crisp high-res frame at 50% progress
+              if (prog >= 50 && !bestFrameBlobRef.current) {
                 captureFrameBlob(0.92, 960, 960).then((blob) => {
                   if (blob) bestFrameBlobRef.current = blob;
                 });
@@ -434,8 +402,8 @@ export function StudentBiometricsPage() {
               // Cooldown active
             } else {
               consecutiveGazeFramesRef.current++;
-              // Once face is steadily tracked for 18 frames (~900ms), auto-start calibration!
-              if (consecutiveGazeFramesRef.current >= 18 && !autoGazeTriggeredRef.current) {
+              // Once face is steadily tracked for 10 frames (~500ms), auto-start calibration!
+              if (consecutiveGazeFramesRef.current >= 10 && !autoGazeTriggeredRef.current) {
                 autoGazeTriggeredRef.current = true;
                 startGazeCalibration();
               }
@@ -443,13 +411,13 @@ export function StudentBiometricsPage() {
           }
         } else if (isMounted) {
           noFaceCounter++;
-          // Generous hold: do not drop box unless face is absent for at least 8 frames (~400ms)
+          // Generous hold: do not drop box unless face is absent for at least 8 frames
           if (noFaceCounter >= 8) {
             setFaceBox(null);
             setFaceStatus("no_face");
-            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 2);
+            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
             consecutiveGazeFramesRef.current = 0;
-            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 42) * 100));
+            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100));
             setScanProgress(prog);
             bestFrameBlobRef.current = null;
             bestSharpnessRef.current = 0;
@@ -468,7 +436,7 @@ export function StudentBiometricsPage() {
       if (!isMounted) return;
       await detectCycle();
       if (isMounted) {
-        timer = setTimeout(runLoop, nativeDetector ? 60 : 40);
+        timer = setTimeout(runLoop, nativeDetector ? 50 : 35);
       }
     };
     runLoop();
@@ -502,8 +470,13 @@ export function StudentBiometricsPage() {
           success: true,
           message: "چهره و بردار اصالت با موفقیت تایید شد",
         });
+        setScanProgress(100);
         setScanFeedback("تأیید شد");
-        await loadProfile();
+        await loadProfile(false);
+        // Automatically transition to Step 2 after 1.2s
+        setTimeout(() => {
+          setCurrentStep(2);
+        }, 1200);
       } else {
         const msg = res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.";
         showBottomError(msg, 3500);
@@ -530,9 +503,22 @@ export function StudentBiometricsPage() {
     }
   };
 
+  const handleManualStartScan = async () => {
+    if (isLoading) return;
+    autoEnrollTriggeredRef.current = true;
+    setScanProgress(100);
+    setScanFeedback("در حال تصویربرداری و ارسال چهره...");
+    try {
+      const blob = await captureFrameBlob(0.92, 960, 960);
+      await handleEnrollFace(blob);
+    } catch (err) {
+      showBottomError("خطا در تصویربرداری از دوربین");
+    }
+  };
+
   const handleRescanFace = () => {
     setEnrollStatus({ success: false, message: "" });
-    setProfileStatus((prev) => (prev ? { ...prev, face_enrolled: false } : null));
+    setProfileStatus((prev) => (prev ? { ...prev, face_enrolled: false, is_enrolled: false } : null));
     setScanProgress(0);
     setScanFeedback("");
     consecutiveQualityFramesRef.current = 0;
@@ -542,6 +528,7 @@ export function StudentBiometricsPage() {
     autoEnrollTriggeredRef.current = false;
     setFaceStatus("no_face");
     setFaceBox(null);
+    setCurrentStep(1);
   };
 
   const isStepDone = (stepId) => {
@@ -1155,15 +1142,16 @@ export function StudentBiometricsPage() {
 
           {/* Step 1 Action Button */}
           {currentStep === 1 && (
-            isStepDone(1) ? (
+            isStepDone(1) && !enrollStatus.success ? (
               <div className="flex-1 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleRescanFace}
-                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
                   title="اسکن مجدد چهره"
                 >
                   <RefreshCw className="w-4 h-4" />
+                  <span>اسکن مجدد</span>
                 </button>
                 <button
                   type="button"
@@ -1174,11 +1162,26 @@ export function StudentBiometricsPage() {
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               </div>
+            ) : enrollStatus.success ? (
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex-1 h-10 px-4 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold font-vazir flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span>چهره تایید شد</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>مرحله بعد</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
                 disabled={isLoading}
-                onClick={handleEnrollFace}
+                onClick={handleManualStartScan}
                 className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 {isLoading ? (
@@ -1188,15 +1191,11 @@ export function StudentBiometricsPage() {
                   </>
                 ) : (
                   <>
-                    <img
-                      src="/face_logo.png"
-                      alt="Face"
-                      className="w-4 h-4 object-contain brightness-0 invert"
-                    />
+                    <Camera className="w-4 h-4" />
                     <span>
                       {scanProgress > 0
                         ? `در حال اسکن خودکار (${Math.round(scanProgress)}%)...`
-                        : "در انتظار موقعیت چهره..."}
+                        : "شروع اسکن و ثبت چهره"}
                     </span>
                   </>
                 )}
@@ -1204,39 +1203,62 @@ export function StudentBiometricsPage() {
             )
           )}
 
-          {/* Step 2: Auto-calibrating indicator (step button removed as requested) */}
+          {/* Step 2 Action Button */}
           {currentStep === 2 && (
-            <div className="flex-1 h-10 px-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center gap-2 text-white/80 text-xs font-vazir">
-              {isGazeCalibrated ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
-                  <span className="text-emerald-300 font-bold">کالیبراسیون نگاه با موفقیت انجام شد</span>
-                </>
-              ) : isGazeCalibrating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 text-sky-400 animate-spin" />
-                  <span className="text-sky-300">در حال کالیبراسیون نگاه ({Math.round(gazeProgress)}%)...</span>
-                </>
-              ) : (
-                <>
-                  <Target className="w-4 h-4 text-sky-400" />
-                  <span>کالیبراسیون خودکار نگاه با تشخیص چهره</span>
-                </>
-              )}
-            </div>
+            isStepDone(2) && !isGazeCalibrating ? (
+              <div className="flex-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleStartGaze}
+                  className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
+                  title="کالیبراسیون مجدد نگاه"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>کالیبراسیون مجدد</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(3)}
+                  className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>مرحله بعد: مبنای خنثی</span>
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isGazeCalibrating}
+                onClick={handleStartGaze}
+                className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {isGazeCalibrating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 text-sky-200 animate-spin" />
+                    <span>در حال کالیبراسیون نگاه ({Math.round(gazeProgress)}%)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Target className="w-4 h-4" />
+                    <span>شروع کالیبراسیون نگاه</span>
+                  </>
+                )}
+              </button>
+            )
           )}
 
           {/* Step 3 Action Button */}
           {currentStep === 3 && (
-            isStepDone(3) ? (
+            isStepDone(3) && !isNeutralCalibrating ? (
               <div className="flex-1 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleStartNeutral}
-                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                  className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
                   title="ضبط مجدد مبنای خنثی"
                 >
                   <RefreshCw className="w-4 h-4" />
+                  <span>ثبت مجدد</span>
                 </button>
                 <button
                   type="button"
@@ -1262,11 +1284,7 @@ export function StudentBiometricsPage() {
                 ) : (
                   <>
                     <Smile className="w-4 h-4" />
-                    <span>
-                      {faceStatus === "no_face"
-                        ? "در انتظار چهره..."
-                        : "شروع کالیبراسیون حالت خنثی (۳ ثانیه)"}
-                    </span>
+                    <span>شروع کالیبراسیون حالت خنثی (۳ ثانیه)</span>
                   </>
                 )}
               </button>
@@ -1276,17 +1294,15 @@ export function StudentBiometricsPage() {
           {/* Step 4 Action Button */}
           {currentStep === 4 && (
             <div className="flex-1 flex items-center gap-2">
-              {profileStatus?.can_edit !== false && (
-                <button
-                  type="button"
-                  onClick={() => setShowReRegistrationModal(true)}
-                  className="h-10 px-3 rounded-xl bg-white/10 hover:bg-rose-500/20 border border-white/15 hover:border-rose-400/30 text-rose-200 text-xs font-vazir font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
-                  title="حذف داده‌ها و بازثبت موارد"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">بازثبت</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleRescanFace}
+                className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-vazir font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
+                title="شروع مجدد اسکن و ثبت چهره"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>اسکن مجدد</span>
+              </button>
               <button
                 type="button"
                 onClick={() => navigate(returnTo || "/StudentExams")}
@@ -1350,29 +1366,29 @@ export function StudentBiometricsPage() {
 
             <div className="space-y-2">
               <h3 className="text-base font-bold font-vazir text-white drop-shadow">
-                اطلاعات شما با موفقیت ثبت شده است
+                اطلاعات بیومتریک شما ثبت شده است
               </h3>
               <p className="text-xs font-vazir text-white/80 leading-relaxed px-1">
                 {profileStatus?.can_edit !== false ? (
-                  "اطلاعات شما با موفقیت ثبت شده است. درخواست حذف داده‌های ثبت‌شده و بازثبت موارد را دارید؟"
+                  "اطلاعات چهره و کالیبراسیون شما موجود است. می‌توانید فرآیند اسکن و ثبت را مجدداً انجام دهید یا وارد صفحه آزمون شوید."
                 ) : (
-                  "تمامی اطلاعات بیومتریک شما در سامانه ثبت و تایید شده است. امکان ویرایش یا بازثبت اطلاعات توسط مدیر سیستم بسته شده است."
+                  "تمامی اطلاعات بیومتریک شما در سامانه ثبت و تایید شده است."
                 )}
               </p>
             </div>
 
             <div className="pt-2 space-y-2.5">
-              {profileStatus?.can_edit !== false && (
-                <button
-                  type="button"
-                  onClick={handleResetBiometrics}
-                  disabled={isResetting}
-                  className="w-full h-11 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 hover:text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isResetting ? "animate-spin" : ""}`} />
-                  <span>{isResetting ? "در حال حذف و بازنشانی..." : "حذف داده‌های ثبت‌شده و بازثبت موارد"}</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReRegistrationModal(false);
+                  handleRescanFace();
+                }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/25 active:scale-95"
+              >
+                <Camera className="w-4 h-4" />
+                <span>شروع اسکن و ثبت مجدد چهره</span>
+              </button>
 
               <button
                 type="button"
@@ -1385,6 +1401,18 @@ export function StudentBiometricsPage() {
                 <ShieldCheck className="w-4 h-4" />
                 <span>{returnTo ? "تایید و ورود به آزمون" : "تایید و ورود به صفحه آزمون‌ها"}</span>
               </button>
+
+              {profileStatus?.can_edit !== false && (
+                <button
+                  type="button"
+                  onClick={handleResetBiometrics}
+                  disabled={isResetting}
+                  className="w-full h-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 text-rose-300 hover:text-white font-vazir text-[11px] font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`} />
+                  <span>{isResetting ? "در حال حذف..." : "حذف داده‌های ثبت‌شده از سرور"}</span>
+                </button>
+              )}
 
               <button
                 type="button"

@@ -131,16 +131,22 @@ export function useBiometricCamera(options = {}) {
     [videoRef]
   );
 
+  // Synchronize stream with video DOM element to prevent race conditions on mount
+  useEffect(() => {
+    if (videoRef.current && stream && videoRef.current.srcObject !== stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [stream, videoRef]);
+
   useEffect(() => {
     if (autoStart) {
       startCamera();
     }
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
+      stopCamera();
     };
-  }, []);
+  }, [autoStart, startCamera, stopCamera]);
 
   return {
     videoRef,
