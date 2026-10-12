@@ -1,12 +1,19 @@
 /**
  * @file voiceTextNormalizer.js
  * @description Advanced Persian TTS pre-processing, phonetic transliteration, and vocalization pipeline.
- * Converts mixed Persian/English technical texts into 100% Persian script with diacritics (Ezafe & short vowels)
- * using a hybrid approach:
- * 1. High-speed Computer Science & Engineering phonetic dictionary pre-pass.
- * 2. Specialized local LLM (Qwen 2.5 on port 8000) for context-aware vocalization and Ezafe marking.
- * 3. Strict post-pass sanitizer to guarantee zero (0%) Latin characters reach the TTS model.
- * 4. Resilient rule-based fallback if the LLM is slow or offline.
+ * Designed for academic oral exams and speech synthesis:
+ * 1. Checks if the text is Persian; if the text is primarily or purely English, it is PRESERVED AS ENGLISH.
+ * 2. Intelligent Parentheses Resolution:
+ *    - Translation + English term (e.g. "هسته (kernel)", "زمینه (context)"): reads as "هَسته یا کِرنِل", "زَمینه یا کانتِکست".
+ *    - Loanword + English spelling (e.g. "کش (cache)", "کشینگ (caching)"): avoids repetition and vocalizes cleanly as "کَش" (با فتحه).
+ * 3. Contextual Disambiguation:
+ *    - In Computer Science / OS context, "کش" is vocalized as "کَش" (fathe) and "حافظه کش" as "حافظه‌یِ کَش" to avoid Persian homographs.
+ * 4. Technical Term Transliteration:
+ *    - Converts inline English terms (e.g. "i-node" -> "آی‌نود", "CPU" -> "سی‌پی‌یو", "Thread" -> "تِرِد").
+ * 5. Qwen 2.5 LLM Pass:
+ *    - Adds Ezafe ("ـِ") and short vowels for natural, human-like academic speech cadence.
+ * 6. Zero-Latin Guarantee & 0ms Cache:
+ *    - Guarantees 0% Latin characters reach the Persian TTS engine, with resilient offline fallback.
  */
 
 import API_CONFIG from "../../api/config.js";
@@ -15,8 +22,137 @@ import API_CONFIG from "../../api/config.js";
 const normalizerCache = new Map();
 
 /**
- * Phonetic transliterations for common Computer Science, Engineering & Tech terms.
- * Sorted by length (longer multi-word terms first) to prevent sub-string collision.
+ * Checks whether the text is primarily Persian script.
+ * If text has 0 Persian characters or is an English sentence, returns false.
+ */
+export function isPersianText(text) {
+  if (!text || typeof text !== "string") return false;
+  const persianMatches = text.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g);
+  if (!persianMatches || persianMatches.length === 0) return false;
+  const latinMatches = text.match(/[a-zA-Z]/g);
+  if (!latinMatches || latinMatches.length === 0) return true;
+  const total = persianMatches.length + latinMatches.length;
+  // If at least 20% of letters are Persian, consider it a Persian text with technical loanwords
+  return persianMatches.length / total >= 0.2;
+}
+
+/**
+ * Phonetic transliterations for common English technical terms.
+ */
+const PHONETIC_MAP = {
+  kernel: "کِرنِل",
+  context: "کانتِکست",
+  cache: "کَش",
+  caching: "کَشینگ",
+  deadlock: "دِدلاک",
+  thread: "تِرِد",
+  threads: "تِرِدهٰا",
+  multithreading: "مالتی‌ترِدینگ",
+  process: "پِروسِس",
+  processes: "پِروسِس‌هٰا",
+  multiprocessing: "مالتی‌پِروسِسینگ",
+  queue: "کیو",
+  stack: "استَک",
+  heap: "هیپ",
+  "i-node": "آی‌نود",
+  inode: "آی‌نود",
+  cpu: "سی‌پی‌یو",
+  gpu: "جی‌پی‌یو",
+  ram: "رَم",
+  rom: "رام",
+  ssd: "اس‌اس‌دی",
+  hdd: "اچ‌دی‌دی",
+  memory: "مِموری",
+  "virtual memory": "ویرچوال مِموری",
+  paging: "پِیجینگ",
+  segmentation: "سِگمِنتِیشِن",
+  "page fault": "پِیج فالت",
+  "page table": "پِیج تِیبِل",
+  mutex: "میوتِکس",
+  semaphore: "سِمافور",
+  semaphores: "سِمافورها",
+  socket: "ساکِت",
+  port: "پورت",
+  packet: "پَکِت",
+  frame: "فِرِیم",
+  router: "روتر",
+  switch: "سوییچ",
+  block: "بلوک",
+  blocks: "بلوک‌هٰا",
+  directory: "دایرِکتوری",
+  filesystem: "فایل‌سیستِم",
+  buffer: "بافِر",
+  "round robin": "راوند رابین",
+  "context switch": "کانتِکست سوییچ",
+  "race condition": "رِیس کاندیشِن",
+  "critical section": "کریتیکال سِکشِن",
+  starvation: "استاروِیشِن",
+  livelock: "لایولاک",
+  scheduling: "اِسکِجولینگ",
+  scheduler: "اِسکِجولِر",
+  user: "یوزِر",
+  hardware: "سَخت‌افزار",
+  software: "نَرم‌افزار",
+};
+
+/**
+ * Words where the Persian form is already a direct loanword of the English term.
+ * In these cases, we do NOT repeat "یا" (e.g. "کش (cache)" -> "کَش", not "کش یا کش").
+ */
+const LOANWORDS = new Set([
+  "کش", "کَش", "کشینگ", "کَشینگ", "سرور", "کلاینت", "پکت", "فریم",
+  "روتر", "سوییچ", "سوکت", "ساکت", "پورت", "بایت", "بیت", "پایپ",
+  "سیگنال", "ترد", "تِرِد", "پروسس", "سمافور", "میوتکس", "استک", "کیو",
+  "هیپ", "بلوک", "بافِر", "بافر", "نود"
+]);
+
+/**
+ * Resolves Persian (English) parentheses intelligently:
+ * 1. "هسته (kernel)" -> "هَسته یا کِرنِل"
+ * 2. "کش (cache)" -> "کَش" (با فتحه)
+ * 3. "کشینگ (caching)" -> "کَشینگ"
+ */
+export function resolveParenthesesTerms(text) {
+  if (!text) return "";
+  // Match a Persian word followed by an English term in parentheses
+  const pattern = /([\u0600-\u06FF]+)\s*\(([a-zA-Z0-9_\-\s]{2,25})\)/g;
+  return text.replace(pattern, (match, fa, enRaw) => {
+    const enLower = enRaw.trim().toLowerCase();
+    const phonetic = PHONETIC_MAP[enLower] || enRaw;
+    const faClean = fa.replace(/[\u064B-\u065F\u0670]/g, "").trim();
+
+    if (LOANWORDS.has(faClean) || enLower === "cache" || enLower === "caching") {
+      if (enLower === "cache") return "کَش";
+      if (enLower === "caching") return "کَشینگ";
+      return phonetic;
+    }
+
+    // Translation + English equivalent: read with "یا"
+    return `${fa} یا ${phonetic}`;
+  });
+}
+
+/**
+ * Disambiguates technical homographs in Computer Science / Operating Systems:
+ * - "کش" -> "کَش" (fathe, cache)
+ * - "حافظه کش" -> "حافظه‌یِ کَش"
+ * - "سطح کش" -> "سطحِ کَش"
+ * - "کشینگ" -> "کَشینگ"
+ */
+export function disambiguateTechnicalPersian(text) {
+  if (!text) return "";
+  let res = text;
+  res = res.replace(/\bحافظه\s+کش\b/g, "حافظه‌یِ کَش");
+  res = res.replace(/\bحافظه‌ی\s+کش\b/g, "حافظه‌یِ کَش");
+  res = res.replace(/\bسطح\s+کش\b/g, "سطحِ کَش");
+  res = res.replace(/\bسطوح\s+کش\b/g, "سطوحِ کَش");
+  res = res.replace(/\bکشینگ\b/g, "کَشینگ");
+  res = res.replace(/\bکش\b/g, "کَش");
+  return res;
+}
+
+/**
+ * Transliteration dictionary for standalone technical loanwords and abbreviations.
  */
 const TECH_TERMS = [
   // Multi-word phrases
@@ -41,24 +177,10 @@ const TECH_TERMS = [
   [/\bhash table\b/gi, "هَش تِیبِل"],
   [/\bbinary tree\b/gi, "باینِری تِری"],
   [/\bmac address\b/gi, "مَک آدْرِس"],
-  [/\boperating system\b/gi, "سیستِم عامِل"],
-  [/\bdata structure\b/gi, "ساختار داده"],
-  [/\bmachine learning\b/gi, "یادگیریِ ماشین"],
-  [/\bdeep learning\b/gi, "یادگیریِ عمیق"],
-  [/\bartificial intelligence\b/gi, "هوشِ مصنوعی"],
-
-  // Big-O complexities
-  [/\bo\(1\)\b/gi, "او یِک"],
-  [/\bo\(n\)\b/gi, "او اِن"],
-  [/\bo\(log\s*n\)\b/gi, "او لاگ اِن"],
-  [/\bo\(n\s*log\s*n\)\b/gi, "او اِن لاگ اِن"],
-  [/\bo\(n\^2\)\b/gi, "او اِن دو"],
-  [/\bo\(n\^3\)\b/gi, "او اِن سه"],
-  [/\bo\(2\^n\)\b/gi, "او دو به توان اِن"],
-  [/\bbig-o\b/gi, "بیگ‌او"],
-  [/\bbig o\b/gi, "بیگ‌او"],
 
   // Hardware & Architectures
+  [/\bi-node\b/gi, "آی‌نود"],
+  [/\binode\b/gi, "آی‌نود"],
   [/\bx86\b/gi, "ایکس هشتاد و شش"],
   [/\bx64\b/gi, "ایکس شصت و چهار"],
   [/\barm\b/gi, "آرم"],
@@ -71,8 +193,6 @@ const TECH_TERMS = [
   [/\bi\/o\b/gi, "آی‌او"],
   [/\bio\b/gi, "آی‌او"],
   [/\bmmu\b/gi, "ام‌ام‌یو"],
-  [/\balu\b/gi, "ای‌ال‌یو"],
-  [/\bbus\b/gi, "باس"],
   [/\bregister\b/gi, "رِجیستِر"],
   [/\bregisters\b/gi, "رِجیستِرهٰا"],
   [/\bcore\b/gi, "کور"],
@@ -81,7 +201,7 @@ const TECH_TERMS = [
   // OS & Concurrency
   [/\bthread\b/gi, "تِرِد"],
   [/\bthreads\b/gi, "تِرِدهٰا"],
-  [/\bmultithreading\b/gi, "مالتی‌تردینگ"],
+  [/\bmultithreading\b/gi, "مالتی‌ترِدینگ"],
   [/\bprocess\b/gi, "پِروسِس"],
   [/\bprocesses\b/gi, "پِروسِس‌هٰا"],
   [/\bmultiprocessing\b/gi, "مالتی‌پِروسِسینگ"],
@@ -93,6 +213,7 @@ const TECH_TERMS = [
   [/\bkernel\b/gi, "کِرنِل"],
   [/\buser\b/gi, "یوزِر"],
   [/\bcache\b/gi, "کَش"],
+  [/\bcaching\b/gi, "کَشینگ"],
   [/\bbuffer\b/gi, "بافِر"],
   [/\bpaging\b/gi, "پِیجینگ"],
   [/\bsegmentation\b/gi, "سِگمِنتِیشِن"],
@@ -102,108 +223,40 @@ const TECH_TERMS = [
   [/\bpcb\b/gi, "پی‌سی‌بی"],
   [/\btcb\b/gi, "تی‌سی‌بی"],
   [/\bipc\b/gi, "آی‌پی‌سی"],
-  [/\bpipe\b/gi, "پایپ"],
-  [/\bsignal\b/gi, "سیگنال"],
   [/\bsyscall\b/gi, "سیس‌کال"],
   [/\binterrupt\b/gi, "اینتِراپت"],
   [/\binterrupts\b/gi, "اینتِراپت‌هٰا"],
   [/\bscheduling\b/gi, "اِسکِجولینگ"],
   [/\bscheduler\b/gi, "اِسکِجولِر"],
 
-  // Data Structures & Algorithms
+  // Data Structures & Big-O
   [/\bstack\b/gi, "استَک"],
   [/\bqueue\b/gi, "کیو"],
   [/\bdeque\b/gi, "دِک"],
   [/\bpush\b/gi, "پوش"],
   [/\bpop\b/gi, "پاپ"],
   [/\bheap\b/gi, "هیپ"],
-  [/\btree\b/gi, "تِری"],
   [/\bbst\b/gi, "بی‌اس‌تی"],
-  [/\bavl\b/gi, "ای‌وی‌ال"],
-  [/\bgraph\b/gi, "گِراف"],
-  [/\bnode\b/gi, "نود"],
-  [/\bnodes\b/gi, "نودهٰا"],
-  [/\bvertex\b/gi, "وِرتِکس"],
-  [/\bedge\b/gi, "اِج"],
   [/\bhashmap\b/gi, "هَش‌مَپ"],
-  [/\bhash\b/gi, "هَش"],
-  [/\bdfs\b/gi, "دی‌اف‌اس"],
-  [/\bbfs\b/gi, "بی‌اف‌اس"],
+  [/\bbo\(1\)\b/gi, "او یِک"],
+  [/\bo\(n\)\b/gi, "او اِن"],
+  [/\bo\(log\s*n\)\b/gi, "او لاگ اِن"],
+  [/\bbig-o\b/gi, "بیگ‌او"],
+  [/\bbig o\b/gi, "بیگ‌او"],
 
-  // Networks & Protocols
+  // Networks & DB
   [/\btcp\b/gi, "تی‌سی‌پی"],
   [/\budp\b/gi, "یو‌دی‌پی"],
   [/\bip\b/gi, "آی‌پی"],
-  [/\bipv4\b/gi, "آی‌پی ورژن چهار"],
-  [/\bipv6\b/gi, "آی‌پی ورژن شش"],
-  [/\bmac\b/gi, "مَک"],
   [/\bdns\b/gi, "دی‌ان‌اس"],
-  [/\bdhcp\b/gi, "دی‌اچ‌سی‌پی"],
   [/\bhttp\b/gi, "اچ‌تی‌تی‌پی"],
   [/\bhttps\b/gi, "اچ‌تی‌تی‌پی‌اس"],
-  [/\bftp\b/gi, "اف‌تی‌پی"],
   [/\bssh\b/gi, "اس‌اس‌اچ"],
-  [/\bssl\b/gi, "اس‌اس‌ال"],
-  [/\btls\b/gi, "تی‌ال‌اس"],
-  [/\bosi\b/gi, "او‌اِس‌آی"],
-  [/\blan\b/gi, "لَن"],
-  [/\bwan\b/gi, "وَن"],
-  [/\bvlan\b/gi, "وی‌لَن"],
-  [/\bnat\b/gi, "نَت"],
-  [/\bvpn\b/gi, "وی‌پی‌ان"],
-  [/\brouter\b/gi, "روتر"],
-  [/\bswitch\b/gi, "سوییچ"],
-  [/\bpacket\b/gi, "پَکِت"],
-  [/\bpackets\b/gi, "پَکِت‌هٰا"],
-  [/\bframe\b/gi, "فِرِیم"],
-  [/\bhandshake\b/gi, "هَندشِیک"],
-  [/\bsocket\b/gi, "ساکِت"],
-  [/\bsockets\b/gi, "ساکِت‌هٰا"],
-  [/\bport\b/gi, "پورت"],
-  [/\bports\b/gi, "پورت‌هٰا"],
-
-  // Databases
   [/\bsql\b/gi, "اس‌کیواِل"],
-  [/\bnosql\b/gi, "نو‌اس‌کیواِل"],
-  [/\bindex\b/gi, "اینْدِکس"],
-  [/\bindexes\b/gi, "اینْدِکس‌هٰا"],
-  [/\bjoin\b/gi, "جویْن"],
-  [/\bquery\b/gi, "کوئِری"],
-  [/\btable\b/gi, "تِیبِل"],
-  [/\bschema\b/gi, "اسکیما"],
-  [/\bacid\b/gi, "اَسید"],
-  [/\btransaction\b/gi, "تِرَنزَکشِن"],
-
-  // Software & Web
-  [/\bai\b/gi, "هوش مصنوعی"],
-  [/\bml\b/gi, "ام‌ال"],
-  [/\bdl\b/gi, "دی‌ال"],
   [/\bapi\b/gi, "ای‌پی‌آی"],
-  [/\brest\b/gi, "رِست"],
-  [/\bjson\b/gi, "جِیسان"],
-  [/\bxml\b/gi, "ایکس‌ام‌ال"],
-  [/\bgit\b/gi, "گیت"],
-  [/\bcommit\b/gi, "کامیت"],
-  [/\bpull\b/gi, "پول"],
-  [/\bmerge\b/gi, "مِرج"],
-  [/\bbranch\b/gi, "برَنچ"],
-  [/\bbug\b/gi, "باگ"],
-  [/\bdebug\b/gi, "دی‌باگ"],
-  [/\bserver\b/gi, "سِروِر"],
-  [/\bclient\b/gi, "کلاینت"],
-  [/\bfrontend\b/gi, "فرانت‌اند"],
-  [/\bbackend\b/gi, "بَک‌اند"],
-  [/\bfullstack\b/gi, "فول‌استَک"],
-  [/\bdocker\b/gi, "داکِر"],
-  [/\bcontainer\b/gi, "کانتِینِر"],
-  [/\bhtml\b/gi, "اچ‌تی‌ام‌اِل"],
-  [/\bcss\b/gi, "سی‌اس‌اس"],
-  [/\bjs\b/gi, "جی‌اس"],
-  [/\bjavascript\b/gi, "جاوا اسکریپت"],
-  [/\bpython\b/gi, "پایتون"],
-  [/\bjava\b/gi, "جاوا"],
-  [/\bc\+\+\b/gi, "سی پلاس پلاس"],
-  [/\bc#\b/gi, "سی شارپ"],
+  [/\bpacket\b/gi, "پَکِت"],
+  [/\bsocket\b/gi, "ساکِت"],
+  [/\bport\b/gi, "پورت"],
 ];
 
 const PERSIAN_DIGIT_WORDS = [
@@ -223,9 +276,6 @@ const LATIN_LETTER_PHONETIC = {
   v: "وی", w: "دابلیو", x: "ایکس", y: "وای", z: "زد"
 };
 
-/**
- * Converts small integers (0-99) to written Persian words.
- */
 function numberToPersianWords(num) {
   const n = parseInt(num, 10);
   if (isNaN(n)) return num;
@@ -241,43 +291,59 @@ function numberToPersianWords(num) {
 
 /**
  * Pre-normalization pass:
- * 1. Strips Markdown fences and syntax.
- * 2. Replaces common CS & tech terms with exact Persian transliterations.
- * 3. Expands percentage signs and compound numbers.
+ * 1. Checks if text is Persian; if not, returns untouched.
+ * 2. Resolves parentheses: "هسته (kernel)" -> "هسته یا کِرنِل", "کش (cache)" -> "کَش".
+ * 3. Disambiguates homographs: "کش" -> "کَش" in OS context.
+ * 4. Transliterates remaining technical terms and cleans markdown.
  */
-export function preNormalizeText(text) {
+export function preNormalizeText(text, courseContext = "سیستم‌های عامل") {
   if (!text) return "";
+  if (!isPersianText(text)) return text; // Preserve full English questions!
+
   let res = String(text);
 
-  // Remove code blocks and inline code ticks
+  // 1. Remove Markdown code blocks & ticks
   res = res.replace(/```[\s\S]*?```/g, " ");
   res = res.replace(/`([^`]+)`/g, "$1");
-
-  // Remove bold, italic, headers, bullet stars, tildes
   res = res.replace(/[*#_~>]/g, " ");
 
-  // Expand percentages
+  // 2. Intelligent parentheses resolution ("هسته (kernel)" -> "هسته یا کِرنِل", "کش (cache)" -> "کَش")
+  res = resolveParenthesesTerms(res);
+
+  // 3. Disambiguate technical Persian terms ("کش" -> "کَش", "حافظه کش" -> "حافظه‌یِ کَش")
+  res = disambiguateTechnicalPersian(res);
+
+  // 4. Expand percentages
   res = res.replace(/(\d+)\s*%/g, "$1 دَرصَد");
   res = res.replace(/(\d+)\s*٪/g, "$1 دَرصَد");
 
-  // Apply CS & Tech terms dictionary
+  // 5. Apply technical dictionary
   for (const [pattern, rep] of TECH_TERMS) {
     res = res.replace(pattern, rep);
   }
+
+  // 6. Handle remaining explanatory parentheses (replace with natural commas)
+  res = res.replace(/\(([^)]+)\)/g, "، $1،");
 
   return res.replace(/\s+/g, " ").trim();
 }
 
 /**
  * Post-pass sanitizer:
- * GUARANTEES 100% ZERO LATIN CHARACTERS.
+ * GUARANTEES 100% ZERO LATIN CHARACTERS for Persian texts.
  * Converts remaining digits and stray Latin letters to Persian phonetics.
  */
 export function postSanitizeText(text) {
   if (!text) return "";
+  if (!isPersianText(text)) return text; // Do not sanitize pure English!
+
   let res = String(text);
 
-  // Convert English & Persian digits (0-9, ۰-۹) to Persian words
+  // Strip LLM echoes like "درس: سیستم‌های عامل" or "متن: "
+  res = res.replace(/^درس:[^\n]*\n?/gm, "");
+  res = res.replace(/^متن:[^\n]*\n?/gm, "");
+
+  // Convert digits to Persian words
   res = res.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
   res = res.replace(/\b(\d{1,2})\b/g, (m) => numberToPersianWords(m));
 
@@ -305,11 +371,16 @@ export function postSanitizeText(text) {
  * @param {object} [options]
  * @param {number} [options.timeoutMs=4500] LLM request timeout in ms
  * @param {boolean} [options.forceRefresh=false] Bypass cache
- * @returns {Promise<string>} 100% Persian script vocalized text
+ * @returns {Promise<string>} Vocalized text
  */
 export async function normalizeTextForTTS(rawText, courseContext = "سیستم‌های عامل", options = {}) {
   if (!rawText || typeof rawText !== "string") {
     return "";
+  }
+
+  // CRITICAL CHECK: If text is primarily English, NEVER force it to Persian!
+  if (!isPersianText(rawText)) {
+    return rawText;
   }
 
   const cleanCourse = (courseContext || "سیستم‌های عامل").trim();
@@ -319,10 +390,10 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
     return normalizerCache.get(cacheKey);
   }
 
-  // Pre-normalize using high-performance dictionary
-  const prepared = preNormalizeText(rawText);
+  // Pre-normalize using high-performance rules
+  const prepared = preNormalizeText(rawText, cleanCourse);
 
-  // Determine LLM URL: in Vite dev mode use proxy, otherwise API_CONFIG.LLM_BASE_URL
+  // Determine LLM URL
   const isViteDev =
     typeof window !== "undefined" && window.location.port === "5173";
   const llmEndpoint = isViteDev
@@ -330,40 +401,34 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
     : `${API_CONFIG.LLM_BASE_URL || "http://94.184.177.171:8000/v1"}/chat/completions`;
 
   const systemPrompt = `شما متخصص آوانگاری زبان فارسی برای سیستم صوتی تبدیل متن به گفتار (Text-to-Speech) هستید.
-وظیفه شما: متن ورودی را برای خوانده شدن کاملاً روان و طبیعی توسط گوینده صوتی، به خط ۱۰۰٪ فارسی بازنویسی و اعراب‌گذاری کنید.
+وظیفه شما: متن ورودی را برای خوانده شدن کاملاً روان، رسا و طبیعی توسط گوینده صوتی، به خط ۱۰۰٪ فارسی بازنویسی و اعراب‌گذاری کنید.
 
-قوانین الزامی:
-۱. شما هرگز به سوالات پاسخ نمی‌دهید و نباید مسئله را حل کنید؛ فقط عین جملات ورودی را بازنویسی صوتی کنید.
-۲. هیچ کاراکتر لاتین/انگلیسی (A-Z, a-z) نباید در خروجی باشد. تمام اصطلاحات فنی انگلیسی و مخفف‌ها را با املای صوتی فارسی بنویسید.
-۳. برای اتصال روان کلمات و خوانش بی‌نقص توسط مدل صوتی، برای ترکیبات اضافه و کلمات کلیدی حتماً از کسره اضافه (ـِ) و حرکات (فتحه َ، کسره ِ، ضمه ُ، تشدید ّ) استفاده کنید.
-۴. اعداد و نشانه‌ها را حتماً به حروف فارسی بنویسید (مثلاً ۲ -> دو).
-۵. تمام نمادهای مارک‌داون (*, #, \`, _) را پاک کنید.
+قوانین حیاتی و اختصاصی:
+۱. شما هرگز به سوالات پاسخ نمی‌دهید؛ فقط عین جملات ورودی را بازنویسی صوتی کنید.
+۲. عبارات داخل پرانتز معادل:
+   - اگر داخل پرانتز معادل انگلیسی برای یک کلمه فارسی است (ترجمه + اصطلاح اصلی مانند «هسته (kernel)» یا «زمینه (context)»)، با «یا» بخوانید: «هَسته یا کِرنِل»، «زَمینه یا کانتِکست».
+   - اگر کلمه فارسی خود همان اصطلاح خارجی است (مانند «کش (cache)» یا «کشینگ (caching)»)، نیازی به تکرار نیست؛ فقط همان کلمه را با اعراب و تلفظ دقیق بنویسید: «کَش» (با فتحه، نه کِش)، «کَشینگ».
+۳. در درس سیستم عامل، کلمه «کش» مخفف Cache است و باید حتماً به صورت «کَش» (با فتحه) تلفظ شود و در ترکیب‌ها کسره اضافه («ـِ») داشته باشد: «حافظه‌یِ کَش»، «سطحِ کَش».
+۴. اصطلاحات فنی انگلیسی در متن (مانند i-node -> آی‌نود، CPU -> سی‌پی‌یو، Thread -> تِرِد) را به تلفظ صوتی فارسی بنویسید.
+۵. تمام نمادهای مارک‌داون (*, #, \`, _) و پرانتزها را حذف یا به مکث صوتی تبدیل کنید.
 ۶. خروجی فقط و فقط متن نهایی فارسی باشد بدون هیچ توضیح، پیشوند یا نقل قول.`;
 
   const fewShots = [
     {
       role: "user",
-      content: "درس: سیستم‌های عامل\nمتن: لطفاً الگوریتم راوند رابین با دو تا سی‌پی‌یو کور را شرح دهید."
+      content: "درس: سیستم‌های عامل\nمتن: بسته به زمینه (context) خاص، هسته (kernel) حافظه کش (cache) را مدیریت می‌کند."
     },
     {
       role: "assistant",
-      content: "لُطفاً الگوریتمِ راوند رابین با دو تا سی‌پی‌یو کور را شَرح دَهید."
+      content: "بسته به زمینه یا کانتِکست خاص، هَسته یا کِرنِل، حافظه‌یِ کَش را مدیریت می‌کند."
     },
     {
       role: "user",
-      content: "درس: پایگاه داده\nمتن: تفاوت پرایمِری کی و فورِن کی در اس‌کیواِل چیست؟"
+      content: "درس: سیستم‌های عامل\nمتن: کشینگ (caching) برای بهبود عملکرد و کاهش Page Fault در پروسس‌ها به کار می‌رود."
     },
     {
       role: "assistant",
-      content: "تَفاوتِ پرایمِری کی و فورِن کی دَر اس‌کیواِل چیست؟"
-    },
-    {
-      role: "user",
-      content: "درس: شبکه‌های کامپیوتری\nمتن: در مدل او‌اس‌آی نقش لایه ترنسپورت چیست؟"
-    },
-    {
-      role: "assistant",
-      content: "دَر مُدِلِ او‌اِس‌آی، نَقشِ لایه‌یِ ترَنسپورت چیست؟"
+      content: "کَشینگ برای بهبودِ عملکرد و کاهشِ پِیج فالت در پِروسِس‌ها به کار می‌رود."
     }
   ];
 
@@ -388,7 +453,7 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
         model: API_CONFIG.LLM_MODEL || "Qwen/Qwen2.5-7B-Instruct-AWQ",
         messages,
         temperature: 0.05,
-        max_tokens: 350
+        max_tokens: 450
       }),
       signal: controller.signal
     });
@@ -417,10 +482,11 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
 }
 
 /**
- * Pre-warms normalization in the background without blocking the current call.
+ * Pre-warms normalization in the background without blocking.
  */
 export function warmupQuestionNormalization(rawText, courseContext = "سیستم‌های عامل") {
   if (!rawText || typeof rawText !== "string") return;
+  if (!isPersianText(rawText)) return; // Don't pre-warm pure English text!
   const cleanCourse = (courseContext || "سیستم‌های عامل").trim();
   const cacheKey = `${cleanCourse}:::${rawText.trim()}`;
   if (normalizerCache.has(cacheKey)) return;
@@ -434,5 +500,8 @@ export default {
   normalizeTextForTTS,
   warmupQuestionNormalization,
   preNormalizeText,
-  postSanitizeText
+  postSanitizeText,
+  isPersianText,
+  resolveParenthesesTerms,
+  disambiguateTechnicalPersian
 };

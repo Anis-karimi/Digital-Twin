@@ -784,11 +784,14 @@ export const StudentExamPage = () => {
           setIsBufferingTTS(true);
           setSpokenWordCount(0);
 
-          const courseName =
-            examMeta?.course || passedExam?.course || (isRTL ? "سیستم عامل" : "Operating Systems");
-          const speechText = await normalizeTextForTTS(text, courseName);
+          let speechText = text;
+          if (isQuestionRTL) {
+            const courseName =
+              examMeta?.course || passedExam?.course || "سیستم‌های عامل";
+            speechText = await normalizeTextForTTS(text, courseName);
+          }
 
-          const res = await voiceApi.streamTTS(speechText, courseName);
+          const res = await voiceApi.streamTTS(speechText);
           if (!res || !res.body) {
             throw new Error("TTS streaming response invalid");
           }
@@ -1006,9 +1009,11 @@ export const StudentExamPage = () => {
       if (lastAutoPlayedQuestionRef.current !== currentQuestion) {
         lastAutoPlayedQuestionRef.current = currentQuestion;
         setHasFinishedCurrentQuestion(false);
-        const courseName =
-          examMeta?.course || passedExam?.course || (isRTL ? "سیستم عامل" : "Operating Systems");
-        warmupQuestionNormalization(currentQuestion, courseName);
+        if (isQuestionRTL) {
+          const courseName =
+            examMeta?.course || passedExam?.course || "سیستم‌های عامل";
+          warmupQuestionNormalization(currentQuestion, courseName);
+        }
         playQuestionTTS(currentQuestion);
         // Auto-align voice input language with question language (fa for Persian, en for English)
         setVoiceLang(isQuestionRTL ? "fa" : "en");

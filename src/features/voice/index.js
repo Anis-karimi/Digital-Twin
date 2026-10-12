@@ -7,7 +7,10 @@ export {
   normalizeTextForTTS,
   warmupQuestionNormalization,
   preNormalizeText,
-  postSanitizeText
+  postSanitizeText,
+  isPersianText,
+  resolveParenthesesTerms,
+  disambiguateTechnicalPersian
 } from "./voiceTextNormalizer";
 
 export { default as voiceTextNormalizer } from "./voiceTextNormalizer";

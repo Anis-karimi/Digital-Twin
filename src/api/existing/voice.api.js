@@ -19,8 +19,12 @@ import { normalizeTextForTTS } from "@/features/voice";
 export async function streamTTS(text, courseContext = "") {
   try {
     let payloadText = text;
-    // Auto-normalize if text contains Latin characters or markdown
-    if (payloadText && (/[a-zA-Z]/.test(payloadText) || /[*#`]/.test(payloadText))) {
+    // Auto-normalize ONLY if text is a Persian sentence containing Latin characters or markdown
+    if (
+      payloadText &&
+      /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(payloadText) &&
+      (/[a-zA-Z]/.test(payloadText) || /[*#`]/.test(payloadText))
+    ) {
       try {
         payloadText = await normalizeTextForTTS(payloadText, courseContext);
       } catch (normErr) {
