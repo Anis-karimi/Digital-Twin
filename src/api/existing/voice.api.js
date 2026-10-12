@@ -5,19 +5,31 @@
 
 import { API_CONFIG } from "../config";
 import { httpRequest, handleApiError } from "../client";
+import { normalizeTextForTTS } from "@/features/voice";
 
 /**
  * Initiates TTS streaming from Digital Twin server.
- * Encapsulates FormData creation for text payload.
+ * Automatically normalizes any technical or Latin text to 100% Persian script before streaming.
  * 
  * @endpoint POST /tts_router_stream (on DGTW_URL)
  * @param {string} text Text to synthesize into speech
+ * @param {string} [courseContext=""] Academic course context for domain-specific terminology
  * @returns {Promise<Response>} Raw response stream reader
  */
-export async function streamTTS(text) {
+export async function streamTTS(text, courseContext = "") {
   try {
+    let payloadText = text;
+    // Auto-normalize if text contains Latin characters or markdown
+    if (payloadText && (/[a-zA-Z]/.test(payloadText) || /[*#`]/.test(payloadText))) {
+      try {
+        payloadText = await normalizeTextForTTS(payloadText, courseContext);
+      } catch (normErr) {
+        console.warn("[VoiceApi.streamTTS] Normalization fallback warning:", normErr);
+      }
+    }
+
     const formData = new FormData();
-    formData.append("text", text);
+    formData.append("text", payloadText);
 
     const ttsUrl =
       API_CONFIG.TTS_STREAM_URL || `${API_CONFIG.DGTW_URL}/tts_router_stream`;

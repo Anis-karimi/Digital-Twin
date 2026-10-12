@@ -31,8 +31,8 @@ import { useBiometricTelemetry } from "@/features/biometrics/hooks/useBiometricT
 import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
-import { ThinkingOrb } from "thinking-orbs";
 import { voiceApi } from "@/api";
+import { normalizeTextForTTS, warmupQuestionNormalization } from "@/features/voice";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 import { ChatGptOrb } from "@/Components/ChatGptOrb";
 import { detectClientFace, detectFaceWithFallback } from "@/features/biometrics/utils/clientFaceDetector";
@@ -784,7 +784,11 @@ export const StudentExamPage = () => {
           setIsBufferingTTS(true);
           setSpokenWordCount(0);
 
-          const res = await voiceApi.streamTTS(text);
+          const courseName =
+            examMeta?.course || passedExam?.course || (isRTL ? "سیستم عامل" : "Operating Systems");
+          const speechText = await normalizeTextForTTS(text, courseName);
+
+          const res = await voiceApi.streamTTS(speechText, courseName);
           if (!res || !res.body) {
             throw new Error("TTS streaming response invalid");
           }
@@ -1002,6 +1006,9 @@ export const StudentExamPage = () => {
       if (lastAutoPlayedQuestionRef.current !== currentQuestion) {
         lastAutoPlayedQuestionRef.current = currentQuestion;
         setHasFinishedCurrentQuestion(false);
+        const courseName =
+          examMeta?.course || passedExam?.course || (isRTL ? "سیستم عامل" : "Operating Systems");
+        warmupQuestionNormalization(currentQuestion, courseName);
         playQuestionTTS(currentQuestion);
         // Auto-align voice input language with question language (fa for Persian, en for English)
         setVoiceLang(isQuestionRTL ? "fa" : "en");
@@ -1010,7 +1017,7 @@ export const StudentExamPage = () => {
     return () => {
       stopQuestionTTS();
     };
-  }, [currentQuestion, isCompleted, isQuestionRTL, loading, isIdentityVerified, playQuestionTTS, stopQuestionTTS]);
+  }, [currentQuestion, isCompleted, isQuestionRTL, loading, isIdentityVerified, playQuestionTTS, stopQuestionTTS, examMeta?.course, passedExam?.course, isRTL]);
 
   // True while the AI examiner is actively buffering or reading the current question
   const isBotReading = Boolean(

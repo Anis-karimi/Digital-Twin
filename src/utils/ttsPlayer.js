@@ -86,9 +86,10 @@ export function computeWaveformBars(audioBuffer, barCount = 30) {
  * Returns cached instance if already fetched.
  * 
  * @param {string} text Raw message text
+ * @param {string} [courseContext=""] Course context for domain vocalization
  * @returns {Promise<{ audioBuffer: AudioBuffer, waveformBars: number[], duration: number }>}
  */
-export async function synthesizeAndDecodeTTS(text) {
+export async function synthesizeAndDecodeTTS(text, courseContext = "") {
   const clean = cleanMessageText(text);
   if (!clean) {
     throw new Error("متنی برای تبدیل به صدا وجود ندارد");
@@ -101,7 +102,7 @@ export async function synthesizeAndDecodeTTS(text) {
 
   const ctx = getAudioContext();
 
-  const res = await voiceApi.streamTTS(clean);
+  const res = await voiceApi.streamTTS(clean, courseContext);
   if (!res || !res.body) {
     throw new Error("TTS streaming response is not readable");
   }

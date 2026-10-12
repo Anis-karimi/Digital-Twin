@@ -1203,7 +1203,7 @@ export const CreateExamAccordion = ({
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                 }`}
               >
-                {isRTL ? "فارسی + کلمات انگلیسی" : "Persian + EN"}
+                {isRTL ? "فارسی" : "Persian"}
               </button>
               <button
                 type="button"
