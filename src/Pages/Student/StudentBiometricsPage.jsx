@@ -76,6 +76,10 @@ export function StudentBiometricsPage() {
   const autoGazeTriggeredRef = useRef(false);
   const consecutiveGazeFramesRef = useRef(0);
 
+  // Step 3 Neutral Emotion Face Verification Refs
+  const autoNeutralTriggeredRef = useRef(false);
+  const consecutiveNeutralFramesRef = useRef(0);
+
   // Sync refs for live face tracking without stale closures
   const faceStatusRef = useRef(faceStatus);
   const faceBoxRef = useRef(faceBox);
@@ -104,6 +108,8 @@ export function StudentBiometricsPage() {
   useEffect(() => {
     autoGazeTriggeredRef.current = false;
     consecutiveGazeFramesRef.current = 0;
+    autoNeutralTriggeredRef.current = false;
+    consecutiveNeutralFramesRef.current = 0;
     setErrorMsg("");
   }, [currentStep]);
 
@@ -194,6 +200,10 @@ export function StudentBiometricsPage() {
 
   // Manual start handler for neutral baseline calibration
   const handleStartNeutral = () => {
+    if (!isCameraActive) {
+      startCamera();
+    }
+    autoNeutralTriggeredRef.current = true;
     startNeutralCalibration();
   };
 
@@ -409,6 +419,20 @@ export function StudentBiometricsPage() {
               }
             }
           }
+
+          // === Step 3: Neutral Emotion Face Presence & Auto-Start ===
+          if (currentStep === 3 && !isNeutralCalibrated && !isNeutralCalibrating) {
+            if (Date.now() < cooldownUntilRef.current) {
+              // Cooldown active
+            } else {
+              consecutiveNeutralFramesRef.current++;
+              // Once face is steadily tracked for 12 frames (~600ms), auto-start neutral calibration!
+              if (consecutiveNeutralFramesRef.current >= 12 && !autoNeutralTriggeredRef.current) {
+                autoNeutralTriggeredRef.current = true;
+                startNeutralCalibration();
+              }
+            }
+          }
         } else if (isMounted) {
           noFaceCounter++;
           // Generous hold: do not drop box unless face is absent for at least 8 frames
@@ -417,6 +441,7 @@ export function StudentBiometricsPage() {
             setFaceStatus("no_face");
             consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
             consecutiveGazeFramesRef.current = 0;
+            consecutiveNeutralFramesRef.current = 0;
             const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100));
             setScanProgress(prog);
             bestFrameBlobRef.current = null;
@@ -445,7 +470,19 @@ export function StudentBiometricsPage() {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [isCameraActive, currentStep, enrollStatus.success, isGazeCalibrated, isGazeCalibrating, studentId, isLoading, startGazeCalibration]);
+  }, [
+    isCameraActive,
+    currentStep,
+    enrollStatus.success,
+    isGazeCalibrated,
+    isGazeCalibrating,
+    isNeutralCalibrated,
+    isNeutralCalibrating,
+    studentId,
+    isLoading,
+    startGazeCalibration,
+    startNeutralCalibration,
+  ]);
 
   // Automatic Face Enrollment Action with candidate blob
   const handleEnrollFace = async (candidateBlob = null) => {
@@ -1272,7 +1309,7 @@ export function StudentBiometricsPage() {
             ) : (
               <button
                 type="button"
-                disabled={isNeutralCalibrating || !isCameraActive}
+                disabled={isNeutralCalibrating}
                 onClick={handleStartNeutral}
                 className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
