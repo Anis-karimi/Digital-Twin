@@ -48,7 +48,7 @@ export function StudentBiometricsPage() {
     return biometricsApi.getCandidateBiometricIds(currentUser);
   }, [currentUser]);
 
-  const studentId = candidateIds[0] || "20000000-0000-4000-8000-000000000105";
+  const studentId = candidateIds[0] || currentUser?.user_id || currentUser?.username || "";
 
   const [currentStep, setCurrentStep] = useState(1);
   const [profileStatus, setProfileStatus] = useState(null);
@@ -231,6 +231,9 @@ export function StudentBiometricsPage() {
             setCurrentStep(4);
             setShowReRegistrationModal(true);
           }
+        } else {
+          setShowReRegistrationModal(false);
+          setCurrentStep(1);
         }
       }
     } catch (err) {

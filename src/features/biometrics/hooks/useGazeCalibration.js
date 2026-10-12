@@ -11,8 +11,8 @@ import { biometricsApi } from "@/api/new/biometrics.api";
 // 5 Key Calibration Targets: Center, Left ('نه'), Right ('نه'), Top, Bottom
 const CALIBRATION_TARGETS = [
   { id: "center_init", label: "مرکز تصویر", norm: [0.50, 0.50], x: 50, y: 50, hint: "مستقیماً به نقطه قرمز مرکز صفحه نگاه کنید" },
-  { id: "turn_left", label: "سمت چپ (نه)", norm: [0.15, 0.50], x: 15, y: 50, hint: "سر و چشمان خود را به آرامی به سمت چپ حرکت دهید" },
-  { id: "turn_right", label: "سمت راست (نه)", norm: [0.85, 0.50], x: 85, y: 50, hint: "سر و چشمان خود را به سمت راست حرکت دهید" },
+  { id: "turn_left", label: "سمت چپ", norm: [0.15, 0.50], x: 15, y: 50, hint: "سر و چشمان خود را به آرامی به سمت چپ حرکت دهید" },
+  { id: "turn_right", label: "سمت راست", norm: [0.85, 0.50], x: 85, y: 50, hint: "سر و چشمان خود را به سمت راست حرکت دهید" },
   { id: "look_top", label: "بالای صفحه", norm: [0.50, 0.15], x: 50, y: 15, hint: "به آرامی به بالای صفحه نگاه کنید" },
   { id: "center_final", label: "مرکز نهایی", norm: [0.50, 0.50], x: 50, y: 50, hint: "مجدداً به مرکز صفحه خیره شوید و ثابت بمانید" },
 ];

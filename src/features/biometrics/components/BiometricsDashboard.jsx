@@ -325,7 +325,7 @@ export function BiometricsDashboard({
       {/* Fullscreen Gaze Calibration Modal */}
       {isGazeCalibrating && gazeTarget && (
         <div className="fixed inset-0 bg-slate-950/95 z-[9999] flex flex-col items-center justify-center p-6 select-none">
-          <div className="absolute top-10 text-center">
+          {/* <div className="absolute top-10 text-center">
             <span className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
               مرحله {gazeStep} از {gazeTotalSteps}
             </span>
@@ -335,7 +335,7 @@ export function BiometricsDashboard({
             <p className="text-sm text-sky-400 mt-1">
               {gazeTarget.hint}
             </p>
-          </div>
+          </div> */}
 
           {/* Moving target dot */}
           <div

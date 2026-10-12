@@ -95,7 +95,7 @@ export const StudentExamPage = () => {
     return biometricsApi.getCandidateBiometricIds(currentUser);
   }, [currentUser]);
 
-  const studentId = candidateIds[0] || "20000000-0000-4000-8000-000000000105";
+  const studentId = candidateIds[0] || currentUser?.user_id || currentUser?.username || "";
 
   // Biometrics & Distraction Proctoring State
   const [isDistracted, setIsDistracted] = useState(false);
@@ -128,14 +128,23 @@ export const StudentExamPage = () => {
   const cooldownUntilRef = useRef(0);
   const offscreenCanvasRef = useRef(null);
 
-  // Capture low-res frame from videoRef for background 1 FPS telemetry
-  const captureExamFrameBlob = useCallback((quality = 0.65, width = 320, height = 240) => {
+  // Capture frame preserving natural aspect ratio (portrait vs landscape)
+  const captureExamFrameBlob = useCallback((quality = 0.88, targetDim = 540) => {
     return new Promise((resolve) => {
       const video = videoRef.current;
       if (!video || !video.videoWidth || !video.videoHeight || video.readyState < 2) {
         return resolve(null);
       }
       try {
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        let width = targetDim;
+        let height = Math.round((vh / vw) * targetDim);
+        if (vh > vw) {
+          // Portrait mobile camera
+          height = targetDim;
+          width = Math.round((vw / vh) * targetDim);
+        }
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
@@ -163,7 +172,7 @@ export const StudentExamPage = () => {
     setVerificationResult(null);
 
     try {
-      const blob = await captureExamFrameBlob(0.88, 540, 420);
+      const blob = await captureExamFrameBlob(0.90, 540);
       if (!blob) {
         setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
         cooldownUntilRef.current = Date.now() + 2500;
@@ -176,10 +185,13 @@ export const StudentExamPage = () => {
       let isMatch = false;
       let isSpoof = false;
       let isNotEnrolled = false;
+      let isFaceNotDetected = false;
       let lastErr = null;
       let verifyResponse = null;
 
-      for (const cid of candidateIds) {
+      const activeCandidates = candidateIds.length > 0 ? candidateIds : (studentId ? [studentId] : []);
+
+      for (const cid of activeCandidates) {
         try {
           const res = await biometricsApi.verifyStudentFace(cid, blob, "balanced");
           if (res && res.verified) {
@@ -188,6 +200,7 @@ export const StudentExamPage = () => {
             break;
           } else if (res && res.status === "ACCESS DENIED") {
             verifyResponse = res;
+            break;
           }
         } catch (err) {
           lastErr = err;
@@ -203,10 +216,16 @@ export const StudentExamPage = () => {
             isSpoof = true;
             break;
           }
+          if (err?.status === 400 || msg.includes("چهره") || msg.includes("face")) {
+            // Face visibility issue: stop loop and retry next frame
+            isFaceNotDetected = true;
+            break;
+          }
           if (msg.includes("not enrolled") || String(err?.status).includes("404")) {
             isNotEnrolled = true;
+            continue;
           }
-          continue;
+          break;
         }
       }
 
@@ -247,6 +266,17 @@ export const StudentExamPage = () => {
           statusText: isRTL ? "دسترسی غیرمجاز (حمله تقلبی)" : "Access Denied (Spoof)",
         });
         cooldownUntilRef.current = Date.now() + 3500;
+        consecutiveQualityFramesRef.current = 0;
+        setScanProgress(0);
+        autoVerifyTriggeredRef.current = false;
+      } else if (isFaceNotDetected) {
+        setIsVerifiedSuccess(false);
+        setIsScanning(false);
+        const faceMsg = isRTL
+          ? "چهره در کادر تصویر واضح نیست. لطفاً مستقیماً روبه‌روی دوربین قرار گیرید."
+          : "Face not clearly visible. Please look directly at the camera.";
+        setVerificationError(faceMsg);
+        cooldownUntilRef.current = Date.now() + 2500;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
         autoVerifyTriggeredRef.current = false;

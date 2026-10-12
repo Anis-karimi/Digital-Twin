@@ -69,7 +69,6 @@ export async function verifyStudentFace(userId, imageBlob, livenessMode = "balan
 }
 
 /**
- * 3. Gaze & Head Movement Calibration ('نه نه')
  * @param {string} userId
  * @param {Array<Object>} samples
  * @returns {Promise<Object>}
@@ -301,27 +300,41 @@ export async function toggleBiometricEditPermission(userId, canEdit) {
  * @returns {Array<string>}
  */
 export function getCandidateBiometricIds(currentUser) {
+  let user = currentUser;
+  if (!user || (!user.user_id && !user.id && !user.username)) {
+    try {
+      const saved = localStorage.getItem("current_user");
+      if (saved) user = JSON.parse(saved);
+    } catch { }
+  }
   const ids = [];
-  if (currentUser?.user_id) ids.push(String(currentUser.user_id).trim());
-  if (currentUser?.id) ids.push(String(currentUser.id).trim());
-  if (currentUser?.student_id) ids.push(String(currentUser.student_id).trim());
-  if (currentUser?.username) ids.push(String(currentUser.username).trim());
-  ids.push("20000000-0000-4000-8000-000000000105");
+  if (user?.user_id) ids.push(String(user.user_id).trim());
+  if (user?.id) ids.push(String(user.id).trim());
+  if (user?.student_id) ids.push(String(user.student_id).trim());
+  if (user?.username) ids.push(String(user.username).trim());
   return [...new Set(ids.filter(Boolean))];
 }
 
 /**
  * Checks biometric enrollment status across all candidate identifiers and caches verified state.
+ * The backend database is the single source of truth.
  * @param {Object} currentUser
  * @returns {Promise<Object>}
  */
 export async function checkStudentBiometricStatus(currentUser) {
   const candidateIds = getCandidateBiometricIds(currentUser);
-  const localRegistered =
-    localStorage.getItem("dt_biometrics_registered") === "true" ||
-    candidateIds.some((cid) => localStorage.getItem(`dt_biometrics_${cid}`) === "true");
+  if (!candidateIds.length) {
+    return {
+      is_enrolled: false,
+      face_enrolled: false,
+      is_fully_registered: false,
+      ready_for_exam: false,
+    };
+  }
 
   let resolvedStatus = null;
+  let serverFoundEnrolled = false;
+
   for (const cid of candidateIds) {
     try {
       const res = await getStudentBiometricProfile(cid);
@@ -333,6 +346,7 @@ export async function checkStudentBiometricStatus(currentUser) {
           res.ready_for_exam)
       ) {
         resolvedStatus = res;
+        serverFoundEnrolled = true;
         break;
       } else if (res && !resolvedStatus) {
         resolvedStatus = res;
@@ -342,31 +356,23 @@ export async function checkStudentBiometricStatus(currentUser) {
     }
   }
 
-  if (
-    resolvedStatus?.is_enrolled ||
-    resolvedStatus?.face_enrolled ||
-    resolvedStatus?.is_fully_registered ||
-    resolvedStatus?.ready_for_exam
-  ) {
+  if (serverFoundEnrolled) {
     try {
       localStorage.setItem("dt_biometrics_registered", "true");
       for (const cid of candidateIds) {
         localStorage.setItem(`dt_biometrics_${cid}`, "true");
       }
-    } catch {}
+    } catch { }
     return { ...resolvedStatus, is_enrolled: true, is_fully_registered: true, ready_for_exam: true };
   }
 
-  if (localRegistered) {
-    return {
-      ...(resolvedStatus || {}),
-      user_id: candidateIds[0],
-      is_enrolled: true,
-      face_enrolled: true,
-      is_fully_registered: true,
-      ready_for_exam: true,
-    };
-  }
+  // Server confirms student is NOT enrolled. Purge any stale localStorage keys so settings modal does not lie!
+  try {
+    localStorage.removeItem("dt_biometrics_registered");
+    for (const cid of candidateIds) {
+      localStorage.removeItem(`dt_biometrics_${cid}`);
+    }
+  } catch { }
 
   return resolvedStatus || {
     user_id: candidateIds[0],
