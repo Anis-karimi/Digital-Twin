@@ -178,14 +178,24 @@ export const StudentExamPage = () => {
     setIsScanning(true);
     setVerificationError("");
     setVerificationResult(null);
+    setScanProgress(15);
+
+    // Smooth progressive scan animation during API verification
+    let scanVal = 15;
+    const scanInterval = setInterval(() => {
+      scanVal = Math.min(90, scanVal + Math.floor(Math.random() * 8) + 6);
+      setScanProgress(scanVal);
+    }, 120);
 
     try {
       const blob = await captureExamFrameBlob(0.92, 960);
       if (!blob) {
+        clearInterval(scanInterval);
         setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
         cooldownUntilRef.current = Date.now() + 2500;
         setIsScanning(false);
         setIsVerifyingIdentity(false);
+        setScanProgress(0);
         return;
       }
 
@@ -207,7 +217,6 @@ export const StudentExamPage = () => {
             break;
           } else if (res && res.status === "ACCESS DENIED") {
             verifyResponse = res;
-            break;
           }
         } catch (err) {
           lastErr = err;
@@ -224,7 +233,6 @@ export const StudentExamPage = () => {
             break;
           }
           if (err?.status === 400 || msg.includes("چهره") || msg.includes("face")) {
-            // Face visibility issue: stop loop and retry next frame
             isFaceNotDetected = true;
             break;
           }
@@ -232,9 +240,10 @@ export const StudentExamPage = () => {
             isNotEnrolled = true;
             continue;
           }
-          break;
         }
       }
+
+      clearInterval(scanInterval);
 
       if (isMatch) {
         setIsVerifiedSuccess(true);
@@ -257,6 +266,7 @@ export const StudentExamPage = () => {
       } else if (isSpoof) {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
+        setScanProgress(0);
         const spoofMsg = isRTL
           ? "🚫 هشدار امنیتی: تلاش برای جعل هویت با عکس / نمایشگر شناسایی شد (Spoof Detected)"
           : "🚫 Security Alert: Photo / Screen Presentation Attack Detected";
@@ -274,20 +284,20 @@ export const StudentExamPage = () => {
         });
         cooldownUntilRef.current = Date.now() + 3500;
         consecutiveQualityFramesRef.current = 0;
-        setScanProgress(0);
       } else if (isFaceNotDetected) {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
+        setScanProgress(0);
         const faceMsg = isRTL
           ? "چهره در کادر تصویر واضح نیست. لطفاً مستقیماً روبه‌روی دوربین قرار گیرید."
           : "Face not clearly visible. Please look directly at the camera.";
         setVerificationError(faceMsg);
         cooldownUntilRef.current = Date.now() + 2500;
         consecutiveQualityFramesRef.current = 0;
-        setScanProgress(0);
       } else if (isNotEnrolled) {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
+        setScanProgress(0);
         const enrollMsg = isRTL
           ? "پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ابتدا ثبت هویت نمایید."
           : "Biometric profile not found. Please enroll first in settings.";
@@ -303,10 +313,10 @@ export const StudentExamPage = () => {
         });
         cooldownUntilRef.current = Date.now() + 4000;
         consecutiveQualityFramesRef.current = 0;
-        setScanProgress(0);
       } else {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
+        setScanProgress(0);
         const mismatchMsg = isRTL
           ? "عدم تطابق چهره با الگوی ثبت‌شده در سامانه. لطفاً روبه‌روی دوربین قرار بگیرید."
           : "Face does not match registered biometric template.";
@@ -324,12 +334,13 @@ export const StudentExamPage = () => {
         });
         cooldownUntilRef.current = Date.now() + 3000;
         consecutiveQualityFramesRef.current = 0;
-        setScanProgress(0);
       }
     } catch (err) {
+      clearInterval(scanInterval);
       console.warn("Identity verification error:", err);
       setIsVerifiedSuccess(false);
       setIsScanning(false);
+      setScanProgress(0);
       const msg = err?.message || err?.data?.detail || "خطا در برقراری ارتباط با سرور احراز هویت.";
       setVerificationError(msg);
       setVerificationResult({
@@ -343,12 +354,10 @@ export const StudentExamPage = () => {
       });
       cooldownUntilRef.current = Date.now() + 3000;
       consecutiveQualityFramesRef.current = 0;
-      setScanProgress(0);
-      autoVerifyTriggeredRef.current = false;
     } finally {
       setIsVerifyingIdentity(false);
     }
-  }, [captureExamFrameBlob, candidateIds, isVerifyingIdentity, isVerifiedSuccess, isRTL]);
+  }, [captureExamFrameBlob, candidateIds, studentId, isVerifyingIdentity, isVerifiedSuccess, isRTL]);
 
   // Continuous Face Tracking & Centering Loop (matches Settings Biometrics design)
   useEffect(() => {
@@ -459,15 +468,16 @@ export const StudentExamPage = () => {
 
           setFaceStatus("face_locked");
           consecutiveQualityFramesRef.current = Math.min(22, consecutiveQualityFramesRef.current + 1);
-          setScanProgress(Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100)));
-          // Face is locked and framed in blue! User clicks the confirm button to verify & enter.
+          // Face is locked and framed in blue! User clicks the confirm button to scan & enter.
         } else if (isMounted) {
           noFaceCounter++;
           if (noFaceCounter >= 8) {
             setFaceBox(null);
             setFaceStatus("no_face");
             consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
-            setScanProgress(0);
+            if (!isVerifyingIdentity) {
+              setScanProgress(0);
+            }
           }
         }
       } catch (err) {
@@ -1665,10 +1675,12 @@ export const StudentExamPage = () => {
                 </span>
               ) : faceStatus === "multiple_faces" ? (
                 <span className="text-rose-400 font-bold">بیش از ۱ چهره</span>
-              ) : scanProgress > 0 ? (
+              ) : isScanning ? (
                 <span className="text-sky-300 font-mono font-bold">
                   {Math.round(scanProgress)}%
                 </span>
+              ) : faceStatus === "face_locked" ? (
+                <span className="text-sky-300 font-bold">آماده تأیید</span>
               ) : (
                 <span className="text-white/70">احراز هویت چهره</span>
               )}
