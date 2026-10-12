@@ -393,12 +393,8 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
   // Pre-normalize using high-performance rules
   const prepared = preNormalizeText(rawText, cleanCourse);
 
-  // Determine LLM URL
-  const isViteDev =
-    typeof window !== "undefined" && window.location.port === "5173";
-  const llmEndpoint = isViteDev
-    ? "/llm-proxy/v1/chat/completions"
-    : `${API_CONFIG.LLM_BASE_URL || "http://94.184.177.171:8000/v1"}/chat/completions`;
+  // Direct LLM endpoint requested by user: http://94.184.177.171:8000/v1
+  const llmEndpoint = "http://94.184.177.171:8000/v1/chat/completions";
 
   const systemPrompt = `شما متخصص آوانگاری زبان فارسی برای سیستم صوتی تبدیل متن به گفتار (Text-to-Speech) هستید.
 وظیفه شما: متن ورودی را برای خوانده شدن کاملاً روان، رسا و طبیعی توسط گوینده صوتی، به خط ۱۰۰٪ فارسی بازنویسی و اعراب‌گذاری کنید.
