@@ -122,12 +122,14 @@ export function StudentBiometricsPage() {
     captureFrameBlob,
   } = useBiometricCamera({ autoStart: true });
 
-  // 2. Gaze Calibration Hook
+  // 2. Gaze Calibration Hook (synchronized with verified face-in-frame presence)
   const {
     isCalibrating: isGazeCalibrating,
     currentStep: gazeSubStep,
     totalSteps: gazeTotalSteps,
     currentTarget: gazeTarget,
+    pointProgress: gazePointProgress,
+    isFaceMissing: isGazeFaceMissing,
     isCalibrated: isGazeCalibrated,
     statusMessage: gazeStatusMsg,
     progress: gazeHookProgress,
@@ -135,6 +137,7 @@ export function StudentBiometricsPage() {
   } = useGazeCalibration({
     userId: studentId,
     captureFrameBlob,
+    isFaceInFrame: () => faceStatusRef.current === "face_locked" && Boolean(faceBoxRef.current),
     onCalibrationComplete: () => {
       loadProfile(false);
       setTimeout(() => {
@@ -144,11 +147,10 @@ export function StudentBiometricsPage() {
   });
 
   // Calculate dynamic progress for each step:
-  // Step 2 gaze targets: 20%, 40%, 60%, 80%, 90% (stays 90% until server confirms, then 100%)
   const gazeProgress = isGazeCalibrated
     ? 100
     : isGazeCalibrating
-    ? (gazeHookProgress || (gazeSubStep === 5 ? 90 : Math.min(80, gazeSubStep * 20)))
+    ? (gazeHookProgress ?? 0)
     : 0;
 
   // 3. Neutral Calibration Hook (synchronized with verified face-in-frame presence)
@@ -195,6 +197,14 @@ export function StudentBiometricsPage() {
 
   // Manual start handler for gaze calibration
   const handleStartGaze = () => {
+    if (!isCameraActive) {
+      startCamera();
+    }
+    if (faceStatusRef.current !== "face_locked" || !faceBoxRef.current) {
+      showBottomError("صورت خود را در مرکز کادر قرار دهید تا کالیبراسیون آغاز شود");
+      return;
+    }
+    autoGazeTriggeredRef.current = true;
     startGazeCalibration();
   };
 
@@ -1042,18 +1052,30 @@ export function StudentBiometricsPage() {
                 </span>
               </div>
             ) : isGazeCalibrating ? (
-              <div className="liquid-glass-info liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl">
-                <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
+              isGazeFaceMissing ? (
+                <div className="liquid-glass-warning liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl animate-pulse border border-rose-400/50 bg-rose-950/50">
+                  <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-400" />
+                  </div>
+                  <span className="text-xs font-semibold font-vazir text-rose-200 tracking-wide">
+                    صورت در کادر نیست - کالیبراسیون موقتاً متوقف شد
+                  </span>
                 </div>
-                <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
-                  {`در حال کالیبراسیون نگاه (${gazeTarget?.label || "نقطه " + gazeSubStep})`}
-                </span>
-                <span className="text-[11px] font-mono font-bold text-sky-300 mr-1 bg-sky-950/60 px-1.5 py-0.5 rounded-md border border-sky-400/30">
-                  {Math.round(gazeProgress)}%
-                </span>
-              </div>
+              ) : (
+                <div className="liquid-glass-info liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl">
+                  <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
+                  </div>
+                  <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
+                    {`در حال کالیبراسیون نگاه (${gazeTarget?.label || "نقطه " + gazeSubStep})`}
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-sky-300 mr-1 bg-sky-950/60 px-1.5 py-0.5 rounded-md border border-sky-400/30">
+                    {Math.round(gazeProgress)}%
+                  </span>
+                </div>
+              )
             ) : faceStatus === "no_face" ? (
               <div className="liquid-glass-warning liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl animate-liquid-float">
                 <div className="relative flex items-center justify-center w-3 h-3 shrink-0">
@@ -1369,29 +1391,68 @@ export function StudentBiometricsPage() {
 
       {/* ================= 5. Interactive Gaze Calibration Overlay Target ================= */}
       {isGazeCalibrating && gazeTarget && (
-        <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-6 select-none pointer-events-none">
-          <div className="absolute top-20 text-center px-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-6 select-none pointer-events-none">
+          <div className="absolute top-20 text-center px-4 max-w-xs">
             <span className="text-xs px-3.5 py-1 rounded-full bg-sky-600/90 text-white font-bold backdrop-blur-md shadow-md border border-white/20">
               مرحله {gazeSubStep} از {gazeTotalSteps}
             </span>
             <h3 className="text-base font-bold text-white mt-2 font-vazir drop-shadow-md">
               {gazeTarget.label}
             </h3>
-            <p className="text-xs text-sky-200 mt-0.5 font-vazir drop-shadow">
-              {gazeTarget.hint}
-            </p>
+
+            {isGazeFaceMissing ? (
+              <div className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-500/35 border-2 border-rose-400 text-rose-100 text-xs font-bold font-vazir animate-pulse shadow-xl">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-300" />
+                <span>چهره در کادر نیست - رو به دوربین باشید</span>
+              </div>
+            ) : (
+              <p className="text-xs text-sky-200 mt-1 font-vazir drop-shadow">
+                {gazeStatusMsg || gazeTarget.hint}
+              </p>
+            )}
           </div>
 
-          {/* Animated Interactive Gaze Target Dot */}
+          {/* Animated Interactive Gaze Target Dot with Dynamic Fixation Progress */}
           <div
-            className="absolute w-8 h-8 rounded-full bg-rose-500 shadow-[0_0_30px_#f43f5e] transition-all duration-500 ease-out border-2 border-white pointer-events-none flex items-center justify-center"
+            className={`absolute w-11 h-11 rounded-full transition-all duration-300 ease-out border-2 pointer-events-none flex items-center justify-center ${
+              isGazeFaceMissing
+                ? "bg-rose-500/30 border-rose-400 shadow-[0_0_25px_#f43f5e] animate-pulse"
+                : "bg-rose-500 shadow-[0_0_35px_#f43f5e] border-white"
+            }`}
             style={{
               left: `${gazeTarget.x}%`,
               top: `${gazeTarget.y}%`,
               transform: "translate(-50%, -50%)",
             }}
           >
-            <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
+            {/* SVG Ring Progress around the Dot */}
+            <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 44 44">
+              <circle
+                cx="22"
+                cy="22"
+                r="19"
+                fill="none"
+                stroke={isGazeFaceMissing ? "rgba(244,63,94,0.3)" : "rgba(255,255,255,0.25)"}
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="22"
+                cy="22"
+                r="19"
+                fill="none"
+                stroke={isGazeFaceMissing ? "#f43f5e" : "#38bdf8"}
+                strokeWidth="2.5"
+                strokeDasharray={2 * Math.PI * 19}
+                strokeDashoffset={(2 * Math.PI * 19) * (1 - (gazePointProgress || 0) / 100)}
+                strokeLinecap="round"
+                className="transition-all duration-100 ease-linear"
+              />
+            </svg>
+            <div
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                isGazeFaceMissing ? "bg-rose-300" : "bg-white animate-ping"
+              }`}
+            />
           </div>
         </div>
       )}

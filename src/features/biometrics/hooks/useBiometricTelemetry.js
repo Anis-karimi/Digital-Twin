@@ -12,7 +12,7 @@ export function useBiometricTelemetry(options = {}) {
   const {
     intervalMs = 1000,
     userId = "default",
-    detector = "skip",
+    detector = "opencv",
     captureFrameBlob,
     onTelemetryUpdate,
     onError,
@@ -25,71 +25,91 @@ export function useBiometricTelemetry(options = {}) {
   const [error, setError] = useState(null);
 
   const isBusyRef = useRef(false);
-  const timerRef = useRef(null);
+  const optionsRef = useRef({
+    intervalMs,
+    userId,
+    detector,
+    captureFrameBlob,
+    onTelemetryUpdate,
+    onError,
+  });
+
+  // Keep optionsRef fresh on every render without restarting intervals
+  useEffect(() => {
+    optionsRef.current = {
+      intervalMs,
+      userId,
+      detector,
+      captureFrameBlob,
+      onTelemetryUpdate,
+      onError,
+    };
+  }, [intervalMs, userId, detector, captureFrameBlob, onTelemetryUpdate, onError]);
 
   const sendTelemetryPulse = useCallback(async () => {
-    if (isBusyRef.current || !captureFrameBlob) return;
+    const opts = optionsRef.current;
+    if (isBusyRef.current || !opts.captureFrameBlob) return;
 
     try {
-      // Downscale frame to 320x240 @ 0.65 quality (only ~15KB per pulse)
-      const blob = await captureFrameBlob(0.65, 320, 240);
+      // Downscale frame to 320px targetDim @ 0.65 quality (~15KB per pulse)
+      const blob = await opts.captureFrameBlob(0.65, 320);
       if (!blob) return;
 
       isBusyRef.current = true;
       const startTime = performance.now();
 
-      const data = await biometricsApi.sendBiometricTelemetry(userId, blob, detector);
+      const data = await biometricsApi.sendBiometricTelemetry(
+        opts.userId,
+        blob,
+        opts.detector || "opencv"
+      );
       const elapsed = Math.round(performance.now() - startTime);
 
       setTelemetry(data);
       setLatencyMs(elapsed);
       setError(null);
-      if (onTelemetryUpdate) onTelemetryUpdate(data);
+      if (opts.onTelemetryUpdate) {
+        opts.onTelemetryUpdate(data);
+      }
     } catch (err) {
       setError(err?.message || "ارسال تله‌متری با خطا مواجه شد");
-      if (onError) onError(err);
+      if (opts.onError) opts.onError(err);
     } finally {
       isBusyRef.current = false;
     }
-  }, [userId, detector, captureFrameBlob, onTelemetryUpdate, onError]);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsStreaming(false);
+      return;
+    }
+
+    setIsStreaming(true);
+    // Send initial pulse immediately
+    sendTelemetryPulse();
+
+    const timer = setInterval(() => {
+      sendTelemetryPulse();
+    }, intervalMs);
+
+    return () => {
+      clearInterval(timer);
+      setIsStreaming(false);
+    };
+  }, [enabled, intervalMs, sendTelemetryPulse]);
 
   const startTelemetry = useCallback(() => {
-    if (isStreaming) return;
-    setIsStreaming(true);
     sendTelemetryPulse();
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(sendTelemetryPulse, intervalMs);
-  }, [isStreaming, sendTelemetryPulse, intervalMs]);
+  }, [sendTelemetryPulse]);
 
   const stopTelemetry = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
     setIsStreaming(false);
   }, []);
 
   const toggleTelemetry = useCallback(() => {
-    if (isStreaming) {
-      stopTelemetry();
-    } else {
-      startTelemetry();
-    }
-  }, [isStreaming, startTelemetry, stopTelemetry]);
-
-  useEffect(() => {
-    if (enabled) {
-      startTelemetry();
-    } else {
-      stopTelemetry();
-    }
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [enabled, startTelemetry, stopTelemetry]);
+    setIsStreaming((prev) => !prev);
+  }, []);
 
   return {
     isStreaming,

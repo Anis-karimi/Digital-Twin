@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Target,
   Eye,
+  EyeOff,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -98,9 +99,7 @@ export const StudentExamPage = () => {
   const studentId = candidateIds[0] || currentUser?.user_id || currentUser?.username || "";
 
   // Biometrics & Distraction Proctoring State
-  const [isDistracted, setIsDistracted] = useState(false);
   const [distractionCount, setDistractionCount] = useState(0);
-  const distractionTimerRef = useRef(null);
   const lastDistractionLogTimeRef = useRef(0);
 
   // Pre-exam Face Identity Verification Gate
@@ -112,8 +111,8 @@ export const StudentExamPage = () => {
   const [verificationError, setVerificationError] = useState("");
   const [periodicAlert, setPeriodicAlert] = useState("");
 
-  // Auto-scan & Square Face Tracking Reticle State
-  const [faceBox, setFaceBox] = useState(null); // { x, y, size } in container px
+  // Face Tracking & Verification State (matches Settings Biometrics design)
+  const [faceBox, setFaceBox] = useState(null); // { x, y, width, height } in container px
   const [faceStatus, setFaceStatus] = useState("no_face"); // "no_face" | "face_locked" | "multiple_faces"
   const [scanProgress, setScanProgress] = useState(0); // 0 to 100
   const [liveMetrics, setLiveMetrics] = useState({
@@ -123,10 +122,19 @@ export const StudentExamPage = () => {
     stability: 0,
   });
   const [verificationResult, setVerificationResult] = useState(null); // { verdict, title, message, liveness, distance, statusText }
-  const autoVerifyTriggeredRef = useRef(false);
   const consecutiveQualityFramesRef = useRef(0);
   const cooldownUntilRef = useRef(0);
   const offscreenCanvasRef = useRef(null);
+
+  // Sync refs for live face tracking without stale closures
+  const faceStatusRef = useRef(faceStatus);
+  const faceBoxRef = useRef(faceBox);
+  useEffect(() => {
+    faceStatusRef.current = faceStatus;
+  }, [faceStatus]);
+  useEffect(() => {
+    faceBoxRef.current = faceBox;
+  }, [faceBox]);
 
   // Capture frame preserving natural aspect ratio (portrait vs landscape)
   const captureExamFrameBlob = useCallback((quality = 0.88, targetDim = 540) => {
@@ -166,17 +174,24 @@ export const StudentExamPage = () => {
   // 1. Initial Face Verification before letting student take the exam
   const handleVerifyIdentity = useCallback(async () => {
     if (isVerifyingIdentity || isVerifiedSuccess) return;
+    if (faceStatusRef.current !== "face_locked" || !faceBoxRef.current) {
+      setVerificationError(
+        isRTL
+          ? "صورت خود را در کادر قرار دهید تا کادر آبی شود، سپس دکمه را بزنید."
+          : "Position your face in the frame until locked in blue, then click."
+      );
+      return;
+    }
     setIsVerifyingIdentity(true);
     setIsScanning(true);
     setVerificationError("");
     setVerificationResult(null);
 
     try {
-      const blob = await captureExamFrameBlob(0.90, 540);
+      const blob = await captureExamFrameBlob(0.92, 960);
       if (!blob) {
         setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
         cooldownUntilRef.current = Date.now() + 2500;
-        autoVerifyTriggeredRef.current = false;
         setIsScanning(false);
         setIsVerifyingIdentity(false);
         return;
@@ -243,7 +258,7 @@ export const StudentExamPage = () => {
           distance: verifyResponse?.cosine_distance || 0.22,
           statusText: isRTL ? "دسترسی مجاز" : "Access Granted",
         });
-        // Wait 1.2s to allow student to see the green square & confirmation before starting exam
+        // Wait 1.2s to allow student to see the green brackets & confirmation before starting exam
         setTimeout(() => {
           setIsIdentityVerified(true);
         }, 1200);
@@ -268,7 +283,6 @@ export const StudentExamPage = () => {
         cooldownUntilRef.current = Date.now() + 3500;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
-        autoVerifyTriggeredRef.current = false;
       } else if (isFaceNotDetected) {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
@@ -279,7 +293,6 @@ export const StudentExamPage = () => {
         cooldownUntilRef.current = Date.now() + 2500;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
-        autoVerifyTriggeredRef.current = false;
       } else if (isNotEnrolled) {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
@@ -299,7 +312,6 @@ export const StudentExamPage = () => {
         cooldownUntilRef.current = Date.now() + 4000;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
-        autoVerifyTriggeredRef.current = false;
       } else {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
@@ -321,7 +333,6 @@ export const StudentExamPage = () => {
         cooldownUntilRef.current = Date.now() + 3000;
         consecutiveQualityFramesRef.current = 0;
         setScanProgress(0);
-        autoVerifyTriggeredRef.current = false;
       }
     } catch (err) {
       console.warn("Identity verification error:", err);
@@ -347,7 +358,7 @@ export const StudentExamPage = () => {
     }
   }, [captureExamFrameBlob, candidateIds, isVerifyingIdentity, isVerifiedSuccess, isRTL]);
 
-  // Continuous Face Tracking & Centering Loop (Apple Face ID aesthetic)
+  // Continuous Face Tracking & Centering Loop (matches Settings Biometrics design)
   useEffect(() => {
     if (isIdentityVerified || isCompleted || loading || cameraError) return;
 
@@ -404,76 +415,67 @@ export const StudentExamPage = () => {
 
         if (faceResult?.multipleFaces && isMounted) {
           setFaceStatus("multiple_faces");
-          setVerificationError(isRTL ? "تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید." : "Only one face must be in frame.");
+          setVerificationError(
+            isRTL
+              ? "تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید."
+              : "Only one face must be in frame."
+          );
           consecutiveQualityFramesRef.current = 0;
           setScanProgress(0);
-          autoVerifyTriggeredRef.current = false;
-        } else if (faceResult?.detected && faceResult?.squareNorm && isMounted) {
+        } else if (faceResult?.detected && isMounted) {
           noFaceCounter = 0;
-          const sq = faceResult.squareNorm;
+          // In mirrored mode, horizontal X is inverted:
+          const mirroredNormX = 1.0 - (faceResult.normX + faceResult.normW);
+          const detectedBox = {
+            x: offsetX + mirroredNormX * renderedW,
+            y: offsetY + faceResult.normY * renderedH,
+            w: faceResult.normW * renderedW,
+            h: faceResult.normH * renderedH,
+          };
 
-          // Video is mirrored horizontally: scaleX(-1)
-          const mirroredNormX = 1.0 - (sq.x + sq.size);
-          const rawBoxSize = Math.round(sq.size * renderedW);
-          const clampedSize = Math.max(160, Math.min(Math.round(cw * 0.68), rawBoxSize));
+          // Constrain box width strictly to realistic human head dimensions
+          const maxFaceW = Math.round(cw * 0.62);
+          const minFaceW = Math.round(cw * 0.36);
+          const targetW = Math.max(minFaceW, Math.min(maxFaceW, detectedBox.w * 1.15));
+          const targetH = Math.round(targetW * 1.30);
 
-          const rawX = offsetX + mirroredNormX * renderedW;
-          const rawY = offsetY + sq.y * renderedH;
-
-          const cx = rawX + (clampedSize / 2);
-          const cy = rawY + (clampedSize / 2);
-
-          const targetX = Math.max(12, Math.min(cw - clampedSize - 12, cx - clampedSize / 2));
-          const targetY = Math.max(70, Math.min(ch - clampedSize - 120, cy - clampedSize / 2));
+          const cx = detectedBox.x + detectedBox.w / 2;
+          const cy = detectedBox.y + detectedBox.h * 0.45;
+          const targetX = Math.max(12, Math.min(cw - targetW - 12, cx - targetW / 2));
+          const targetY = Math.max(76, Math.min(ch - targetH - 120, cy - targetH * 0.45));
 
           setFaceBox((prev) => {
-            if (!prev) return { x: targetX, y: targetY, size: clampedSize };
-            const smoothX = prev.x * 0.76 + targetX * 0.24;
-            const smoothY = prev.y * 0.76 + targetY * 0.24;
-            const smoothSize = prev.size * 0.82 + clampedSize * 0.18;
+            if (!prev) return { x: targetX, y: targetY, width: targetW, height: targetH };
+
+            const dx = Math.abs(targetX - prev.x);
+            const dy = Math.abs(targetY - prev.y);
+            const dw = Math.abs(targetW - prev.width);
+            const dh = Math.abs(targetH - prev.height);
+
+            const smoothX = dx < 2.5 ? prev.x : prev.x * 0.78 + targetX * 0.22;
+            const smoothY = dy < 2.5 ? prev.y : prev.y * 0.78 + targetY * 0.22;
+            const smoothW = dw < 3.0 ? prev.width : prev.width * 0.88 + targetW * 0.12;
+            const smoothH = dh < 3.0 ? prev.height : prev.height * 0.88 + targetH * 0.12;
+
             return {
               x: smoothX,
               y: smoothY,
-              size: smoothSize,
+              width: smoothW,
+              height: smoothH,
             };
           });
 
           setFaceStatus("face_locked");
-
-          if (!isVerifyingIdentity && !isVerifiedSuccess) {
-            if (Date.now() < cooldownUntilRef.current) {
-              // Waiting for cooldown to expire
-            } else {
-              consecutiveQualityFramesRef.current = Math.min(26, consecutiveQualityFramesRef.current + 1);
-              const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100));
-              setScanProgress(prog);
-
-              if (prog >= 100 && !autoVerifyTriggeredRef.current) {
-                autoVerifyTriggeredRef.current = true;
-                handleVerifyIdentity();
-              }
-            }
-          }
+          consecutiveQualityFramesRef.current = Math.min(22, consecutiveQualityFramesRef.current + 1);
+          setScanProgress(Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100)));
+          // Face is locked and framed in blue! User clicks the confirm button to verify & enter.
         } else if (isMounted) {
           noFaceCounter++;
-          if (noFaceCounter >= 6) {
+          if (noFaceCounter >= 8) {
+            setFaceBox(null);
             setFaceStatus("no_face");
-            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 2);
-            const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100));
-            setScanProgress(prog);
-
-            const guideSize = Math.round(Math.min(cw * 0.65, ch * 0.44, 250));
-            const guideX = Math.round((cw - guideSize) / 2);
-            const guideY = Math.round(ch * 0.20);
-
-            setFaceBox((prev) => {
-              if (!prev) return { x: guideX, y: guideY, size: guideSize };
-              return {
-                x: prev.x * 0.85 + guideX * 0.15,
-                y: prev.y * 0.85 + guideY * 0.15,
-                size: prev.size * 0.85 + guideSize * 0.15,
-              };
-            });
+            consecutiveQualityFramesRef.current = Math.max(0, consecutiveQualityFramesRef.current - 1);
+            setScanProgress(0);
           }
         }
       } catch (err) {
@@ -488,7 +490,7 @@ export const StudentExamPage = () => {
       if (!isMounted) return;
       await detectCycle();
       if (isMounted) {
-        timer = setTimeout(runLoop, nativeDetector ? 50 : 45);
+        timer = setTimeout(runLoop, nativeDetector ? 50 : 35);
       }
     };
     runLoop();
@@ -497,22 +499,26 @@ export const StudentExamPage = () => {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, [isIdentityVerified, isCompleted, loading, cameraError, isVerifyingIdentity, isVerifiedSuccess, handleVerifyIdentity, isRTL]);
+  }, [isIdentityVerified, isCompleted, loading, cameraError, isVerifiedSuccess, isRTL]);
 
-  // Dynamic Square Corner Brackets Framing Calculations
+  // Dynamic coordinates: When idle/no face, 4 corner brackets stay at spacious natural framing.
+  // When face is detected, they dynamically adjust position, width, and height to frame the face!
   const isLockedOnFace = (faceStatus === "face_locked" && faceBox) || isVerifiedSuccess;
-  const bracketSize = 52;
+  const bracketSize = 56;
   const cw = containerRef.current?.clientWidth || 360;
   const ch = containerRef.current?.clientHeight || 640;
 
-  const defaultGuideSize = Math.round(Math.min(cw * 0.65, ch * 0.44, 250));
-  const defaultGuideX = Math.round((cw - defaultGuideSize) / 2);
-  const defaultGuideY = Math.round(ch * 0.20);
+  // Natural resting face guide in the center of viewport - spacious wide framing
+  const guideW = Math.round(cw * 0.84);
+  const guideH = Math.min(Math.round(ch * 0.60), Math.round(guideW * 1.34));
+  const guideX = Math.round((cw - guideW) / 2);
+  const guideY = Math.round((ch - guideH) / 2 - 15);
 
-  const activeBox = faceBox || {
-    x: defaultGuideX,
-    y: defaultGuideY,
-    size: defaultGuideSize,
+  const activeBox = (isLockedOnFace && faceBox) ? faceBox : {
+    x: guideX,
+    y: guideY,
+    width: guideW,
+    height: guideH,
   };
 
   const bracketPositions = {
@@ -522,85 +528,114 @@ export const StudentExamPage = () => {
     },
     topRight: {
       top: `${Math.round(activeBox.y)}px`,
-      left: `${Math.round(activeBox.x + activeBox.size - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
     },
     bottomLeft: {
-      top: `${Math.round(activeBox.y + activeBox.size - bracketSize)}px`,
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
       left: `${Math.round(activeBox.x)}px`,
     },
     bottomRight: {
-      top: `${Math.round(activeBox.y + activeBox.size - bracketSize)}px`,
-      left: `${Math.round(activeBox.x + activeBox.size - bracketSize)}px`,
+      top: `${Math.round(activeBox.y + activeBox.height - bracketSize)}px`,
+      left: `${Math.round(activeBox.x + activeBox.width - bracketSize)}px`,
     },
   };
 
-  // Color states:
-  // - Verified Success: Green (#34d399)
-  // - Spoof Attempt: Crimson (#f43f5e)
-  // - Mismatch: Amber (#fbbf24)
-  // - Multiple Faces Warning: Rose (#f43f5e)
-  // - Face Locked & Tracking: Blue (#38bdf8)
-  // - Searching / Idle: Soft White
+  // Three progressive color states (matches Settings Biometrics):
+  // 1. Soft White: Waiting for face
+  // 2. Cyan/Blue: Face locked and tracking
+  // 3. Emerald Green: Biometrics verified
   const bracketStroke = isVerifiedSuccess
     ? "#34d399"
     : verificationResult?.verdict === "spoof"
     ? "#f43f5e"
-    : verificationResult?.verdict === "mismatch"
-    ? "#fbbf24"
     : faceStatus === "multiple_faces"
     ? "#f43f5e"
+    : verificationResult?.verdict === "mismatch"
+    ? "#fbbf24"
     : isLockedOnFace
     ? "#38bdf8"
-    : "rgba(255, 255, 255, 0.75)";
+    : "rgba(255, 255, 255, 0.92)";
 
   const bracketFilter = isVerifiedSuccess
-    ? "drop-shadow(0 0 18px rgba(52, 211, 153, 0.95))"
+    ? "drop-shadow(0 0 16px rgba(52, 211, 153, 0.95))"
     : verificationResult?.verdict === "spoof"
     ? "drop-shadow(0 0 16px rgba(244, 63, 94, 0.95))"
     : isLockedOnFace
     ? "drop-shadow(0 0 14px rgba(56, 189, 248, 0.9))"
     : "drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))";
 
-  // 2. Real-time Telemetry & Fast Gaze Deviation Reaction
+  // 2. Real-time Telemetry & Fast Distraction Logger
   const handleTelemetryUpdate = useCallback((data) => {
     if (!data) return;
     const isFocused = data.is_focused ?? (data.attention_score >= 45);
     const attention = data.attention_score ?? 100;
     const gazeDir = String(data.gaze_direction || "Direct");
+    const faceDetected = data.face_detected !== false;
 
-    // Fast check if student looked away or averted head/eyes
+    // Check if student looked away or face out of frame
     const isLookingAway =
+      !faceDetected ||
       !isFocused ||
       attention < 45 ||
-      (gazeDir !== "Direct" && gazeDir !== "Screen" && gazeDir !== "Forward" && gazeDir !== "Center");
+      (gazeDir !== "Direct" && gazeDir !== "Direct / Center" && gazeDir !== "Screen" && gazeDir !== "Forward" && gazeDir !== "Center");
 
     if (isLookingAway) {
-      if (!distractionTimerRef.current) {
-        distractionTimerRef.current = setTimeout(() => {
-          setIsDistracted(true);
-          setDistractionCount((prev) => prev + 1);
-
-          // Rate limit distraction logging to once every 4 seconds
-          const now = Date.now();
-          if (now - lastDistractionLogTimeRef.current > 4000) {
-            lastDistractionLogTimeRef.current = now;
-            biometricsApi.logExamDistraction(sessionId || id, studentId, {
-              attention_score: attention,
-              gaze_direction: gazeDir,
-              dominant_emotion: data.dominant_emotion || "neutral",
-              stress_score: data.stress_score || 0,
-            }).catch((e) => console.warn("Distraction log error:", e));
-          }
-        }, 400); // 400ms rapid response!
+      const now = Date.now();
+      if (now - lastDistractionLogTimeRef.current > 4000) {
+        lastDistractionLogTimeRef.current = now;
+        setDistractionCount((prev) => prev + 1);
+        biometricsApi.logExamDistraction(sessionId || id, studentId, {
+          attention_score: attention,
+          gaze_direction: gazeDir,
+          dominant_emotion: data.dominant_emotion || "neutral",
+          stress_score: data.stress_score || 0,
+        }).catch((e) => console.warn("Distraction log error:", e));
       }
-    } else {
-      if (distractionTimerRef.current) {
-        clearTimeout(distractionTimerRef.current);
-        distractionTimerRef.current = null;
-      }
-      setIsDistracted(false);
     }
   }, [sessionId, id, studentId]);
+
+  // Hook declared BEFORE eyeState to prevent "Cannot access before initialization" TDZ error
+  const {
+    telemetry: biometricTelemetry,
+  } = useBiometricTelemetry({
+    intervalMs: 1000,
+    userId: studentId,
+    detector: "opencv",
+    captureFrameBlob: captureExamFrameBlob,
+    onTelemetryUpdate: handleTelemetryUpdate,
+    enabled: !cameraLoading && !cameraError && !isCompleted && isIdentityVerified,
+  });
+
+  // 3-State Live Eye Status:
+  // - "good" (Green): Face in frame, attention >= 65%, gaze focused on screen
+  // - "warning" (Yellow): Face in frame, 40 <= attention < 65% or slight gaze shift
+  // - "critical" (Red): Face NOT in frame or attention < 40% or looking completely away
+  const eyeState = useMemo(() => {
+    if (!biometricTelemetry) {
+      return "good";
+    }
+    const faceDetected = biometricTelemetry.face_detected !== false;
+    const attentionScore = Number(biometricTelemetry.attention_score ?? 100);
+    const gazeDir = String(biometricTelemetry.gaze_direction || "Direct");
+
+    if (!faceDetected) {
+      return "critical";
+    }
+    if (attentionScore < 40 || gazeDir === "Out of Frame" || gazeDir.includes("Away")) {
+      return "critical";
+    }
+    if (
+      attentionScore < 65 ||
+      (gazeDir !== "Direct" &&
+        gazeDir !== "Direct / Center" &&
+        gazeDir !== "Screen" &&
+        gazeDir !== "Forward" &&
+        gazeDir !== "Center")
+    ) {
+      return "warning";
+    }
+    return "good";
+  }, [biometricTelemetry]);
 
   // 3. Periodic Random Background Face Re-verification (Low overhead, 1 frame every 90-150s)
   useEffect(() => {
@@ -633,26 +668,6 @@ export const StudentExamPage = () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [isIdentityVerified, isCompleted, loading, error, captureExamFrameBlob, studentId]);
-
-  const {
-    telemetry: biometricTelemetry,
-  } = useBiometricTelemetry({
-    intervalMs: 1000,
-    userId: studentId,
-    detector: "opencv",
-    captureFrameBlob: captureExamFrameBlob,
-    onTelemetryUpdate: handleTelemetryUpdate,
-    enabled: !cameraLoading && !cameraError && !isCompleted && isIdentityVerified,
-  });
-
-  useEffect(() => {
-    return () => {
-      if (distractionTimerRef.current) {
-        clearTimeout(distractionTimerRef.current);
-        distractionTimerRef.current = null;
-      }
-    };
-  }, []);
 
   // TTS & Live Word-by-Word State for Question Box
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
@@ -1528,31 +1543,44 @@ export const StudentExamPage = () => {
 
         {isIdentityVerified ? (
           <div className="flex items-center gap-2">
-            {/* Biometric Proctoring Status Indicator */}
+            {/* 3-State Live Eye Proctoring Indicator */}
             <div
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-medium transition-all ${
-                isDistracted
-                  ? "bg-amber-500/30 border-amber-400 text-amber-200 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"
-                  : biometricTelemetry?.is_focused
-                  ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-300"
-                  : "bg-black/50 border-white/15 text-slate-300"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs font-medium transition-all duration-300 ${
+                eyeState === "critical"
+                  ? "bg-rose-950/80 border-rose-500/70 text-rose-200 shadow-[0_0_16px_rgba(244,63,94,0.45)] animate-pulse"
+                  : eyeState === "warning"
+                  ? "bg-amber-950/60 border-amber-500/50 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
+                  : "bg-emerald-950/40 border-emerald-500/25 text-emerald-300"
               }`}
+              title={
+                eyeState === "critical"
+                  ? (isRTL ? "هشدار: چهره در کادر نیست یا نگاه معطوف به آزمون نمی‌باشد" : "Critical: Face out of frame or looking away")
+                  : eyeState === "warning"
+                  ? (isRTL ? "توجه: نگاه خود را به صفحه متمرکز نمایید" : "Warning: Refocus gaze on exam screen")
+                  : (isRTL ? "وضعیت مطلوب: تمرکز نگاه تایید شده است" : "Optimal focus")
+              }
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isDistracted
-                    ? "bg-amber-400 animate-ping"
-                    : biometricTelemetry?.is_focused
-                    ? "bg-emerald-400"
-                    : "bg-sky-400"
-                }`}
-              />
-              <span className="text-[11px] font-mono">
-                {isDistracted
-                  ? (isRTL ? "عدم تمرکز" : "Distracted")
-                  : biometricTelemetry
-                  ? `${isRTL ? "توجه" : "Attn"}: ${Math.round(biometricTelemetry.attention_score || 95)}%`
-                  : (isRTL ? "پایش فعال" : "Monitoring")}
+              {eyeState === "critical" ? (
+                <EyeOff className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />
+              ) : eyeState === "warning" ? (
+                <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              ) : (
+                <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              )}
+              <span className="text-[11px] font-mono font-medium">
+                {eyeState === "critical" ? (
+                  biometricTelemetry?.face_detected === false
+                    ? (isRTL ? "عدم حضور چهره" : "No Face")
+                    : (isRTL ? "انحراف دید" : "Averted Gaze")
+                ) : eyeState === "warning" ? (
+                  isRTL
+                    ? `انحراف توجه (${toPersianDigits(Math.round(biometricTelemetry?.attention_score || 55))}٪)`
+                    : `Attention: ${Math.round(biometricTelemetry?.attention_score || 55)}%`
+                ) : (
+                  isRTL
+                    ? `دقت: ${toPersianDigits(Math.round(biometricTelemetry?.attention_score || 95))}٪`
+                    : `Focus: ${Math.round(biometricTelemetry?.attention_score || 95)}%`
+                )}
               </span>
             </div>
 
@@ -1659,144 +1687,112 @@ export const StudentExamPage = () => {
         {!isIdentityVerified && <div className="w-10 h-10" />}
       </header>
 
-      {/* ================= 4 Apple Face ID Corner Brackets & Square Scanning HUD ================= */}
+      {/* ================= 4 Face ID Corner Brackets (Exact same as Settings Biometrics) ================= */}
       {!isIdentityVerified && !loading && !cameraError && (
-        <div className="absolute inset-0 pointer-events-none z-[18] overflow-hidden">
-          {/* Main Square Reticle Container */}
+        <div className="absolute inset-0 pointer-events-none z-[15] overflow-hidden">
+          {/* Top-Left Corner Bracket (Curved Border Radius) */}
           <div
-            className="absolute bracket-smooth-transition flex items-center justify-center pointer-events-none"
+            className="absolute bracket-smooth-transition"
             style={{
-              top: `${Math.round(activeBox.y)}px`,
-              left: `${Math.round(activeBox.x)}px`,
-              width: `${Math.round(activeBox.size)}px`,
-              height: `${Math.round(activeBox.size)}px`,
+              ...bracketPositions.topLeft,
+              filter: bracketFilter,
             }}
           >
-            {/* Top Tag / Pill on the Square Box */}
-            <div
-              className={`absolute -top-8 px-3 py-1 rounded-full text-[11px] font-vazir font-bold flex items-center gap-1.5 backdrop-blur-md border shadow-lg transition-all duration-300 pointer-events-none whitespace-nowrap ${
-                isVerifiedSuccess
-                  ? "bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-emerald-500/30"
-                  : verificationResult?.verdict === "spoof"
-                  ? "bg-rose-950/80 border-rose-500 text-rose-300 shadow-rose-500/30 animate-bounce"
-                  : verificationResult?.verdict === "mismatch"
-                  ? "bg-amber-950/80 border-amber-500 text-amber-300 shadow-amber-500/30"
-                  : isScanning
-                  ? "bg-sky-950/80 border-sky-400 text-sky-300 animate-pulse shadow-sky-500/30"
-                  : isLockedOnFace
-                  ? "bg-slate-900/85 border-sky-400/80 text-sky-300"
-                  : "bg-slate-900/80 border-white/20 text-slate-300"
-              }`}
-            >
-              {isVerifiedSuccess ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                  <span>{isRTL ? "تأیید هویت موفق (چهره واقعی دانشجو)" : "Verified: Genuine Student"}</span>
-                </>
-              ) : verificationResult?.verdict === "spoof" ? (
-                <>
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  <span>{isRTL ? "هشدار: عکس / تصویر غیرواقعی شناسایی شد" : "Spoof Detected"}</span>
-                </>
-              ) : verificationResult?.verdict === "mismatch" ? (
-                <>
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isRTL ? "عدم تطابق چهره با الگو" : "Face Mismatch"}</span>
-                </>
-              ) : isScanning ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 text-sky-400 animate-spin" />
-                  <span>{isRTL ? `در حال اسکن بیومتریک (${Math.round(scanProgress)}٪)` : `Scanning (${Math.round(scanProgress)}%)`}</span>
-                </>
-              ) : isLockedOnFace ? (
-                <>
-                  <Target className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                  <span>{isRTL ? `چهره قفل شد | اطمینان: ${liveMetrics.confidence}٪` : `Face Locked (${liveMetrics.confidence}%)`}</span>
-                </>
-              ) : (
-                <>
-                  <Scan className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{isRTL ? "چهره را در این کادر مربع قرار دهید" : "Position face in square"}</span>
-                </>
-              )}
-            </div>
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 5 52 L 5 21 A 16 16 0 0 1 21 5 L 52 5"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
 
-            {/* Glowing Laser Sweep Line across the Square Box during Auto-Scan */}
-            {(isScanning || scanProgress > 15) && !isVerifiedSuccess && (
-              <div className="absolute inset-x-2 animate-biometric-laser h-1 rounded-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#38bdf8] pointer-events-none z-20" />
-            )}
+          {/* Top-Right Corner Bracket (Curved Border Radius) */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.topRight,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 4 5 L 35 5 A 16 16 0 0 1 51 21 L 51 52"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
 
-            {/* Center Reticle / Graphic */}
+          {/* Bottom-Left Corner Bracket (Curved Border Radius) */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.bottomLeft,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 5 4 L 5 35 A 16 16 0 0 0 21 51 L 52 51"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+
+          {/* Bottom-Right Corner Bracket (Curved Border Radius) */}
+          <div
+            className="absolute bracket-smooth-transition"
+            style={{
+              ...bracketPositions.bottomRight,
+              filter: bracketFilter,
+            }}
+          >
+            <svg className="w-14 h-14 overflow-visible" viewBox="0 0 56 56" fill="none">
+              <path
+                d="M 4 51 L 35 51 A 16 16 0 0 0 51 35 L 51 4"
+                stroke={bracketStroke}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-300"
+              />
+            </svg>
+          </div>
+
+          {/* Success Checkmark Badge (Apple Face ID Animation) */}
+          {isVerifiedSuccess && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              {isVerifiedSuccess ? (
-                <div className="w-16 h-16 rounded-full bg-emerald-500/25 border-2 border-emerald-400 flex items-center justify-center animate-faceid-back-flip shadow-[0_0_30px_rgba(52,211,153,0.9)]">
-                  <Check className="w-9 h-9 text-emerald-300 stroke-[3.5]" />
-                </div>
-              ) : verificationResult?.verdict === "spoof" ? (
-                <div className="w-16 h-16 rounded-full bg-rose-500/25 border-2 border-rose-500 flex items-center justify-center shadow-[0_0_30px_rgba(244,63,94,0.8)]">
-                  <ShieldAlert className="w-9 h-9 text-rose-400 animate-bounce" />
-                </div>
-              ) : (
-                <div className="w-6 h-6 border border-white/20 rounded-full flex items-center justify-center opacity-40">
-                  <div className="w-1.5 h-1.5 bg-white/50 rounded-full" />
-                </div>
-              )}
+              <div className="w-20 h-20 rounded-full border-2 border-emerald-400 animate-shockwave-1 shadow-[0_0_35px_rgba(52,211,153,0.85)]" />
+              <div className="w-20 h-20 rounded-full border-2 border-teal-300 animate-shockwave-2 shadow-[0_0_45px_rgba(45,212,191,0.65)]" />
+              <div className="relative animate-check-badge w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600/40 via-teal-500/30 to-emerald-400/50 border-2 border-emerald-300 flex items-center justify-center shadow-[0_0_50px_rgba(52,211,153,0.9),inset_0_1.5px_3px_rgba(255,255,255,0.85)] backdrop-blur-md">
+                <Check className="w-10 h-10 text-emerald-100 stroke-[3.5] drop-shadow-[0_0_12px_rgba(236,253,245,0.95)]" />
+              </div>
             </div>
+          )}
 
-            {/* 4 Square Reticle Corner Brackets */}
-            {/* Top-Left */}
-            <div className="absolute top-0 left-0 w-12 h-12" style={{ filter: bracketFilter }}>
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
-                <path d="M 4 44 L 4 18 A 14 14 0 0 1 18 4 L 44 4" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          {/* Spoof Alert Badge */}
+          {verificationResult?.verdict === "spoof" && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-20 h-20 rounded-full bg-rose-600/30 border-2 border-rose-500 flex items-center justify-center shadow-[0_0_40px_rgba(244,63,94,0.9)] backdrop-blur-md animate-bounce">
+                <ShieldAlert className="w-10 h-10 text-rose-300 stroke-[2.5]" />
+              </div>
             </div>
-            {/* Top-Right */}
-            <div className="absolute top-0 right-0 w-12 h-12" style={{ filter: bracketFilter }}>
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
-                <path d="M 4 4 L 30 4 A 14 14 0 0 1 44 18 L 44 44" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            {/* Bottom-Left */}
-            <div className="absolute bottom-0 left-0 w-12 h-12" style={{ filter: bracketFilter }}>
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
-                <path d="M 4 4 L 4 30 A 14 14 0 0 0 18 44 L 44 44" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            {/* Bottom-Right */}
-            <div className="absolute bottom-0 right-0 w-12 h-12" style={{ filter: bracketFilter }}>
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 48 48" fill="none">
-                <path d="M 4 44 L 30 44 A 14 14 0 0 0 44 30 L 44 4" stroke={bracketStroke} strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Liquid-Glass Distraction Warning Banner */}
-      {isDistracted && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 pointer-events-none">
-          <div className="relative overflow-hidden rounded-2xl bg-amber-500/25 backdrop-blur-2xl border-2 border-amber-400/90 p-3.5 shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center gap-3 text-right">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/30 border border-amber-400 flex items-center justify-center shrink-0 animate-bounce text-amber-300">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-black text-amber-200">
-                {isRTL ? "⚠️ اخطار عدم تمرکز در آزمون" : "⚠️ Attention Warning"}
-              </h4>
-              <p className="text-xs text-amber-100/90 mt-0.5 leading-relaxed font-medium">
-                {isRTL
-                  ? "لطفاً نگاه خود را به صفحه آزمون معطوف فرمایید. انحراف نگاه ثبت می‌شود."
-                  : "Please refocus your gaze on the exam window. Looking away is recorded."}
-              </p>
-            </div>
-            {distractionCount > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 font-mono border border-amber-500/50 font-bold shrink-0">
-                {isRTL ? `اخطار ${distractionCount}` : `Warning ${distractionCount}`}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* Periodic Random Identity Alert */}
       {periodicAlert && (
@@ -1919,7 +1915,7 @@ export const StudentExamPage = () => {
               <div className="w-full text-right bg-black/40 rounded-xl p-3 mb-4 text-xs font-vazir text-slate-200 border border-white/10">
                 <div className="font-bold mb-1 flex items-center gap-1 text-sky-300">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {isRTL ? "بازخورد استاد هوش مصنوعی:" : "AI Feedback:"}
+                  {isRTL ? "بازخورد هوش مصنوعی:" : "AI Feedback:"}
                 </div>
                 <p className="leading-relaxed">{lastFeedback}</p>
               </div>
@@ -1977,8 +1973,8 @@ export const StudentExamPage = () => {
             <div className="space-y-1.5">
               <h3 className="text-sm font-bold text-white font-vazir">
                 {isRTL
-                  ? "استاد هوش مصنوعی در حال تحلیل پاسخ شماست..."
-                  : "AI Examiner is analyzing your answer..."}
+                  ? "هوش مصنوعی در حال تحلیل پاسخ شماست..."
+                  : "AI is analyzing your answer..."}
               </h3>
               <p className="text-xs text-slate-300 font-vazir leading-relaxed max-w-[260px]">
                 {isRTL
@@ -2041,8 +2037,8 @@ export const StudentExamPage = () => {
                     : isScanning || isVerifyingIdentity
                     ? (isRTL ? "در حال اسکن و ارزیابی اصالت چهره..." : "Scanning & verifying liveness...")
                     : faceStatus === "face_locked"
-                    ? (isRTL ? "چهره قفل شد، ثابت بمانید..." : "Face locked, hold steady...")
-                    : (isRTL ? "احراز هویت هوشمند خودکار" : "Automatic Face Verification")}
+                    ? (isRTL ? "چهره شناسایی شد (آماده تأیید و ورود)" : "Face locked (Ready to enter)")
+                    : (isRTL ? "احراز هویت و ورود به آزمون" : "Face Verification")}
                 </h3>
               </div>
 
@@ -2057,9 +2053,9 @@ export const StudentExamPage = () => {
                   <span className="text-emerald-300 font-bold">{toPersianDigits(liveMetrics.brightness)}٪</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "تثبیت در کادر" : "Stability"}</span>
-                  <span className={`font-bold ${scanProgress > 80 ? "text-emerald-300" : "text-sky-300"}`}>
-                    {toPersianDigits(scanProgress)}٪
+                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "وضعیت قفل" : "Lock Status"}</span>
+                  <span className={`font-bold font-vazir text-[9px] ${faceStatus === "face_locked" ? "text-sky-300" : "text-slate-400"}`}>
+                    {faceStatus === "face_locked" ? (isRTL ? "قفل شد" : "Locked") : (isRTL ? "در حال جستجو" : "Searching")}
                   </span>
                 </div>
               </div>
@@ -2082,17 +2078,28 @@ export const StudentExamPage = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[300px]">
-                  {isScanning
-                    ? (isRTL ? "پرتوی اسکن در حال خواندن مشخصات بیومتریک و سنجش زنده بودن است..." : "Scanning face depth & anti-spoofing...")
+                <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[320px]">
+                  {isScanning || isVerifyingIdentity
+                    ? (isRTL ? "در حال اسکن بیومتریک و سنجش زنده بودن چهره..." : "Scanning face depth & anti-spoofing...")
                     : faceStatus === "multiple_faces"
                     ? (isRTL
                         ? "تنها یک چهره باید در کادر تصویر باشد. لطفاً به تنهایی در برابر دوربین قرار گیرید."
                         : "Only one face must be in camera frame.")
+                    : faceStatus === "face_locked"
+                    ? (isRTL
+                        ? "کادر آبی روی چهره شما قفل شد. برای اسکن و ورود به آزمون، دکمه زیر را لمس کنید."
+                        : "Face locked in blue frame. Tap 'Confirm Identity & Enter Exam' below.")
                     : (isRTL
-                        ? "کادر مربع به صورت خودکار روی چهره شما قرار می‌گیرد و پس از چند ثانیه اسکن آغاز می‌شود."
-                        : "Square reticle tracks your face automatically and scans identity.")}
+                        ? "صورت خود را روبه‌روی دوربین قرار دهید تا کادر به رنگ آبی روی چهره قفل شود."
+                        : "Position your face in front of the camera until framed in blue.")}
                 </p>
+              )}
+
+              {/* Inline warning message if verification error exists without result card */}
+              {verificationError && !verificationResult && (
+                <div className="w-full p-2 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-200 text-[11px] font-vazir text-right animate-in fade-in duration-200">
+                  <span>{verificationError}</span>
+                </div>
               )}
 
               {/* Navigation button if biometrics profile is missing */}
@@ -2119,29 +2126,31 @@ export const StudentExamPage = () => {
                 <button
                   type="button"
                   onClick={handleVerifyIdentity}
-                  disabled={isVerifyingIdentity || cameraLoading || cameraError}
-                  className={`w-full h-10 rounded-xl text-white text-xs font-bold font-vazir shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                  disabled={isVerifyingIdentity || isScanning || cameraLoading || cameraError}
+                  className={`w-full h-11 rounded-xl text-white text-xs font-bold font-vazir shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${
                     verificationResult?.verdict === "spoof"
                       ? "bg-rose-600 hover:bg-rose-500 shadow-rose-600/30"
                       : verificationResult?.verdict === "mismatch"
                       ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/30"
-                      : "bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-sky-500/30"
+                      : faceStatus === "face_locked"
+                      ? "bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-sky-500/40 animate-pulse"
+                      : "bg-slate-700/80 hover:bg-slate-600/80 text-slate-300"
                   }`}
                 >
                   {isVerifyingIdentity || isScanning ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin" />
                       <span>{isRTL ? "در حال اسکن و سنجش اصالت..." : "Scanning & verifying..."}</span>
                     </>
                   ) : verificationResult ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <RefreshCw className="w-4 h-4" />
                       <span>{isRTL ? "تلاش مجدد و اسکن دوباره" : "Retry Face Scan"}</span>
                     </>
                   ) : (
                     <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>{isRTL ? "شروع دستی اسکن و تأیید هویت" : "Scan & Verify Identity"}</span>
+                      <ShieldCheck className="w-4 h-4 text-sky-300" />
+                      <span>{isRTL ? "تأیید هویت و ورود به آزمون" : "Confirm Identity & Enter Exam"}</span>
                     </>
                   )}
                 </button>
