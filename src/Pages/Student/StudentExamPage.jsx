@@ -205,9 +205,8 @@ export const StudentExamPage = () => {
           }
           if (msg.includes("not enrolled") || String(err?.status).includes("404")) {
             isNotEnrolled = true;
-            continue;
           }
-          break;
+          continue;
         }
       }
 
@@ -364,6 +363,15 @@ export const StudentExamPage = () => {
           nativeDetector
         );
 
+        if (faceResult?.metrics && isMounted) {
+          setLiveMetrics({
+            sharpness: faceResult.metrics.sharpness,
+            brightness: faceResult.metrics.brightness,
+            confidence: faceResult.detected ? (faceResult.metrics.confidence || 92) : 0,
+            stability: Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100)),
+          });
+        }
+
         if (faceResult?.multipleFaces && isMounted) {
           setFaceStatus("multiple_faces");
           setVerificationError(isRTL ? "تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید." : "Only one face must be in frame.");
@@ -401,15 +409,6 @@ export const StudentExamPage = () => {
           });
 
           setFaceStatus("face_locked");
-
-          if (faceResult.metrics) {
-            setLiveMetrics({
-              sharpness: faceResult.metrics.sharpness || 85,
-              brightness: faceResult.metrics.brightness || 80,
-              confidence: faceResult.metrics.confidence || 92,
-              stability: Math.min(100, Math.round((consecutiveQualityFramesRef.current / 22) * 100)),
-            });
-          }
 
           if (!isVerifyingIdentity && !isVerifiedSuccess) {
             if (Date.now() < cooldownUntilRef.current) {
@@ -2397,7 +2396,7 @@ export const StudentExamPage = () => {
                 }}
                 className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-600/30 font-vazir"
               >
-                {isRTL ? "قطع تماس" : "End Call"}
+                {isRTL ? "خروج از آزمون" : "Leave Exam"}
               </button>
             </div>
           </div>
