@@ -99,14 +99,23 @@ export const ChatArea = () => {
     const isTeacherViewingStudentChat = isStudentChat && !isStudentRole;
 
     const activeChatType = isStudentChat || isStudentRole ? "student" : "course";
-    const activeTargetId = isStudentChat
+
+    // Resolve course ID and student ID to scope bot conversations per course
+    const targetCourseId = isStudentChat
+      ? location.state?.lessonId || "bbd22574-beac-4bdc-8cc4-afdc663a10d5"
+      : id || "bbd22574-beac-4bdc-8cc4-afdc663a10d5";
+
+    const targetStudentId = isStudentChat
       ? id
       : isStudentRole
       ? currentUser?.user_id || "ef6125a3-d179-442c-a9be-b4cd82e8ada6"
-      : id || "c0000000-0000-4000-8000-000000000001";
-    const activeCourseId = !isStudentChat
-      ? id || "c0000000-0000-4000-8000-000000000001"
       : null;
+
+    const activeTargetId = isStudentChat || isStudentRole
+      ? `${targetStudentId}_${targetCourseId}`
+      : targetCourseId;
+
+    const activeCourseId = targetCourseId;
 
     const [highlightCommentId, setHighlightCommentId] = useState(null);
     const [activeTelegramNotification, setActiveTelegramNotification] = useState(null);

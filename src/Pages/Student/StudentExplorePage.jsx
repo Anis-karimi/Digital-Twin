@@ -316,7 +316,7 @@ export const StudentExplore = () => {
         </div>
 
         {/* Filter Tabs */}
-        <div className="w-full shrink-0 flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="w-full shrink-0 flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5 swiper-no-swiping">
           {tabs.map((tab) => {
             const isActive = selectedTab === tab.id;
             return (
@@ -364,10 +364,10 @@ export const StudentExplore = () => {
                 return (
                   <article
                     key={course.id}
-                    onClick={() => isEnrolled && handleEnterCourse(course)}
-                    className={`relative w-full min-h-[58px] flex items-center gap-3 py-2 px-3 rounded-2xl bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 shadow-2xs transition-all hover:border-primery-400 dark:hover:border-primery-700/60 ${
-                      isEnrolled ? "cursor-pointer" : ""
-                    } ${isRTL ? "flex-row text-right" : "flex-row text-left"}`}
+                    onClick={() => handleEnterCourse(course)}
+                    className={`relative w-full min-h-[58px] flex items-center gap-3 py-2 px-3 rounded-2xl bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 shadow-2xs transition-all hover:border-primery-400 dark:hover:border-primery-700/60 cursor-pointer ${
+                      isRTL ? "flex-row text-right" : "flex-row text-left"
+                    }`}
                   >
                     {/* Course Avatar */}
                     <img

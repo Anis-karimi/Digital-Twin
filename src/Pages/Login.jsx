@@ -270,46 +270,56 @@ export const Login = () => {
         {/* Tab 1: Teacher Login View */}
         {activeTab === "teacher" && (
           <div className="flex flex-col gap-3">
-            {currentCourse?.teacher ? (
-              <button
-                type="button"
-                disabled={Boolean(loadingUser)}
-                onClick={() => handleLogin(currentCourse.teacher)}
-                className="w-full p-4 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/80 dark:hover:bg-blue-950/40 hover:border-blue-400 flex items-center gap-3.5 transition-all duration-200 cursor-pointer text-start shadow-xs hover:shadow-md disabled:opacity-50"
-              >
-                <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/25">
-                  {loadingUser === (currentCourse.teacher.username || currentCourse.teacher.id) ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-white" />
-                  ) : (
-                    <GraduationCap className="w-6 h-6 text-white" />
-                  )}
-                </div>
+            {(() => {
+              const teacherProfile = currentCourse?.teacher || {
+                id: "10000000-0000-4000-8000-000000000001",
+                name: "دکتر محمد اله بخش",
+                username: "teacher",
+                role: "TEACHER",
+                defaultToken: "sso_token_dr_allahbakhsh",
+                avatar: null,
+              };
+              const isCurrentLoading =
+                loadingUser === (teacherProfile.username || teacherProfile.id) ||
+                loadingUser === "teacher";
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale100 font-vazir truncate">
-                      {currentCourse.teacher.name}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md border font-vazir shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                      {isRTL ? "استاد درس" : "Instructor"}
-                    </span>
+              return (
+                <button
+                  type="button"
+                  disabled={Boolean(loadingUser)}
+                  onClick={() => handleLogin(teacherProfile)}
+                  className="w-full p-4 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/80 dark:hover:bg-blue-950/40 hover:border-blue-400 flex items-center gap-3.5 transition-all duration-200 cursor-pointer text-start shadow-xs hover:shadow-md disabled:opacity-50"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/25">
+                    {isCurrentLoading ? (
+                      <Loader2 className="w-6 h-6 animate-spin text-white" />
+                    ) : (
+                      <GraduationCap className="w-6 h-6 text-white" />
+                    )}
                   </div>
-                  <p className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-vazir mt-0.5">
-                    {isRTL
-                      ? `مدیریت آزمون‌ها و محتوای درس ${currentCourse.title}`
-                      : `Instructor for ${currentCourse.title}`}
-                  </p>
-                </div>
 
-                <div className="shrink-0 text-blue-600 dark:text-blue-400">
-                  {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                </div>
-              </button>
-            ) : (
-              <div className="p-4 text-center text-xs text-neutral-scale800 dark:text-neutral-scale400 font-vazir">
-                {isRTL ? "استادی برای این درس تعریف نشده است." : "No instructor assigned."}
-              </div>
-            )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale100 font-vazir truncate">
+                        {teacherProfile.name || "دکتر محمد اله بخش"}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md border font-vazir shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                        {isRTL ? "استاد و هیئت علمی" : "Instructor"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-vazir mt-0.5">
+                      {isRTL
+                        ? `ورود به پنل استاد و مدیریت دروس (${currentCourse?.title || "سیستم عامل و بلاکچین"})`
+                        : `Instructor portal: manage courses (${currentCourse?.title || "All assigned courses"})`}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-blue-600 dark:text-blue-400">
+                    {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                  </div>
+                </button>
+              );
+            })()}
           </div>
         )}
 

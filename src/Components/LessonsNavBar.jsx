@@ -159,12 +159,17 @@ export const LessonsNavBar = ({
   useEffect(() => {
     if (isDragging) return;
     const el = tabsRef.current[activeTab];
-    if (!el) return;
+    const container = containerRef.current;
+    if (!el || !container) return;
 
-    el.scrollIntoView({
+    const containerWidth = container.clientWidth;
+    const elLeft = el.offsetLeft;
+    const elWidth = el.offsetWidth;
+    const targetScroll = elLeft - containerWidth / 2 + elWidth / 2;
+
+    container.scrollTo({
+      left: Math.max(0, targetScroll),
       behavior: "smooth",
-      inline: "center",
-      block: "nearest",
     });
   }, [activeTab, isDragging, items]);
 

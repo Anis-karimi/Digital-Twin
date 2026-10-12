@@ -301,32 +301,98 @@ export const AdminCreateCoursePage = () => {
           </div>
 
           {/* Section: Options Toggles */}
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-scale100 dark:border-neutral-scale1100">
-            {/* Active Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 text-primery-700 rounded-sm focus:ring-0 cursor-pointer"
-              />
-              <span className="text-xs font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
-                {isRTL ? "درس فعال باشد" : "Course is active"}
-              </span>
-            </label>
+          <div className="flex flex-col gap-2.5 pt-2 border-t border-neutral-scale100 dark:border-neutral-scale1100">
+            {/* Active Toggle Card */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              onClick={() => setIsActive((prev) => !prev)}
+              className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer select-none text-start ${
+                isActive
+                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-300"
+                  : "bg-white dark:bg-neutral-scale1200 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1800 dark:text-neutral-scale70 hover:border-neutral-scale300"
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                    isActive
+                      ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                      : "bg-neutral-scale100 dark:bg-neutral-scale1100 border-neutral-scale300 dark:border-neutral-scale900 text-transparent"
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-bold leading-tight truncate">
+                    {isRTL ? "درس فعال باشد" : "Course is active"}
+                  </span>
+                  <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
+                    {isActive
+                      ? (isRTL ? "درس فعال و در دسترس کاربران قرار می‌گیرد" : "Course is active & accessible")
+                      : (isRTL ? "درس به صورت غیرفعال ذخیره می‌شود" : "Course will be saved as inactive")}
+                  </span>
+                </div>
+              </div>
 
-            {/* Public Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-4 h-4 text-primery-700 rounded-sm focus:ring-0 cursor-pointer"
-              />
-              <span className="text-xs font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
-                {isRTL ? "درس عمومی باشد" : "Public course"}
-              </span>
-            </label>
+              <div className="tg-switch shrink-0 pointer-events-none" dir="ltr">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  readOnly
+                  tabIndex={-1}
+                />
+                <span className="tg-track" />
+                <span className="tg-thumb" />
+              </div>
+            </button>
+
+            {/* Public Toggle Card */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPublic}
+              onClick={() => setIsPublic((prev) => !prev)}
+              className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer select-none text-start ${
+                isPublic
+                  ? "bg-blue-500/10 border-blue-500/40 text-blue-900 dark:text-blue-300"
+                  : "bg-white dark:bg-neutral-scale1200 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1800 dark:text-neutral-scale70 hover:border-neutral-scale300"
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                    isPublic
+                      ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                      : "bg-neutral-scale100 dark:bg-neutral-scale1100 border-neutral-scale300 dark:border-neutral-scale900 text-transparent"
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-bold leading-tight truncate">
+                    {isRTL ? "درس عمومی باشد" : "Public course"}
+                  </span>
+                  <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
+                    {isPublic
+                      ? (isRTL ? "قابل مشاهده و ثبت‌نام برای همه دانشجویان" : "Open for all students to enroll")
+                      : (isRTL ? "درس به صورت خصوصی ثبت می‌شود" : "Restricted / private course")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="tg-switch shrink-0 pointer-events-none" dir="ltr">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  readOnly
+                  tabIndex={-1}
+                />
+                <span className="tg-track" />
+                <span className="tg-thumb" />
+              </div>
+            </button>
           </div>
 
           {/* Submit Button */}

@@ -32,7 +32,7 @@ import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
 import { voiceApi } from "@/api";
-import { normalizeTextForTTS, warmupQuestionNormalization } from "@/features/voice";
+import { normalizeTextForTTS, warmupQuestionNormalization, detectTextLanguage } from "@/features/voice";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 import { ChatGptOrb } from "@/Components/ChatGptOrb";
 import { detectClientFace, detectFaceWithFallback } from "@/features/biometrics/utils/clientFaceDetector";
@@ -691,10 +691,10 @@ export const StudentExamPage = () => {
     return currentQuestion.split(/\s+/).filter(Boolean);
   }, [currentQuestion]);
 
-  // True if question contains Persian / Arabic characters, false for English / Latin
+  // True if question is Persian, false if English (based on semantic structure)
   const isQuestionRTL = useMemo(() => {
     if (!currentQuestion) return isRTL;
-    return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(currentQuestion);
+    return detectTextLanguage(currentQuestion) === "fa";
   }, [currentQuestion, isRTL]);
 
   // Dynamic direction for student's typed answer
@@ -758,6 +758,7 @@ export const StudentExamPage = () => {
 
       const abortController = new AbortController();
       ttsAbortControllerRef.current = abortController;
+      let speechText = text;
 
       try {
         // Initialize or resume AudioContext
@@ -784,14 +785,15 @@ export const StudentExamPage = () => {
           setIsBufferingTTS(true);
           setSpokenWordCount(0);
 
-          let speechText = text;
-          if (isQuestionRTL) {
-            const courseName =
-              examMeta?.course || passedExam?.course || "سیستم‌های عامل";
+          const courseName =
+            examMeta?.course || passedExam?.course || "سیستم‌های عامل";
+          try {
             speechText = await normalizeTextForTTS(text, courseName);
+          } catch (normErr) {
+            console.warn("[StudentExamPage] Normalization warning:", normErr);
           }
 
-          const res = await voiceApi.streamTTS(speechText);
+          const res = await voiceApi.streamTTS(speechText, courseName);
           if (!res || !res.body) {
             throw new Error("TTS streaming response invalid");
           }
@@ -955,7 +957,7 @@ export const StudentExamPage = () => {
           setIsSpeakingQuestion(true);
           setSpokenWordCount(1);
           window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
+          const utterance = new SpeechSynthesisUtterance(speechText || text);
           utterance.lang = isQuestionRTL ? "fa-IR" : "en-US";
           utterance.rate = 0.95;
 
@@ -1009,13 +1011,13 @@ export const StudentExamPage = () => {
       if (lastAutoPlayedQuestionRef.current !== currentQuestion) {
         lastAutoPlayedQuestionRef.current = currentQuestion;
         setHasFinishedCurrentQuestion(false);
+        const courseName =
+          examMeta?.course || passedExam?.course || "سیستم‌های عامل";
         if (isQuestionRTL) {
-          const courseName =
-            examMeta?.course || passedExam?.course || "سیستم‌های عامل";
           warmupQuestionNormalization(currentQuestion, courseName);
         }
         playQuestionTTS(currentQuestion);
-        // Auto-align voice input language with question language (fa for Persian, en for English)
+        // Align voice input language with question language (fa for Persian, en for English)
         setVoiceLang(isQuestionRTL ? "fa" : "en");
       }
     }

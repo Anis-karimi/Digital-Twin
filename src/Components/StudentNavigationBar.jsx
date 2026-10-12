@@ -14,7 +14,7 @@ import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 import { chatHistoryApi } from "@/api";
 
-export const StudentNavigationBar = ({ swipeIndex = null }) => {
+export const StudentNavigationBar = ({ swipeIndex = null, activeTabId = null }) => {
   const { t, isRTL, currentUser } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,6 +97,8 @@ export const StudentNavigationBar = ({ swipeIndex = null }) => {
     location.pathname.toLowerCase() === "/students";
 
   const getActiveId = () => {
+    if (activeTabId) return activeTabId;
+
     if (isHomePage) return "chats";
 
     if (location.pathname === "/StudentExplore") {

@@ -19,16 +19,11 @@ import { normalizeTextForTTS } from "@/features/voice";
 export async function streamTTS(text, courseContext = "") {
   try {
     let payloadText = text;
-    // Auto-normalize ONLY if text is a Persian sentence containing Latin characters or markdown
-    if (
-      payloadText &&
-      /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(payloadText) &&
-      (/[a-zA-Z]/.test(payloadText) || /[*#`]/.test(payloadText))
-    ) {
+    if (payloadText && typeof payloadText === "string") {
       try {
         payloadText = await normalizeTextForTTS(payloadText, courseContext);
       } catch (normErr) {
-        console.warn("[VoiceApi.streamTTS] Normalization fallback warning:", normErr);
+        console.warn("[VoiceApi.streamTTS] Normalization warning:", normErr);
       }
     }
 

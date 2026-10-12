@@ -1,5 +1,5 @@
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useContext, useEffect, useRef, useState } from "react";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -15,11 +15,16 @@ import { StudentSettings } from "@/Pages/Student/StudentSettings";
 
 import "@/styles/fonts.css";
 
+const MemoStudentHome = React.memo(StudentHome);
+const MemoStudentExplore = React.memo(StudentExplore);
+const MemoStudentExams = React.memo(StudentExams);
+const MemoStudentSettings = React.memo(StudentSettings);
+
 const STUDENT_TABS = [
-  { id: "chats", path: "/Student", component: StudentHome },
-  { id: "explore", path: "/StudentExplore", component: StudentExplore },
-  { id: "exams", path: "/StudentExams", component: StudentExams },
-  { id: "settings", path: "/StudentSettings", component: StudentSettings },
+  { id: "chats", path: "/Student", component: MemoStudentHome },
+  { id: "explore", path: "/StudentExplore", component: MemoStudentExplore },
+  { id: "exams", path: "/StudentExams", component: MemoStudentExams },
+  { id: "settings", path: "/StudentSettings", component: MemoStudentSettings },
 ];
 
 const normalizePath = (pathname) =>
@@ -41,47 +46,46 @@ export const StudentLayout = () => {
   const navigate = useNavigate();
 
   const swiperRef = useRef(null);
+  const isSwipingRef = useRef(false);
 
   const currentIndex = getStudentTabIndex(location.pathname);
   const isMainTab = currentIndex !== -1;
 
   const [activeIndex, setActiveIndex] = useState(Math.max(currentIndex, 0));
-
   const [swipeIndex, setSwipeIndex] = useState(null);
 
-  // Only the initial page is mounted on first load.
-  // Once mounted, a page stays mounted when switching tabs.
-  const [mountedPages, setMountedPages] = useState(() =>
-    currentIndex === -1 ? [] : [currentIndex],
-  );
+  // Pre-mount all tabs so initial swipes are completely smooth and ready with zero blank screens or layout jumps.
+  const [mountedPages] = useState(() => [0, 1, 2, 3]);
 
   const isExamLive =
     location.pathname.toLowerCase().includes("/studentexam/") ||
     location.pathname.toLowerCase().includes("/biometrics");
 
   useEffect(() => {
+    window.scrollTo({ left: 0 });
+    if (document.scrollingElement) {
+      document.scrollingElement.scrollLeft = 0;
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!isMainTab) return;
+
+    if (isSwipingRef.current) {
+      isSwipingRef.current = false;
+      setActiveIndex(currentIndex);
+      return;
+    }
 
     setActiveIndex(currentIndex);
 
-    // Mount the page corresponding to the current URL if needed.
-    setMountedPages((prev) =>
-      prev.includes(currentIndex) ? prev : [...prev, currentIndex],
-    );
-
     const swiper = swiperRef.current;
-
-    if (swiper && !swiper.destroyed) {
-      requestAnimationFrame(() => {
-        if (swiper.destroyed) return;
-
-        swiper.update();
-        swiper.slideTo(currentIndex, 0, false);
-      });
+    if (swiper && !swiper.destroyed && swiper.activeIndex !== currentIndex) {
+      swiper.slideTo(currentIndex, 240, false);
     }
   }, [location.pathname, currentIndex, isMainTab]);
 
-  const handleSwiperChange = (swiper) => {
+  const handleSlideTransitionEnd = (swiper) => {
     setSwipeIndex(null);
     const index = swiper.activeIndex;
 
@@ -89,15 +93,12 @@ export const StudentLayout = () => {
 
     setActiveIndex(index);
 
-    // Mount the destination page when the user swipes to it.
-    // Keep it mounted afterward to preserve its component state.
-    setMountedPages((prev) => (prev.includes(index) ? prev : [...prev, index]));
-
     const targetTab = STUDENT_TABS[index];
     const currentPath = normalizePath(location.pathname);
     const targetPath = normalizePath(targetTab.path);
 
     if (currentPath !== targetPath) {
+      isSwipingRef.current = true;
       navigate(targetTab.path, { replace: true });
     }
   };
@@ -106,7 +107,7 @@ export const StudentLayout = () => {
     const Page = tab.component;
 
     return (
-      <div className="w-full min-w-0 overflow-hidden" data-student-tab={tab.id}>
+      <div className="w-full h-full min-w-0 overflow-hidden" data-student-tab={tab.id}>
         {mountedPages.includes(index) && <Page />}
       </div>
     );
@@ -114,34 +115,26 @@ export const StudentLayout = () => {
 
   return (
     <div
-      className={`min-h-screen w-full min-w-0 overflow-x-hidden transition-all duration-200 ${
+      className={`min-h-screen w-full min-w-0 overflow-x-hidden transition-colors duration-200 ${
         isRTL ? "font-vazir" : "font-inter"
       }`}
       dir={isRTL ? "rtl" : "ltr"}
       lang={language}
     >
       {isMainTab ? (
-        <div className="w-full min-w-0 overflow-hidden">
+        <div className="w-full min-w-0 overflow-hidden" dir="ltr">
           <Swiper
             className="student-tabs-swiper"
             dir="ltr"
             key="student-main-tabs"
             onSwiper={(swiper) => {
               swiperRef.current = swiper;
-
               const index = Math.max(getStudentTabIndex(location.pathname), 0);
-
               setActiveIndex(index);
-              setMountedPages((prev) =>
-                prev.includes(index) ? prev : [...prev, index],
-              );
-
-              requestAnimationFrame(() => {
-                if (swiper.destroyed) return;
-
-                swiper.update();
-                swiper.slideTo(index, 0, false);
-              });
+              swiper.slideTo(index, 0, false);
+            }}
+            onSlideChange={(swiper) => {
+              setActiveIndex(swiper.activeIndex);
             }}
             onTouchMove={(swiper) => {
               const index = swiper.progress * (STUDENT_TABS.length - 1);
@@ -152,12 +145,12 @@ export const StudentLayout = () => {
             onTouchEnd={() => {
               setSwipeIndex(null);
             }}
-            onSlideChange={handleSwiperChange}
+            onSlideChangeTransitionEnd={handleSlideTransitionEnd}
             slidesPerView={1}
             slidesPerGroup={1}
             spaceBetween={0}
-            speed={220}
-            threshold={10}
+            speed={240}
+            threshold={8}
             touchAngle={45}
             simulateTouch={true}
             allowTouchMove={true}
@@ -165,6 +158,9 @@ export const StudentLayout = () => {
             resistanceRatio={0.5}
             allowSlidePrev={true}
             allowSlideNext={true}
+            noSwiping={true}
+            noSwipingClass="swiper-no-swiping"
+            noSwipingSelector=".swiper-no-swiping"
             watchOverflow={true}
             loop={false}
             rewind={false}
@@ -175,13 +171,7 @@ export const StudentLayout = () => {
             }}
           >
             {STUDENT_TABS.map((tab, index) => (
-              <SwiperSlide
-                key={tab.id}
-                style={{
-                  minWidth: 0,
-                  overflow: "hidden",
-                }}
-              >
+              <SwiperSlide key={tab.id} className="w-full h-full overflow-hidden">
                 {renderTab(tab, index)}
               </SwiperSlide>
             ))}
@@ -193,7 +183,10 @@ export const StudentLayout = () => {
 
       {!isExamLive && (
         <FooterGlass>
-          <StudentNavigationBar swipeIndex={swipeIndex} />
+          <StudentNavigationBar
+            swipeIndex={swipeIndex}
+            activeTabId={STUDENT_TABS[activeIndex]?.id}
+          />
         </FooterGlass>
       )}
     </div>

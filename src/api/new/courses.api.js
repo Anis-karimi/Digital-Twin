@@ -9,10 +9,13 @@ import { courses as mockCourses } from "@/data/courses";
 /**
  * Fetches all courses available to the active user.
  * @endpoint GET /courses
+ * @param {Object} [params]
+ * @param {boolean} [params.enrolled_only]
  * @returns {Promise<import("../types").Course[]>}
  */
-export async function getCourses() {
-  const res = await requestWithFallback("/courses", { method: "GET" }, () => mockCourses);
+export async function getCourses(params = {}) {
+  const queryStr = params?.enrolled_only ? "?enrolled_only=true" : "";
+  const res = await requestWithFallback(`/courses${queryStr}`, { method: "GET" }, () => mockCourses);
   return Array.isArray(res) && res.length > 0 ? res : mockCourses;
 }
 

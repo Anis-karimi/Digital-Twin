@@ -21,20 +21,77 @@ import API_CONFIG from "../../api/config.js";
 // In-memory cache: "course:::text" -> normalizedText
 const normalizerCache = new Map();
 
+export const PERSIAN_STRUCTURAL_WORDS = new Set([
+  "در", "به", "با", "از", "برای", "که", "تا", "و", "یا", "این", "آن", "است", "شد", "بود",
+  "باشد", "می‌شود", "میشود", "توضیح", "دهید", "کنید", "چیست", "چگونه", "چرا", "کدام",
+  "آیا", "بررسی", "تعریف", "مقایسه", "نقش", "تفاوت", "بین", "نحوه", "عملکرد", "سیستم",
+  "حافظه", "مدیریت", "انجام", "مگر", "حتی", "نیز", "همیشه", "نیست", "کاربرد", "برنامه",
+  "سخت‌افزار", "نرم‌افزار", "پردازش", "پاسخ", "مفاهیم", "ساختار", "روان", "روش", "چند",
+  "یک", "دو", "سه", "چهار", "پنج", "مورد", "مزایا", "معایب", "ویژگی", "ویژگی‌های",
+  "را", "هم", "دیگر", "یکدیگر", "بگوییم", "اجرا", "دارند", "ارائه", "مجموعه", "حل"
+]);
+
+export const ENGLISH_STRUCTURAL_WORDS = new Set([
+  "the", "is", "are", "was", "were", "of", "in", "to", "and", "a", "an", "that", "this",
+  "for", "as", "with", "by", "on", "at", "from", "which", "what", "how", "why", "who",
+  "when", "where", "explain", "describe", "compare", "based", "provided", "act", "acts",
+  "provide", "consisting", "running", "parallel", "hide", "effects", "between", "does",
+  "do", "did", "can", "could", "would", "should", "will", "discuss", "define", "outline",
+  "list", "following", "true", "false", "difference", "differences"
+]);
+
 /**
- * Checks whether the text is primarily Persian script.
- * If text has 0 Persian characters or is an English sentence, returns false.
+ * Intelligently determines if text is primarily English or Persian with English loanwords:
+ * - If English text: returns 'en' (must be preserved completely as-is).
+ * - If Persian sentence containing English loanwords: returns 'fa' (must be vocalized to Persian).
+ */
+export function detectTextLanguage(text) {
+  if (!text || typeof text !== "string") return "fa";
+  const clean = text.trim();
+  if (!clean) return "fa";
+
+  // Strip metadata/question number prefixes (e.g. "سوال ۱:", "Question 2:")
+  const cleanBody = clean.replace(/^(?:سوال|پرسش|پاسخ|تمرین|تست|درس|question|q)\s*\d*[\s:\-—]*/i, "").trim();
+
+  const persianChars = (cleanBody.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+  if (persianChars === 0) return "en";
+
+  const latinChars = (cleanBody.match(/[a-zA-Z]/g) || []).length;
+  if (latinChars === 0) return "fa";
+
+  const persianWords = cleanBody.toLowerCase().match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]+/g) || [];
+  const latinWords = cleanBody.toLowerCase().match(/[a-zA-Z]+/g) || [];
+
+  let faStructuralCount = 0;
+  for (const w of persianWords) {
+    if (PERSIAN_STRUCTURAL_WORDS.has(w)) faStructuralCount++;
+  }
+
+  let enStructuralCount = 0;
+  for (const w of latinWords) {
+    if (ENGLISH_STRUCTURAL_WORDS.has(w)) enStructuralCount++;
+  }
+
+  // If predominantly English sentence structure (English verbs/prepositions without Persian structural tokens)
+  if (enStructuralCount >= 2 && faStructuralCount === 0) {
+    return "en";
+  }
+
+  // If Persian structure or multiple Persian words present, it is a Persian sentence with loanwords
+  if (faStructuralCount >= 1 || persianWords.length >= 2) {
+    return "fa";
+  }
+
+  return persianWords.length >= latinWords.length ? "fa" : "en";
+}
+
+/**
+ * Checks whether the text is Persian context (returns false for pure English).
  */
 export function isPersianText(text) {
-  if (!text || typeof text !== "string") return false;
-  const persianMatches = text.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g);
-  if (!persianMatches || persianMatches.length === 0) return false;
-  const latinMatches = text.match(/[a-zA-Z]/g);
-  if (!latinMatches || latinMatches.length === 0) return true;
-  const total = persianMatches.length + latinMatches.length;
-  // If at least 20% of letters are Persian, consider it a Persian text with technical loanwords
-  return persianMatches.length / total >= 0.2;
+  return detectTextLanguage(text) === "fa";
 }
+
 
 /**
  * Phonetic transliterations for common English technical terms.
@@ -177,6 +234,7 @@ const TECH_TERMS = [
   [/\bhash table\b/gi, "هَش تِیبِل"],
   [/\bbinary tree\b/gi, "باینِری تِری"],
   [/\bmac address\b/gi, "مَک آدْرِس"],
+  [/\bmode\b/gi, "مُد"],
 
   // Hardware & Architectures
   [/\bi-node\b/gi, "آی‌نود"],
@@ -298,7 +356,7 @@ function numberToPersianWords(num) {
  */
 export function preNormalizeText(text, courseContext = "سیستم‌های عامل") {
   if (!text) return "";
-  if (!isPersianText(text)) return text; // Preserve full English questions!
+  if (detectTextLanguage(text) === "en") return text;
 
   let res = String(text);
 
@@ -335,13 +393,38 @@ export function preNormalizeText(text, courseContext = "سیستم‌های عا
  */
 export function postSanitizeText(text) {
   if (!text) return "";
-  if (!isPersianText(text)) return text; // Do not sanitize pure English!
+  if (detectTextLanguage(text) === "en") return text;
 
   let res = String(text);
 
   // Strip LLM echoes like "درس: سیستم‌های عامل" or "متن: "
   res = res.replace(/^درس:[^\n]*\n?/gm, "");
   res = res.replace(/^متن:[^\n]*\n?/gm, "");
+
+  // Remove illegal ezafe directly on prepositions and conjunctions (ازِ -> از, برایِ -> برای, بهِ -> به)
+  res = res.replace(/(?:^|\s+)(از|برای|به|با|در|که|تا|و|یا|چون|اما|اگر|ولی)[\u0650ـِ]+/g, " $1");
+
+  // Remove illegal ezafe before prepositions, conjunctions, verbs, or question words
+  res = res.replace(
+    /[\u0650ـِ]+(?=\s+(?:در|با|از|به|برای|که|تا|و|یا|چون|اما|اگر|ولی|چگونه|چطور|چرا|چیست|کجا|کی|است|شد|بود|باشد|می‌شود)(?:\s+|$|[،.؛:؟!]))/g,
+    ""
+  );
+  res = res.replace(
+    /(?:ه|ه‌ی|هی)ِ(?=\s+(?:در|با|از|به|برای|که|تا|و|یا|چون|اما|اگر|ولی|چگونه|چطور|چرا|چیست|کجا|کی|است|شد|بود|باشد|می‌شود)(?:\s+|$|[،.؛:؟!]))/g,
+    "ه"
+  );
+
+  // Fix silent he with direct combining kasra (e.g. ارائهِ -> ارائه‌یِ)
+  res = res.replace(/([هة])[\u0650]/g, "$1\u200cی\u0650");
+
+  // Apply technical dictionary to map remaining English terms to Persian phonetics
+  for (const [pattern, rep] of TECH_TERMS) {
+    res = res.replace(pattern, rep);
+  }
+
+  // Remove any remaining parentheses
+  res = res.replace(/\(([^)]+)\)/g, "، $1،");
+  res = res.replace(/[()]/g, "");
 
   // Convert digits to Persian words
   res = res.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
@@ -369,7 +452,7 @@ export function postSanitizeText(text) {
  * @param {string} rawText The original question or sentence to speak
  * @param {string} [courseContext="سیستم‌های عامل"] Current academic course context
  * @param {object} [options]
- * @param {number} [options.timeoutMs=4500] LLM request timeout in ms
+ * @param {number} [options.timeoutMs=45000] LLM request timeout in ms
  * @param {boolean} [options.forceRefresh=false] Bypass cache
  * @returns {Promise<string>} Vocalized text
  */
@@ -378,8 +461,9 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
     return "";
   }
 
-  // CRITICAL CHECK: If text is primarily English, NEVER force it to Persian!
-  if (!isPersianText(rawText)) {
+  // 0. Intelligent Language Detection:
+  // If the text is English, preserve it completely as original English!
+  if (detectTextLanguage(rawText) === "en") {
     return rawText;
   }
 
@@ -390,84 +474,65 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
     return normalizerCache.get(cacheKey);
   }
 
-  // Pre-normalize using high-performance rules
+  // 1. Pre-cleaning (0ms): Clean markdown & resolve loanword parentheses
+  let cleanRaw = String(rawText)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/[*#_~]/g, " ");
+
+  cleanRaw = cleanRaw.replace(/(کش|کَش)\s*\(\s*cache\s*\)/gi, "$1");
+  cleanRaw = cleanRaw.replace(/(کشینگ|کَشینگ)\s*\(\s*caching\s*\)/gi, "$1");
+  cleanRaw = cleanRaw.replace(/\((\s*[a-zA-Z0-9_\-]{2,20}\s*)\)/g, " یا $1 ");
+  cleanRaw = cleanRaw.replace(/\(([^)]+)\)/g, "، $1،");
+  cleanRaw = cleanRaw.replace(/\s+/g, " ").trim();
+
+  // Deterministic rule-based preparation kept strictly for offline/fallback pass
   const prepared = preNormalizeText(rawText, cleanCourse);
 
-  // Direct LLM endpoint requested by user: http://94.184.177.171:8000/v1
-  const llmEndpoint = "http://94.184.177.171:8000/v1/chat/completions";
+  // Hybrid Endpoint: Tier 1 Qwen Lexical Transliteration + Tier 2 ALBERT HomoRich Syntactic Ezafe
+  const vocalizeEndpoint =
+    typeof window !== "undefined"
+      ? "/api/v1/llm/vocalize"
+    : `${(API_CONFIG.BACKEND_URL || "http://localhost:7000").replace(/\/+$/, "")}/api/v1/llm/vocalize`;
 
-  const systemPrompt = `شما متخصص آوانگاری زبان فارسی برای سیستم صوتی تبدیل متن به گفتار (Text-to-Speech) هستید.
-وظیفه شما: متن ورودی را برای خوانده شدن کاملاً روان، رسا و طبیعی توسط گوینده صوتی، به خط ۱۰۰٪ فارسی بازنویسی و اعراب‌گذاری کنید.
-
-قوانین حیاتی و اختصاصی:
-۱. شما هرگز به سوالات پاسخ نمی‌دهید؛ فقط عین جملات ورودی را بازنویسی صوتی کنید.
-۲. عبارات داخل پرانتز معادل:
-   - اگر داخل پرانتز معادل انگلیسی برای یک کلمه فارسی است (ترجمه + اصطلاح اصلی مانند «هسته (kernel)» یا «زمینه (context)»)، با «یا» بخوانید: «هَسته یا کِرنِل»، «زَمینه یا کانتِکست».
-   - اگر کلمه فارسی خود همان اصطلاح خارجی است (مانند «کش (cache)» یا «کشینگ (caching)»)، نیازی به تکرار نیست؛ فقط همان کلمه را با اعراب و تلفظ دقیق بنویسید: «کَش» (با فتحه، نه کِش)، «کَشینگ».
-۳. در درس سیستم عامل، کلمه «کش» مخفف Cache است و باید حتماً به صورت «کَش» (با فتحه) تلفظ شود و در ترکیب‌ها کسره اضافه («ـِ») داشته باشد: «حافظه‌یِ کَش»، «سطحِ کَش».
-۴. اصطلاحات فنی انگلیسی در متن (مانند i-node -> آی‌نود، CPU -> سی‌پی‌یو، Thread -> تِرِد) را به تلفظ صوتی فارسی بنویسید.
-۵. تمام نمادهای مارک‌داون (*, #, \`, _) و پرانتزها را حذف یا به مکث صوتی تبدیل کنید.
-۶. خروجی فقط و فقط متن نهایی فارسی باشد بدون هیچ توضیح، پیشوند یا نقل قول.`;
-
-  const fewShots = [
-    {
-      role: "user",
-      content: "درس: سیستم‌های عامل\nمتن: بسته به زمینه (context) خاص، هسته (kernel) حافظه کش (cache) را مدیریت می‌کند."
-    },
-    {
-      role: "assistant",
-      content: "بسته به زمینه یا کانتِکست خاص، هَسته یا کِرنِل، حافظه‌یِ کَش را مدیریت می‌کند."
-    },
-    {
-      role: "user",
-      content: "درس: سیستم‌های عامل\nمتن: کشینگ (caching) برای بهبود عملکرد و کاهش Page Fault در پروسس‌ها به کار می‌رود."
-    },
-    {
-      role: "assistant",
-      content: "کَشینگ برای بهبودِ عملکرد و کاهشِ پِیج فالت در پِروسِس‌ها به کار می‌رود."
-    }
-  ];
-
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...fewShots,
-    { role: "user", content: `درس: ${cleanCourse}\nمتن: ${prepared}` }
-  ];
-
-  const timeoutMs = options.timeoutMs || 4500;
+  const timeoutMs = options.timeoutMs || 45000;
 
   try {
     const controller = new AbortController();
     const timeoutTimer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(llmEndpoint, {
+    // 1. Try unified Production Hybrid Vocalization Endpoint
+    const hybridResponse = await fetch(vocalizeEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: API_CONFIG.LLM_MODEL || "Qwen/Qwen2.5-7B-Instruct-AWQ",
-        messages,
-        temperature: 0.05,
-        max_tokens: 450
+        text: rawText,
+        course_context: cleanCourse,
+        apply_ezafe: true
       }),
       signal: controller.signal
     });
 
     clearTimeout(timeoutTimer);
 
-    if (response.ok) {
-      const data = await response.json();
-      const output = data?.choices?.[0]?.message?.content?.trim();
-      if (output && output.length > 5) {
-        const sanitized = postSanitizeText(output);
+    if (hybridResponse.ok) {
+      const hybridData = await hybridResponse.json();
+      if (hybridData?.detected_language === "en") {
+        normalizerCache.set(cacheKey, rawText);
+        return rawText;
+      }
+      const vocalized = hybridData?.vocalized_text?.trim();
+      if (vocalized && vocalized.length > 3) {
+        const sanitized = postSanitizeText(vocalized);
         normalizerCache.set(cacheKey, sanitized);
         return sanitized;
       }
     }
-  } catch (err) {
-    console.warn(
-      `[voiceTextNormalizer] LLM vocalization skipped (${err.name}: ${err.message}). Using deterministic phonetic fallback.`
+  } catch (hybridErr) {
+    console.debug(
+      `[voiceTextNormalizer] Hybrid vocalize unavailable (${hybridErr.name}: ${hybridErr.message}), falling back.`
     );
   }
 
@@ -482,7 +547,7 @@ export async function normalizeTextForTTS(rawText, courseContext = "سیستم�
  */
 export function warmupQuestionNormalization(rawText, courseContext = "سیستم‌های عامل") {
   if (!rawText || typeof rawText !== "string") return;
-  if (!isPersianText(rawText)) return; // Don't pre-warm pure English text!
+  if (detectTextLanguage(rawText) === "en") return;
   const cleanCourse = (courseContext || "سیستم‌های عامل").trim();
   const cacheKey = `${cleanCourse}:::${rawText.trim()}`;
   if (normalizerCache.has(cacheKey)) return;
@@ -495,9 +560,10 @@ export function warmupQuestionNormalization(rawText, courseContext = "سیستم
 export default {
   normalizeTextForTTS,
   warmupQuestionNormalization,
+  detectTextLanguage,
+  isPersianText,
   preNormalizeText,
   postSanitizeText,
-  isPersianText,
   resolveParenthesesTerms,
   disambiguateTechnicalPersian
 };

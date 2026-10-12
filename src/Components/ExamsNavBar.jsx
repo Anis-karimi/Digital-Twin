@@ -56,12 +56,17 @@ export const ExamsNavBar = ({
 
   const scrollTabIntoView = (tabId) => {
     const el = tabsRef.current[tabId];
-    if (!el) return;
+    const container = containerRef.current;
+    if (!el || !container) return;
 
-    el.scrollIntoView({
+    const containerWidth = container.clientWidth;
+    const elLeft = el.offsetLeft;
+    const elWidth = el.offsetWidth;
+    const targetScroll = elLeft - containerWidth / 2 + elWidth / 2;
+
+    container.scrollTo({
+      left: Math.max(0, targetScroll),
       behavior: "smooth",
-      inline: "center",
-      block: "nearest",
     });
   };
 
@@ -97,7 +102,146 @@ export const ExamsNavBar = ({
     return () => clearTimeout(timer);
   }, [activeTab]);
 
+  const isMouseDownRef = useRef(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const startScrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false);
+  const dragDeltaXRef = useRef(0);
+
+  // Stop native events from bubbling up to layout Swiper
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const stopPropagation = (e) => {
+      e.stopPropagation();
+    };
+
+    container.addEventListener("touchstart", stopPropagation, { passive: true });
+    container.addEventListener("touchmove", stopPropagation, { passive: true });
+    container.addEventListener("touchend", stopPropagation, { passive: true });
+    container.addEventListener("touchcancel", stopPropagation, { passive: true });
+    container.addEventListener("mousedown", stopPropagation);
+    container.addEventListener("pointerdown", stopPropagation);
+
+    return () => {
+      container.removeEventListener("touchstart", stopPropagation);
+      container.removeEventListener("touchmove", stopPropagation);
+      container.removeEventListener("touchend", stopPropagation);
+      container.removeEventListener("touchcancel", stopPropagation);
+      container.removeEventListener("mousedown", stopPropagation);
+      container.removeEventListener("pointerdown", stopPropagation);
+    };
+  }, []);
+
+  const finishDrag = (deltaX) => {
+    const threshold = 35;
+    const currentIndex = items.findIndex((item) => item.id === activeTab);
+    let targetIndex = currentIndex;
+
+    // In both RTL and LTR:
+    // Dragging left (deltaX < -threshold) moves to next tab
+    // Dragging right (deltaX > threshold) moves to prev tab
+    if (deltaX < -threshold && currentIndex < items.length - 1) {
+      targetIndex = currentIndex + 1;
+    } else if (deltaX > threshold && currentIndex > 0) {
+      targetIndex = currentIndex - 1;
+    }
+
+    if (targetIndex !== currentIndex && targetIndex >= 0 && targetIndex < items.length) {
+      const nextTab = items[targetIndex].id;
+      onTabChange?.(nextTab);
+      scrollTabIntoView(nextTab);
+    } else {
+      scrollTabIntoView(activeTab);
+    }
+  };
+
+  // Global mouse drag handling for smooth desktop tracking
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isMouseDownRef.current) return;
+      const deltaX = e.pageX - startXRef.current;
+      if (Math.abs(deltaX) > 5) {
+        hasDraggedRef.current = true;
+        dragDeltaXRef.current = deltaX;
+        if (containerRef.current) {
+          containerRef.current.scrollLeft = startScrollLeftRef.current - deltaX;
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isMouseDownRef.current) return;
+      isMouseDownRef.current = false;
+      if (hasDraggedRef.current) {
+        finishDrag(dragDeltaXRef.current);
+      }
+      setTimeout(() => {
+        hasDraggedRef.current = false;
+      }, 50);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [activeTab, isRTL, items]);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    isMouseDownRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX;
+    dragDeltaXRef.current = 0;
+    if (containerRef.current) {
+      startScrollLeftRef.current = containerRef.current.scrollLeft;
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    hasDraggedRef.current = false;
+    if (e.touches && e.touches[0]) {
+      startXRef.current = e.touches[0].pageX;
+      startYRef.current = e.touches[0].pageY;
+      dragDeltaXRef.current = 0;
+      if (containerRef.current) {
+        startScrollLeftRef.current = containerRef.current.scrollLeft;
+      }
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!e.touches || !e.touches[0]) return;
+    const currentX = e.touches[0].pageX;
+    const currentY = e.touches[0].pageY;
+    const deltaX = currentX - startXRef.current;
+    const deltaY = currentY - startYRef.current;
+
+    if (!hasDraggedRef.current && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+      return;
+    }
+
+    if (Math.abs(deltaX) > 6) {
+      hasDraggedRef.current = true;
+      dragDeltaXRef.current = deltaX;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (hasDraggedRef.current) {
+      finishDrag(dragDeltaXRef.current);
+    }
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  };
+
   const handleTabClick = (tabId) => {
+    if (hasDraggedRef.current) return;
     onTabChange?.(tabId);
     scrollTabIntoView(tabId);
   };
@@ -106,12 +250,16 @@ export const ExamsNavBar = ({
     <nav
       aria-label={isRTL ? "دسته‌بندی آزمون‌ها" : "Exams Navigation"}
       dir={isRTL ? "rtl" : "ltr"}
-      className="flex w-full items-center px-3.5 pt-2 pb-1.5 z-20 shrink-0"
+      className="flex w-full items-center px-3.5 pt-2 pb-1.5 z-20 shrink-0 swiper-no-swiping"
     >
       <div
         ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        className="relative flex-1 grow h-[38px] bg-[#f8fcfd] dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[20px] overflow-x-auto overflow-y-hidden scroll-smooth shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#2828281a,-1px_0px_3px_0.1px_#2828281a] no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="relative flex-1 grow h-[38px] bg-[#f8fcfd] dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[20px] overflow-x-auto overflow-y-hidden shadow-[0px_-1px_3px_0.1px_#2828281a,0px_1px_3px_0.1px_#2828281a,1px_0px_3px_0.1px_#2828281a,-1px_0px_3px_0.1px_#2828281a] no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden swiper-no-swiping cursor-grab active:cursor-grabbing select-none"
       >
         <div
           ref={tablistRef}

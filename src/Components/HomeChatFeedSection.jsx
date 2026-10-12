@@ -12,15 +12,27 @@ import { isPersianText } from "@/utils/textUtils";
 export const HomeChatFeedSection = () => {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
-  const { isRTL, t } = useContext(AppContext);
+  const { isRTL, t, role, currentUser } = useContext(AppContext);
+
+  const isStudentRole = Boolean(
+    (role && role.toLowerCase() === "student") ||
+    (currentUser?.role && currentUser.role.toLowerCase() === "student") ||
+    (currentUser?.user_type && currentUser.user_type.toUpperCase() === "STUDENT") ||
+    localStorage.getItem("user_role") === "student"
+  );
 
   const fetchChats = useCallback(() => {
-    coursesApi.getCourses().then((data) => {
+    coursesApi.getCourses({ enrolled_only: isStudentRole }).then((data) => {
       if (Array.isArray(data)) {
-        setChats(data);
+        if (isStudentRole) {
+          // Only show courses the student is actually enrolled in within the active chats feed
+          setChats(data.filter((c) => Boolean(c.is_enrolled)));
+        } else {
+          setChats(data);
+        }
       }
     });
-  }, []);
+  }, [isStudentRole]);
 
   useEffect(() => {
     fetchChats();

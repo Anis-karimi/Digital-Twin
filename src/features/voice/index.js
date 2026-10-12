@@ -9,6 +9,7 @@ export {
   preNormalizeText,
   postSanitizeText,
   isPersianText,
+  detectTextLanguage,
   resolveParenthesesTerms,
   disambiguateTechnicalPersian
 } from "./voiceTextNormalizer";
