@@ -1074,3 +1074,20 @@ div[data-voice-beam].chat-bubble-student {
 .animate-hud-pulse {
   animation: hud-reticle-pulse 2s ease-in-out infinite;
 }
+
+ .student-tabs-swiper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.student-tabs-swiper > .swiper-wrapper {
+  display: flex;
+}
+
+/* .student-tabs-swiper > .swiper-wrapper > .swiper-slide {
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+} */
