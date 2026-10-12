@@ -9,7 +9,7 @@ import {
   Sparkles,
   AlertCircle,
   AlertTriangle,
-  PhoneOff,
+  DoorOpen,
   Volume2,
   VolumeX,
   UserCheck,
@@ -1494,7 +1494,7 @@ export const StudentExamPage = () => {
           className="w-10 h-10 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-90 transition-all cursor-pointer shrink-0"
           title={isRTL ? "پایان و خروج از آزمون" : "Exit Exam"}
         >
-          <PhoneOff className="w-4 h-4" />
+          <DoorOpen className="w-4 h-4" />
         </button>
 
         {isIdentityVerified ? (
@@ -1788,7 +1788,7 @@ export const StudentExamPage = () => {
             </div>
             <div className="space-y-1.5">
               <h3 className="text-sm font-bold text-white font-vazir">
-                {isRTL ? "در حال برقراری تماس با استاد هوش مصنوعی..." : "Connecting to AI Examiner..."}
+                {isRTL ? "در حال آماده سازی ازمون " : "Connecting to Exam..."}
               </h3>
               <p className="text-xs text-slate-300 font-vazir leading-relaxed">
                 {isRTL ? "جلسه آزمون شفاهی در حال آماده‌سازی است." : "Oral exam room is being initialized."}
@@ -2367,12 +2367,12 @@ export const StudentExamPage = () => {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="w-full max-w-[320px] rounded-3xl bg-slate-900 border border-white/20 p-6 shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500 text-rose-400 mx-auto flex items-center justify-center shadow-lg shadow-rose-500/20">
-              <PhoneOff className="w-6 h-6" />
+              <DoorOpen className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
               <h3 className="text-base font-bold text-white font-vazir">
-                {isRTL ? "قطع تماس و خروج از آزمون" : "Leave Exam Call"}
+                {isRTL ? "خروج از آزمون" : "Leave Exam"}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed font-vazir">
                 {isRTL
