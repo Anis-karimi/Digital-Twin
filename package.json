@@ -28,6 +28,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
+    "swiper": "^14.3.0",
     "thinking-orbs": "^0.3.2",
     "vite-plugin-svgr": "^5.2.0",
     "voice-glow": "^0.2.1"

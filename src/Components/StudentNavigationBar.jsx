@@ -14,7 +14,7 @@ import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 import { chatHistoryApi } from "@/api";
 
-export const StudentNavigationBar = () => {
+export const StudentNavigationBar = ({ swipeIndex = null }) => {
   const { t, isRTL, currentUser } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,12 +26,14 @@ export const StudentNavigationBar = () => {
   });
   const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
 
-  const studentId = currentUser?.user_id || "ef6125a3-d179-442c-a9be-b4cd82e8ada6";
+  const studentId =
+    currentUser?.user_id || "ef6125a3-d179-442c-a9be-b4cd82e8ada6";
 
   useEffect(() => {
     let isMounted = true;
     const fetchUnread = () => {
-      chatHistoryApi.getUnreadCommentsSummary(studentId)
+      chatHistoryApi
+        .getUnreadCommentsSummary(studentId)
         .then((res) => {
           if (isMounted && res && typeof res.unread_count === "number") {
             setUnreadCommentsCount(res.unread_count);
@@ -95,34 +97,64 @@ export const StudentNavigationBar = () => {
     location.pathname.toLowerCase() === "/students";
 
   const getActiveId = () => {
-  if (isHomePage) return "chats";
+    if (isHomePage) return "chats";
 
-  if (location.pathname === "/StudentExplore") {
-    return "explore";
-  }
+    if (location.pathname === "/StudentExplore") {
+      return "explore";
+    }
 
-  if (
-    location.pathname === "/StudentSettings" ||
-    location.pathname.toLowerCase() === "/language" ||
-    location.pathname.toLowerCase() === "/theme"
-  ) {
-    return "settings";
-  }
+    if (
+      location.pathname === "/StudentSettings" ||
+      location.pathname.toLowerCase() === "/language" ||
+      location.pathname.toLowerCase() === "/theme"
+    ) {
+      return "settings";
+    }
 
-  if (
-    location.pathname.toLowerCase() === "/studentexams" ||
-    location.pathname.toLowerCase().startsWith("/studentexam")
-  ) {
-    return "exams";
-  }
+    if (
+      location.pathname.toLowerCase() === "/studentexams" ||
+      location.pathname.toLowerCase().startsWith("/studentexam")
+    ) {
+      return "exams";
+    }
 
-  return null;
-};
+    return null;
+  };
 
   const activeId = getActiveId();
 
+  const handleNavigate = (item) => {
+    if (item.disabled || !item.route) return;
+
+    navigate(item.route);
+  };
+
   // Active indicator position
   useEffect(() => {
+    // هنگام سوایپ، موقعیت نشانگر از موقعیت انگشت می‌آید.
+    if (typeof swipeIndex === "number") {
+      const lowerIndex = Math.floor(swipeIndex);
+      const upperIndex = Math.min(lowerIndex + 1, navItems.length - 1);
+      const progress = swipeIndex - lowerIndex;
+
+      const lowerItem = itemsRef.current[navItems[lowerIndex]?.id];
+      const upperItem = itemsRef.current[navItems[upperIndex]?.id];
+
+      if (!lowerItem || !upperItem) return;
+
+      setIndicatorStyle({
+        width:
+          lowerItem.offsetWidth +
+          (upperItem.offsetWidth - lowerItem.offsetWidth) * progress,
+        left:
+          lowerItem.offsetLeft +
+          (upperItem.offsetLeft - lowerItem.offsetLeft) * progress,
+      });
+
+      return;
+    }
+
+    // خارج از سوایپ، نشانگر از مسیر فعال پیروی می‌کند.
     const el = itemsRef.current[activeId];
 
     if (!el) return;
@@ -131,13 +163,7 @@ export const StudentNavigationBar = () => {
       width: el.offsetWidth,
       left: el.offsetLeft,
     });
-  }, [activeId, location.pathname]);
-
-  const handleNavigate = (item) => {
-    if (item.disabled || !item.route) return;
-    navigate(item.route);
-  };
-
+  }, [activeId, location.pathname, swipeIndex]);
 
   return (
     <nav
@@ -162,17 +188,19 @@ export const StudentNavigationBar = () => {
         {/* Active Indicator */}
         {activeId && (
           <div
-            className=" 
-            absolute 
-            top-1/2 
-            h-[44px] 
-            bg-primery-90 
-            rounded-[23px] 
-            transition-all 
-            duration-300 
-            ease-out 
-            pointer-events-none 
-          "
+            className={`
+      absolute
+      top-1/2
+      h-[44px]
+      bg-primery-90
+      rounded-[23px]
+      pointer-events-none
+      ${
+        typeof swipeIndex === "number"
+          ? "transition-none"
+          : "transition-all duration-300 ease-out"
+      }
+    `}
             style={{
               width: `calc(${indicatorStyle.width}px - 10px)`,
               transform: `translate(${indicatorStyle.left + 4}px, -50%)`,
