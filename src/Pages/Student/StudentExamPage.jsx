@@ -174,14 +174,6 @@ export const StudentExamPage = () => {
   // 1. Initial Face Verification before letting student take the exam
   const handleVerifyIdentity = useCallback(async () => {
     if (isVerifyingIdentity || isVerifiedSuccess) return;
-    if (faceStatusRef.current !== "face_locked" || !faceBoxRef.current) {
-      setVerificationError(
-        isRTL
-          ? "صورت خود را در کادر قرار دهید تا کادر آبی شود، سپس دکمه را بزنید."
-          : "Position your face in the frame until locked in blue, then click."
-      );
-      return;
-    }
     setIsVerifyingIdentity(true);
     setIsScanning(true);
     setVerificationError("");
@@ -383,14 +375,14 @@ export const StudentExamPage = () => {
       if (!isMounted || isBusy || isVerifiedSuccess) return;
       const video = videoRef.current;
       const container = containerRef.current;
-      if (!video || video.readyState < 2 || !container) return;
+      if (!video || video.readyState < 2) return;
 
       isBusy = true;
       try {
         const vw = video.videoWidth || 640;
         const vh = video.videoHeight || 480;
-        const cw = container.clientWidth || 360;
-        const ch = container.clientHeight || 640;
+        const cw = container?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 360);
+        const ch = container?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 640);
 
         const scale = Math.max(cw / vw, ch / vh);
         const renderedW = vw * scale;
@@ -1480,6 +1472,7 @@ export const StudentExamPage = () => {
 
   return (
     <main
+      ref={containerRef}
       dir={isRTL ? "rtl" : "ltr"}
       className="relative w-full md:w-[360px] h-dvh mx-auto overflow-hidden bg-slate-950 text-white flex flex-col select-none shadow-2xl"
     >

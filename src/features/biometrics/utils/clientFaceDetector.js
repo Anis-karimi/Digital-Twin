@@ -104,23 +104,23 @@ export function detectClientFace(video, canvas) {
 
       // 1. REJECT NEUTRAL WALLS & CEILING:
       // White, off-white, and grey plaster walls have almost zero chroma difference between R, G, B
-      const isNeutralWall = Math.abs(r - g) < 14 && Math.abs(r - b) < 16 && Math.abs(g - b) < 14;
+      const isNeutralWall = Math.abs(r - g) < 11 && Math.abs(r - b) < 13 && Math.abs(g - b) < 11;
 
       // 2. TRUE HUMAN SKIN CHROMINANCE:
-      // Human skin has distinct red/warm component (Cr > 132, r > g+3, r > b+10)
+      // Robust across diverse mobile cameras, skin tones and indoor lighting
       const isSkinHue =
         !isNeutralWall &&
         Y > 20 &&
         Y < 252 &&
-        r > 38 &&
-        g > 20 &&
-        b > 12 &&
-        r > g + 3 &&
-        r > b + 10 &&
-        Cr >= 132 &&
-        Cr <= 192 &&
-        Cb >= 64 &&
-        Cb <= 140;
+        r > 35 &&
+        g > 18 &&
+        b > 10 &&
+        r >= g &&
+        r > b + 4 &&
+        Cr >= 129 &&
+        Cr <= 195 &&
+        Cb >= 60 &&
+        Cb <= 145;
 
       if (isSkinHue) {
         skinPixels.push({ x, y });
