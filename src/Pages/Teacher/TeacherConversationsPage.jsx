@@ -1,5 +1,7 @@
 import { useState, useContext, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 
@@ -88,15 +90,37 @@ export const TeacherConversationsPage = () => {
     };
   }, []);
 
-  // Determine active tab ID from route
-  const getActiveTabId = useCallback(() => {
+  // Helper to test if current pathname is a lesson route
+  const isLessonPath = useCallback((path) => {
+    const p = (path || "").toLowerCase().replace(/\/+$/, "") || "/";
+    return p === "/" || p.startsWith("/teacherlessonspage");
+  }, []);
+
+  // Determine active lesson tab ID from route
+  const getLessonIdFromPath = useCallback(() => {
     if (params.lessonId) return params.lessonId;
-    const match = location.pathname.match(/\/TeacherLessonsPage\/([^/]+)/);
+    const match = location.pathname.match(/\/TeacherLessonsPage\/([^/]+)/i);
     if (match) return match[1];
-    return "lessons";
+    if (location.pathname === "/") return "lessons";
+    return null;
   }, [params.lessonId, location.pathname]);
 
-  const activeTabId = getActiveTabId();
+  const [activeTabId, setActiveTabId] = useState(() => {
+    const fromPath = getLessonIdFromPath();
+    if (fromPath) return fromPath;
+    const saved = sessionStorage.getItem("last_teacher_lesson");
+    if (saved && saved !== "lessons") return saved;
+    return "lessons";
+  });
+
+  // Sync activeTabId ONLY when route is a lesson route
+  useEffect(() => {
+    if (!isLessonPath(location.pathname)) return;
+
+    const fromPath = getLessonIdFromPath() || "lessons";
+    setActiveTabId(fromPath);
+    sessionStorage.setItem("last_teacher_lesson", fromPath);
+  }, [location.pathname, getLessonIdFromPath, isLessonPath]);
 
   // Find index of current active tab
   const currentIndex = Math.max(
@@ -104,208 +128,39 @@ export const TeacherConversationsPage = () => {
     items.findIndex((item) => item.id === activeTabId)
   );
 
-  // Navigate to target tab
+  // Navigate to target tab (ONLY when on a lesson route)
   const navigateToTab = useCallback(
     (item, replace = true) => {
+      if (!isLessonPath(location.pathname)) return;
+
       if (item.id === "lessons") {
         navigate("/", { replace });
       } else {
         navigate(`/TeacherLessonsPage/${item.id}`, { replace });
       }
     },
-    [navigate]
+    [navigate, location.pathname, isLessonPath]
   );
 
-  // Reset drag on route change
+  // Reset drag state on route change
   useEffect(() => {
     setDragOffset(0);
     setIsDragging(false);
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  const wasDraggingRef = useRef(false);
+  // Reference to lesson Swiper
+  const lessonSwiperRef = useRef(null);
 
-  // Touch Handlers
-  const handleTouchStart = (e) => {
-    if (e.touches.length !== 1) return;
-    const touch = e.touches[0];
+  // Sync lesson Swiper when currentIndex changes (ONLY when on a lesson route)
+  useEffect(() => {
+    if (!isLessonPath(location.pathname)) return;
 
-    touchStartX.current = touch.clientX;
-    touchStartY.current = touch.clientY;
-    touchStartTime.current = Date.now();
-    directionLocked.current = null;
-    wasDraggingRef.current = false;
-    setIsDragging(false);
-    setDragOffset(0);
-  };
-
-  const handleTouchMove = (e) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    if (e.touches.length !== 1) return;
-
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartX.current;
-    const deltaY = touch.clientY - touchStartY.current;
-
-    // Detect direction in early gesture
-    if (!directionLocked.current) {
-      if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
-        directionLocked.current = "vertical";
-        return;
-      }
-      if (Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        directionLocked.current = "horizontal";
-        wasDraggingRef.current = true;
-        setIsDragging(true);
-      }
+    const swiper = lessonSwiperRef.current;
+    if (swiper && !swiper.destroyed && swiper.activeIndex !== currentIndex) {
+      swiper.slideTo(currentIndex, 240, false);
     }
-
-    if (directionLocked.current !== "horizontal") {
-      return;
-    }
-
-    // Apply elastic resistance at bounds
-    let effectiveDeltaX = deltaX;
-    const isFirst = currentIndex === 0;
-    const isLast = currentIndex === items.length - 1;
-
-    if (isRTL) {
-      // In RTL: deltaX > 0 goes to NEXT (index + 1)
-      // deltaX < 0 goes to PREV (index - 1)
-      if (deltaX > 0 && isLast) {
-        effectiveDeltaX = deltaX * 0.25;
-      } else if (deltaX < 0 && isFirst) {
-        effectiveDeltaX = deltaX * 0.25;
-      }
-    } else {
-      // In LTR: deltaX < 0 goes to NEXT (index + 1)
-      // deltaX > 0 goes to PREV (index - 1)
-      if (deltaX < 0 && isLast) {
-        effectiveDeltaX = deltaX * 0.25;
-      } else if (deltaX > 0 && isFirst) {
-        effectiveDeltaX = deltaX * 0.25;
-      }
-    }
-
-    setDragOffset(effectiveDeltaX);
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStartX.current === null) return;
-
-    const deltaX = dragOffset;
-    const elapsed = Date.now() - touchStartTime.current;
-    const width = viewportWidth || 360;
-    const wasHorizontal = directionLocked.current === "horizontal";
-
-    touchStartX.current = null;
-    touchStartY.current = null;
-    directionLocked.current = null;
-
-    if (!wasHorizontal || Math.abs(deltaX) < 5) {
-      setIsDragging(false);
-      setDragOffset(0);
-      wasDraggingRef.current = false;
-      return;
-    }
-
-    // Mark as having dragged so click events on child cards are absorbed
-    setTimeout(() => {
-      wasDraggingRef.current = false;
-    }, 120);
-
-    // Thresholds: 20% distance or fast flick (> 0.35 px/ms)
-    const velocity = Math.abs(deltaX) / Math.max(1, elapsed);
-    const distanceThreshold = width * 0.2;
-    const isFlick = velocity > 0.35 && Math.abs(deltaX) > 25;
-    const passed = Math.abs(deltaX) > distanceThreshold || isFlick;
-
-    let targetIndex = currentIndex;
-
-    if (passed) {
-      if (isRTL) {
-        // In RTL: swipe right (deltaX > 0) -> Next; swipe left (deltaX < 0) -> Prev
-        if (deltaX > 0 && currentIndex < items.length - 1) {
-          targetIndex = currentIndex + 1;
-        } else if (deltaX < 0 && currentIndex > 0) {
-          targetIndex = currentIndex - 1;
-        }
-      } else {
-        // In LTR: swipe left (deltaX < 0) -> Next; swipe right (deltaX > 0) -> Prev
-        if (deltaX < 0 && currentIndex < items.length - 1) {
-          targetIndex = currentIndex + 1;
-        } else if (deltaX > 0 && currentIndex > 0) {
-          targetIndex = currentIndex - 1;
-        }
-      }
-    }
-
-    setIsDragging(false);
-    setDragOffset(0);
-
-    if (targetIndex !== currentIndex && items[targetIndex]) {
-      navigateToTab(items[targetIndex], true);
-    }
-  };
-
-  const handleTouchCancel = () => {
-    touchStartX.current = null;
-    touchStartY.current = null;
-    directionLocked.current = null;
-    setIsDragging(false);
-    setDragOffset(0);
-    wasDraggingRef.current = false;
-  };
-
-  // Mouse drag support for desktop/testing
-  const handleMouseDown = (e) => {
-    if (e.button !== 0) return;
-    touchStartX.current = e.clientX;
-    touchStartY.current = e.clientY;
-    touchStartTime.current = Date.now();
-    directionLocked.current = null;
-    wasDraggingRef.current = false;
-    setIsDragging(false);
-    setDragOffset(0);
-  };
-
-  const handleMouseMove = (e) => {
-    if (touchStartX.current === null) return;
-    const deltaX = e.clientX - touchStartX.current;
-    const deltaY = e.clientY - touchStartY.current;
-
-    if (!directionLocked.current) {
-      if (Math.abs(deltaY) > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
-        directionLocked.current = "vertical";
-        return;
-      }
-      if (Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        directionLocked.current = "horizontal";
-        wasDraggingRef.current = true;
-        setIsDragging(true);
-      }
-    }
-
-    if (directionLocked.current !== "horizontal") return;
-
-    let effectiveDeltaX = deltaX;
-    const isFirst = currentIndex === 0;
-    const isLast = currentIndex === items.length - 1;
-
-    if (isRTL) {
-      if (deltaX > 0 && isLast) effectiveDeltaX = deltaX * 0.25;
-      else if (deltaX < 0 && isFirst) effectiveDeltaX = deltaX * 0.25;
-    } else {
-      if (deltaX < 0 && isLast) effectiveDeltaX = deltaX * 0.25;
-      else if (deltaX > 0 && isFirst) effectiveDeltaX = deltaX * 0.25;
-    }
-
-    setDragOffset(effectiveDeltaX);
-  };
-
-  const handleMouseUp = () => {
-    handleTouchEnd();
-  };
+  }, [currentIndex, location.pathname, isLessonPath]);
 
   return (
     <main
@@ -430,62 +285,68 @@ export const TeacherConversationsPage = () => {
       )}
 
       {/* ==================================================
-          SWIPEABLE PRE-RENDERED VIEWS TRACK
+          SWIPEABLE PRE-RENDERED VIEWS TRACK (Nested Swiper)
       ================================================== */}
       <section
         ref={viewportRef}
         aria-label={isRTL ? "بخش گفتگوها" : "Conversations track"}
-        className="absolute top-[105px] left-0 right-0 bottom-0 overflow-hidden select-none cursor-grab active:cursor-grabbing"
-        style={{
-          touchAction: "pan-y",
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClickCapture={(e) => {
-          if (wasDraggingRef.current) {
-            e.stopPropagation();
-            e.preventDefault();
-          }
-        }}
+        className="absolute top-[105px] left-0 right-0 bottom-0 overflow-hidden"
       >
-        <div className="relative w-full h-full">
-          {items.map((item, index) => {
-            // Slide positioning based on layout direction
-            const offsetPx = isRTL
-              ? (currentIndex - index) * viewportWidth + dragOffset
-              : (index - currentIndex) * viewportWidth + dragOffset;
+        <Swiper
+          className="teacher-lessons-swiper w-full h-full"
+          dir="ltr"
+          nested={true}
+          touchReleaseOnEdges={true}
+          slidesPerView={1}
+          slidesPerGroup={1}
+          spaceBetween={0}
+          speed={240}
+          threshold={8}
+          touchAngle={45}
+          simulateTouch={true}
+          allowTouchMove={true}
+          resistance={true}
+          resistanceRatio={0.5}
+          onSwiper={(swiper) => {
+            lessonSwiperRef.current = swiper;
+            swiper.slideTo(currentIndex, 0, false);
+          }}
+          onSlideChange={(swiper) => {
+            if (!isLessonPath(location.pathname)) return;
 
-            // Only hide distant slides beyond immediate neighbors for performance
-            const isDistant = Math.abs(currentIndex - index) > 2;
-
-            return (
-              <div
-                key={item.id}
-                className="absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden"
-                style={{
-                  transform: `translate3d(${offsetPx}px, 0, 0)`,
-                  transition: isDragging
-                    ? "none"
-                    : "transform 300ms cubic-bezier(0.25, 1, 0.5, 1)",
-                  willChange: "transform",
-                  visibility: isDistant ? "hidden" : "visible",
-                }}
-              >
+            const newIndex = swiper.activeIndex;
+            if (newIndex >= 0 && newIndex < items.length) {
+              const item = items[newIndex];
+              if (item && item.id !== activeTabId) {
+                setActiveTabId(item.id);
+                sessionStorage.setItem("last_teacher_lesson", item.id);
+                navigateToTab(item, true);
+              }
+            }
+          }}
+          onTouchMove={(swiper) => {
+            setIsDragging(true);
+            const delta = swiper.touches.currentX - swiper.touches.startX;
+            setDragOffset(delta);
+          }}
+          onTouchEnd={() => {
+            setIsDragging(false);
+            setDragOffset(0);
+          }}
+          style={{ width: "100%", height: "100%" }}
+        >
+          {items.map((item) => (
+            <SwiperSlide key={item.id} className="w-full h-full overflow-hidden">
+              <div className="w-full h-full overflow-y-auto overflow-x-hidden">
                 {item.id === "lessons" ? (
                   <HomeChatFeedSection />
                 ) : (
                   <StudentsChatFeedSection lessonId={item.id} />
                 )}
               </div>
-            );
-          })}
-        </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </section>
     </main>
   );

@@ -13,7 +13,7 @@ import MyCoursesFilled from "@/assets/icons/MyCoursesFull.svg?react";
 import ExamFilled from "@/assets/icons/ExamFull.svg?react";
 import SettingsFilled from "@/assets/icons/SettingsFull.svg?react";
 
-export const TeacherNavigationBar = () => {
+export const TeacherNavigationBar = ({ swipeIndex = null, activeTabId = null }) => {
   const { isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,6 +64,8 @@ export const TeacherNavigationBar = () => {
     location.pathname.startsWith("/TeacherLessonsPage");
 
   const getActiveId = () => {
+    if (activeTabId) return activeTabId;
+
     if (isHomePage) return "chats";
     if (location.pathname === "/TeacherCourses") return "courses";
     if (location.pathname === "/TeacherExams") return "exams";
@@ -79,17 +81,38 @@ export const TeacherNavigationBar = () => {
 
   const activeId = getActiveId();
 
-  // Active indicator position
+  // Active indicator position (real-time swipe interpolation + route tracking)
   useEffect(() => {
-    const el = itemsRef.current[activeId];
+    if (typeof swipeIndex === "number") {
+      const lowerIndex = Math.floor(swipeIndex);
+      const upperIndex = Math.min(lowerIndex + 1, navItems.length - 1);
+      const progress = swipeIndex - lowerIndex;
 
+      const lowerItem = itemsRef.current[navItems[lowerIndex]?.id];
+      const upperItem = itemsRef.current[navItems[upperIndex]?.id];
+
+      if (!lowerItem || !upperItem) return;
+
+      setIndicatorStyle({
+        width:
+          lowerItem.offsetWidth +
+          (upperItem.offsetWidth - lowerItem.offsetWidth) * progress,
+        left:
+          lowerItem.offsetLeft +
+          (upperItem.offsetLeft - lowerItem.offsetLeft) * progress,
+      });
+
+      return;
+    }
+
+    const el = itemsRef.current[activeId];
     if (!el) return;
 
     setIndicatorStyle({
       width: el.offsetWidth,
       left: el.offsetLeft,
     });
-  }, [activeId, location.pathname]);
+  }, [activeId, location.pathname, swipeIndex]);
 
   const handleNavigate = (item) => {
     navigate(item.route);
@@ -124,14 +147,15 @@ export const TeacherNavigationBar = () => {
             h-[44px]
             bg-primery-90
             rounded-[23px]
-            transition-all
-            duration-300
-            ease-out
             pointer-events-none
           "
             style={{
               width: `calc(${indicatorStyle.width}px - 10px)`,
               transform: `translate(${indicatorStyle.left + 4}px, -50%)`,
+              transition:
+                typeof swipeIndex === "number"
+                  ? "none"
+                  : "transform 280ms cubic-bezier(0.25, 1, 0.5, 1), width 280ms cubic-bezier(0.25, 1, 0.5, 1)",
             }}
           />
         )}
