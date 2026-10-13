@@ -102,8 +102,8 @@ export const ChatArea = () => {
 
     // Resolve course ID and student ID to scope bot conversations per course
     const targetCourseId = isStudentChat
-      ? location.state?.lessonId || "bbd22574-beac-4bdc-8cc4-afdc663a10d5"
-      : id || "bbd22574-beac-4bdc-8cc4-afdc663a10d5";
+      ? location.state?.lessonId || "c0000000-0000-4000-8000-000000000001"
+      : id || "c0000000-0000-4000-8000-000000000001";
 
     const targetStudentId = isStudentChat
       ? id

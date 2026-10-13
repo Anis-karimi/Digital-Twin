@@ -36,7 +36,7 @@ export async function getAdminCourses() {
     { method: "GET" },
     () => [
       {
-        course_id: "bbd22574-beac-4bdc-8cc4-afdc663a10d5",
+        course_id: "c0000000-0000-4000-8000-000000000001",
         title: "سیستم عامل",
         description: "مفاهیم پایه‌ای سیستم‌های عامل، فرآیندها، نخ‌ها، زمان‌بندی پردازنده و مدیریت حافظه",
         subject: "مهندسی کامپیوتر",

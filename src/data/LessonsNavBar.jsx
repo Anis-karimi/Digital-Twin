@@ -8,7 +8,7 @@ export const lessonItems = [
     unreadCount: 0,
   },
   {
-    id: "bbd22574-beac-4bdc-8cc4-afdc663a10d5",
+    id: "c0000000-0000-4000-8000-000000000001",
     label: "سیستم عامل",
     labelFa: "سیستم عامل",
     labelEn: "Operating Systems",

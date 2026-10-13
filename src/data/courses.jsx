@@ -1,6 +1,6 @@
 export const courses = [
   {
-    id: "bbd22574-beac-4bdc-8cc4-afdc663a10d5",
+    id: "c0000000-0000-4000-8000-000000000001",
     title: "سیستم عامل",
     titleFa: "سیستم عامل",
     titleEn: "Operating Systems",
