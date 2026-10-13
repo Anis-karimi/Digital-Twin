@@ -24,20 +24,69 @@
    GLOBAL FONT RENDER FIX
 ========================================= */
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  background-color: #f1f0f0;
+}
+
+html.dark {
+  background-color: #17191c;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-
+  background-color: #f1f0f0;
+  color: #17191c;
   font-family:
     "Vazirmatn",
     "Inter",
     sans-serif;
+}
+
+html.dark body {
+  background-color: #17191c;
+  color: #ffffff;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-tabs-swiper,
+.student-tabs-swiper {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.teacher-tabs-swiper > .swiper-wrapper,
+.student-tabs-swiper > .swiper-wrapper {
+  display: flex !important;
+  height: 100% !important;
+}
+
+.teacher-tabs-swiper > .swiper-wrapper > .swiper-slide,
+.student-tabs-swiper > .swiper-wrapper > .swiper-slide {
+  height: 100% !important;
+  overflow: hidden !important;
 }
 
 .font-vazir {

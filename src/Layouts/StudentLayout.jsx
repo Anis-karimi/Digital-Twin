@@ -62,9 +62,10 @@ export const StudentLayout = () => {
     location.pathname.toLowerCase().includes("/biometrics");
 
   useEffect(() => {
-    window.scrollTo({ left: 0 });
+    window.scrollTo(0, 0);
     if (document.scrollingElement) {
       document.scrollingElement.scrollLeft = 0;
+      document.scrollingElement.scrollTop = 0;
     }
   }, [location.pathname]);
 
@@ -115,16 +116,16 @@ export const StudentLayout = () => {
 
   return (
     <div
-      className={`min-h-screen w-full min-w-0 overflow-x-hidden transition-colors duration-200 ${
+      className={`h-full h-dvh w-full min-w-0 overflow-hidden flex flex-col bg-[#f1f0f0] dark:bg-neutral-scale1400 transition-colors duration-200 ${
         isRTL ? "font-vazir" : "font-inter"
       }`}
       dir={isRTL ? "rtl" : "ltr"}
       lang={language}
     >
       {isMainTab ? (
-        <div className="w-full min-w-0 overflow-hidden" dir="ltr">
+        <div className="w-full h-full flex-1 min-h-0 min-w-0 overflow-hidden" dir="ltr">
           <Swiper
-            className="student-tabs-swiper"
+            className="student-tabs-swiper w-full h-full"
             dir="ltr"
             key="student-main-tabs"
             onSwiper={(swiper) => {
@@ -166,6 +167,7 @@ export const StudentLayout = () => {
             rewind={false}
             style={{
               width: "100%",
+              height: "100%",
               minWidth: 0,
               overflow: "hidden",
             }}

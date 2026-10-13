@@ -17,7 +17,7 @@ export const AdaptiveLayout = () => {
 
   return (
     <div
-      className={`min-h-screen transition-all duration-200 ${
+      className={`h-full h-dvh w-full min-w-0 overflow-hidden flex flex-col bg-[#f1f0f0] dark:bg-neutral-scale1400 transition-all duration-200 ${
         isRTL ? "font-vazir" : "font-inter"
       }`}
       dir={isRTL ? "rtl" : "ltr"}

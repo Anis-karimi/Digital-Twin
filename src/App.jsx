@@ -65,7 +65,7 @@ function App() {
   return (
     <AppProvider>
       <ErrorBoundary>
-        <div style={{ textAlign: "center" }}>
+        <div className="w-full h-full h-dvh flex flex-col overflow-hidden text-center">
           <Router>
           <Routes>
             {/* ==================== Auth ==================== */}
