@@ -32,6 +32,7 @@ import { toPersianDigits } from "@/utils/dateUtils";
 import { VoiceMicButton } from "@/Components/VoiceMicButton";
 import { VoiceBeam } from "voice-glow";
 import { voiceApi } from "@/api";
+import { ThinkingOrb } from 'thinking-orbs';
 import { normalizeTextForTTS, warmupQuestionNormalization, detectTextLanguage } from "@/features/voice";
 import { LiquidGaugesTrio } from "@/Components/LiquidGaugesTrio";
 import { ChatGptOrb } from "@/Components/ChatGptOrb";
