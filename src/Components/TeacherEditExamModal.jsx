@@ -3,6 +3,7 @@ import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { DatePickerModal } from "@/Components/Common/DatePickerModal";
 import { ClockPickerModal } from "@/Components/Common/ClockPickerModal";
+import { getTodayJalaliDate, isoToJalaliDate } from "@/utils/dateUtils";
 import {
   X,
   FileText,
@@ -28,7 +29,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [examDate, setExamDate] = useState("1405/07/20");
+  const [examDate, setExamDate] = useState(() => getTodayJalaliDate());
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:30");
   const [durationMinutes, setDurationMinutes] = useState(15);
@@ -52,7 +53,8 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
 
     setTitle(exam.title || "");
     setDescription(exam.description || "");
-    setExamDate(exam.date || exam.exam_date || "1405/07/20");
+    const effectiveDate = exam.date || exam.exam_date || (exam.start_at ? isoToJalaliDate(exam.start_at) : getTodayJalaliDate());
+    setExamDate(effectiveDate);
 
     let sTime = "10:00";
     let eTime = "11:30";

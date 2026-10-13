@@ -35,6 +35,7 @@ import {
   formatDisplayDate,
   toPersianDigits,
   getTodayIsoDate,
+  getTodayJalaliDate,
 } from "@/utils/dateUtils";
 
 export const BLOOM_LEVELS_FA = [
@@ -259,7 +260,7 @@ export const CreateExamAccordion = ({
       const { jy, jm, jd } = gregorianToJalali(p.gy, p.gm, p.gd);
       return `${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`;
     }
-    return "1405/07/06";
+    return getTodayJalaliDate();
   });
 
   const [startTime, setStartTime] = useState(() => {
@@ -611,15 +612,27 @@ export const CreateExamAccordion = ({
           ...payload,
           id: assignmentId,
           quiz_id: assignmentId,
+          assignment_id: assignmentId,
           title: examTitle.trim(),
+          description: payload.description,
           course: courseTitle,
           topic: topicTitles.join("، ") || "مباحث آزمون",
           date: examDate,
+          exam_date: examDate,
+          start_at: isoStart || startTime,
+          end_at: isoEnd || endTime,
+          starts_at: isoStart || startTime,
+          ends_at: isoEnd || endTime,
           time: `${startTime} - ${endTime}`,
           duration: `${durationPerStudent} دقیقه هر دانشجو`,
+          duration_minutes: durationPerStudent,
+          active: true,
+          is_active: true,
+          scheduled: true,
           goals: validGoals,
           language: examLanguage,
           studentCount: selectedStudentIds.length,
+          student_ids: selectedStudentIds,
           materials: attachedFiles,
         };
 
@@ -630,18 +643,30 @@ export const CreateExamAccordion = ({
       const result = await examsApi.createLessonQuiz(courseId, payload);
 
       const topicTitles = validGoals.map((g) => g.title).filter(Boolean);
+      const createdId = result?.quiz_id || result?.id || `quiz_${Date.now()}`;
       const createdItem = {
-        id: result?.quiz_id || Date.now(),
+        id: createdId,
+        quiz_id: createdId,
+        assignment_id: result?.assignment_id || createdId,
         title: examTitle.trim(),
+        description: payload.description,
         course: courseTitle,
         topic: topicTitles.join("، ") || "مباحث آزمون",
         date: examDate,
+        exam_date: examDate,
+        start_at: isoStart || startTime,
+        end_at: isoEnd || endTime,
+        starts_at: isoStart || startTime,
+        ends_at: isoEnd || endTime,
         time: `${startTime} - ${endTime}`,
         duration: `${durationPerStudent} دقیقه هر دانشجو`,
+        duration_minutes: durationPerStudent,
         active: true,
+        is_active: true,
         scheduled: true,
         language: examLanguage,
         studentCount: selectedStudentIds.length,
+        student_ids: selectedStudentIds,
         goals: validGoals,
         materials: attachedFiles,
       };

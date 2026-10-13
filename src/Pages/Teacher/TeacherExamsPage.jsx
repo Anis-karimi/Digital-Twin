@@ -20,12 +20,23 @@ import { CreateExamAccordion } from "@/Components/CreateExamAccordion";
 import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
 import { TeacherExamResultsModal } from "@/Components/TeacherExamResultsModal";
-import { jalaliToGregorian, toPersianDigits } from "@/utils/dateUtils";
+import {
+  jalaliToGregorian,
+  toPersianDigits,
+  toEnglishDigits,
+  getTodayJalaliDate,
+  isoToJalaliDate,
+} from "@/utils/dateUtils";
 import { isPersianText } from "@/utils/textUtils";
 
 export const getExamTimingState = (exam, isRTL = true) => {
   // If explicitly marked inactive or completed
-  if (exam.is_active === false || exam.active === false || exam.status === "completed" || exam.status === "ended") {
+  if (
+    exam.is_active === false ||
+    exam.active === false ||
+    exam.status === "completed" ||
+    exam.status === "ended"
+  ) {
     return {
       status: "ended",
       label: isRTL ? "پایان یافته" : "Ended",
@@ -35,61 +46,77 @@ export const getExamTimingState = (exam, isRTL = true) => {
       iconBoxClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
       iconClass: "text-neutral-scale700 dark:text-neutral-scale400",
       dividerClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
-      canEdit: false, // دیگر قابلیت ادیت ندارد
+      canEdit: false,
       canViewResults: true,
     };
-  }
-
-  let startTimeStr = "10:00";
-  let endTimeStr = "11:30";
-
-  if (exam.time && typeof exam.time === "string" && exam.time.includes("-")) {
-    const parts = exam.time.split("-").map((p) => p.trim());
-    if (parts[0]) startTimeStr = parts[0];
-    if (parts[1]) endTimeStr = parts[1];
-  } else if (exam.start_at && exam.end_at) {
-    try {
-      if (typeof exam.start_at === "string" && exam.start_at.includes(":") && !exam.start_at.includes("T")) {
-        startTimeStr = exam.start_at;
-        endTimeStr = exam.end_at;
-      } else {
-        startTimeStr = new Date(exam.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-        endTimeStr = new Date(exam.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-      }
-    } catch {
-      startTimeStr = "10:00";
-      endTimeStr = "11:30";
-    }
   }
 
   const now = new Date();
   let examStartDateTime = null;
   let examEndDateTime = null;
 
-  try {
-    const dateStr = exam.exam_date || exam.date || "";
-    if (dateStr.includes("/")) {
-      const [jy, jm, jd] = dateStr.split("/").map(Number);
-      const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
-      const [sh, sm] = startTimeStr.split(":").map(Number);
-      const [eh, em] = endTimeStr.split(":").map(Number);
-      examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
-      examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
-    } else if (dateStr.includes("-")) {
-      const [gy, gm, gd] = dateStr.split("-").map(Number);
-      const [sh, sm] = startTimeStr.split(":").map(Number);
-      const [eh, em] = endTimeStr.split(":").map(Number);
-      examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
-      examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
-    } else if (exam.start_at && exam.start_at.includes("T")) {
-      examStartDateTime = new Date(exam.start_at);
-      examEndDateTime = new Date(exam.end_at);
-    }
-  } catch (e) {
-    console.error("Error parsing exam dates:", e);
+  // 1. First priority: Direct ISO timestamps
+  if (exam.start_at && exam.end_at) {
+    try {
+      const sDate = new Date(exam.start_at);
+      const eDate = new Date(exam.end_at);
+      if (!isNaN(sDate.getTime()) && !isNaN(eDate.getTime())) {
+        examStartDateTime = sDate;
+        examEndDateTime = eDate;
+      }
+    } catch {}
   }
 
-  if (examStartDateTime && examEndDateTime && !isNaN(examStartDateTime.getTime()) && !isNaN(examEndDateTime.getTime())) {
+  // 2. Second priority: Jalali or Gregorian date string + start/end times
+  if (!examStartDateTime || !examEndDateTime) {
+    let startTimeStr = "10:00";
+    let endTimeStr = "11:30";
+
+    if (exam.time && typeof exam.time === "string" && exam.time.includes("-")) {
+      const parts = exam.time.split("-").map((p) => toEnglishDigits(p.trim()));
+      if (parts[0]) startTimeStr = parts[0];
+      if (parts[1]) endTimeStr = parts[1];
+    } else if (exam.start_at && exam.end_at) {
+      try {
+        if (typeof exam.start_at === "string" && exam.start_at.includes(":") && !exam.start_at.includes("T")) {
+          startTimeStr = toEnglishDigits(exam.start_at);
+          endTimeStr = toEnglishDigits(exam.end_at);
+        } else {
+          startTimeStr = new Date(exam.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+          endTimeStr = new Date(exam.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        }
+      } catch {
+        startTimeStr = "10:00";
+        endTimeStr = "11:30";
+      }
+    }
+
+    try {
+      const rawDateStr = toEnglishDigits(exam.exam_date || exam.date || "");
+      const [sh, sm] = startTimeStr.split(":").map(Number);
+      const [eh, em] = endTimeStr.split(":").map(Number);
+
+      if (rawDateStr.includes("/")) {
+        const [jy, jm, jd] = rawDateStr.split("/").map(Number);
+        const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
+        examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
+        examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
+      } else if (rawDateStr.includes("-")) {
+        const [gy, gm, gd] = rawDateStr.split("-").map(Number);
+        examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
+        examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
+      }
+    } catch (e) {
+      console.error("Error parsing exam dates:", e);
+    }
+  }
+
+  if (
+    examStartDateTime &&
+    examEndDateTime &&
+    !isNaN(examStartDateTime.getTime()) &&
+    !isNaN(examEndDateTime.getTime())
+  ) {
     if (now < examStartDateTime) {
       return {
         status: "upcoming",
@@ -101,7 +128,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
         iconClass: "text-primery-1000 dark:text-primery-90",
         dividerClass: "bg-primery-500 dark:bg-primery-800",
         canEdit: true,
-        canViewResults: false, // برای آزمون که هنوز زمان شروع آن فرا نرسیده است دکمه نتایج به نمایش در نیاد
+        canViewResults: false,
       };
     } else if (now >= examStartDateTime && now <= examEndDateTime) {
       return {
@@ -126,13 +153,13 @@ export const getExamTimingState = (exam, isRTL = true) => {
         iconBoxClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
         iconClass: "text-neutral-scale700 dark:text-neutral-scale400",
         dividerClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
-        canEdit: false, // دیگر قابلیت ادیت ندارد
+        canEdit: false,
         canViewResults: true,
       };
     }
   }
 
-  // Default fallback: upcoming
+  // Default fallback: upcoming (considered active as start and end time have not passed)
   return {
     status: "upcoming",
     label: isRTL ? "شروع نشده" : "Upcoming",
@@ -205,6 +232,8 @@ export const TeacherExams = () => {
             ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
             : (q.description || "مباحث آزمون");
 
+          const effectiveDate = q.exam_date || (q.start_at ? isoToJalaliDate(q.start_at) : getTodayJalaliDate());
+
           return {
             id: q.quiz_id || q.id,
             quiz_id: q.quiz_id || q.id,
@@ -212,8 +241,8 @@ export const TeacherExams = () => {
             title: q.title,
             course: "سیستم عامل",
             topic: topic || "مباحث آزمون",
-            date: q.exam_date || "1405/07/20",
-            exam_date: q.exam_date,
+            date: effectiveDate,
+            exam_date: effectiveDate,
             start_at: q.start_at,
             end_at: q.end_at,
             time: timeDisplay,
@@ -228,7 +257,8 @@ export const TeacherExams = () => {
           };
         });
 
-        setExams(deduplicateExams(mapped));
+        // Merge mapped with previous in-memory exams to prevent newly created exams from vanishing
+        setExams((prev) => deduplicateExams([...mapped, ...prev]));
       })
       .catch(() => {});
   };
@@ -241,8 +271,10 @@ export const TeacherExams = () => {
   const handleExamCreated = (newExam) => {
     setIsCreatingExam(false);
     setEditingExam(null);
+    setActiveTab("active");
+    setFilterStatus("all");
     setSuccessMessage(
-      isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست قرار گرفت!" : "New exam created successfully!"
+      isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست آزمون‌های فعال قرار گرفت!" : "New exam created successfully!"
     );
     if (newExam) {
       setExams((prev) => deduplicateExams([newExam, ...prev]));
@@ -385,7 +417,10 @@ export const TeacherExams = () => {
       {!isCreatingExam && !editingExam && (
         <ExamsNavBar
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setFilterStatus("all");
+          }}
           counts={examCounts}
         />
       )}

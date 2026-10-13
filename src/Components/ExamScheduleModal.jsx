@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
-import { toPersianDigits } from "@/utils/dateUtils";
+import { toPersianDigits, getTodayJalaliDate } from "@/utils/dateUtils";
 
 export const ExamScheduleModal = ({
   isOpen,
@@ -163,7 +163,7 @@ export const ExamScheduleModal = ({
               <div className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300">
                 <CalendarDays className="w-3.5 h-3.5 text-[#2481cc]" />
                 <span className="font-semibold">{isRTL ? "تاریخ برگزاری:" : "Date:"}</span>
-                <span>{exam?.date || "1405/07/20"}</span>
+                <span>{exam?.date || getTodayJalaliDate()}</span>
               </div>
               <span className="text-[11px] font-medium text-neutral-500">
                 {exam?.duration ? `${toPersianDigits(exam.duration)} دقیقه` : "۲۰ دقیقه"}

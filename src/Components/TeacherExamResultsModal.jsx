@@ -21,6 +21,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import "@/styles/fonts.css";
+import { getTodayJalaliDate } from "@/utils/dateUtils";
 
 const toPersianDigits = (num) => {
   if (num === null || num === undefined) return "";
@@ -134,7 +135,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 {resultsData?.title || exam?.title || (isRTL ? "نتایج آزمون" : "Exam Results")}
               </h2>
               <span className="font-vazir text-[11px] text-neutral-scale200 block truncate">
-                {resultsData?.course || "سیستم عامل"} • {resultsData?.date || exam?.date || "1405/07/20"}
+                {resultsData?.course || "سیستم عامل"} • {resultsData?.date || exam?.date || getTodayJalaliDate()}
               </span>
             </div>
           </div>

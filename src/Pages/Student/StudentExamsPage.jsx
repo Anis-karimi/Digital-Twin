@@ -23,8 +23,12 @@ import { AppContext } from "@/Context/AppContext";
 import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
 import { biometricsApi } from "@/api/new/biometrics.api";
-import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
-import { toPersianDigits, jalaliToGregorian } from "@/utils/dateUtils";
+import {
+  toPersianDigits,
+  jalaliToGregorian,
+  isoToJalaliDate,
+  getTodayJalaliDate,
+} from "@/utils/dateUtils";
 
 export const StudentExams = () => {
   const navigate = useNavigate();
@@ -306,7 +310,12 @@ export const StudentExams = () => {
               title: item.title,
               course: item.course || "سیستم عامل",
               topic: topic || "مباحث آزمون",
-              date: item.date || item.exam_date || "1405/07/20",
+              date:
+                item.date ||
+                item.exam_date ||
+                (item.start_at
+                  ? isoToJalaliDate(item.start_at)
+                  : getTodayJalaliDate()),
               startAt: item.start_at,
               endAt: item.end_at,
               duration: item.duration || item.duration_minutes || 20,
@@ -355,7 +364,11 @@ export const StudentExams = () => {
                   title: q.title,
                   course: "سیستم عامل",
                   topic: topic || "مباحث آزمون",
-                  date: q.exam_date || "1405/07/20",
+                  date:
+                    q.exam_date ||
+                    (q.start_at
+                      ? isoToJalaliDate(q.start_at)
+                      : getTodayJalaliDate()),
                   startAt: q.start_at,
                   endAt: q.end_at,
                   duration: q.duration_minutes || 20,

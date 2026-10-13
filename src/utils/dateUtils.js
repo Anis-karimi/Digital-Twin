@@ -11,6 +11,38 @@ export const toPersianDigits = (num) => {
   return str.replace(/[0-9]/g, (w) => persianDigits[+w]);
 };
 
+// Convert Persian and Arabic digits to standard English ASCII digits
+export const toEnglishDigits = (str) => {
+  if (str === null || str === undefined) return "";
+  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  let res = String(str);
+  for (let i = 0; i < 10; i++) {
+    res = res.replaceAll(persianDigits[i], String(i)).replaceAll(arabicDigits[i], String(i));
+  }
+  return res;
+};
+
+// Returns today's date formatted as YYYY/MM/DD in Jalali
+export const getTodayJalaliDate = () => {
+  const now = new Date();
+  const { jy, jm, jd } = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  return `${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`;
+};
+
+// Converts an ISO date/timestamp string to Jalali YYYY/MM/DD
+export const isoToJalaliDate = (isoStr) => {
+  if (!isoStr) return getTodayJalaliDate();
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return getTodayJalaliDate();
+    const { jy, jm, jd } = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return `${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`;
+  } catch {
+    return getTodayJalaliDate();
+  }
+};
+
 // Jalali month names
 export const JALALI_MONTH_NAMES = [
   "فروردین",
