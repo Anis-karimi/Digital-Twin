@@ -297,12 +297,12 @@ export const MessageBubble = ({
             <div className="mt-2.5 flex flex-col gap-2">
               {comments.map((c, cIdx) => {
                 const rawTeacherName = (c.teacher_name || "").trim();
-                const teacherDisplayName = rawTeacherName
-                  ? rawTeacherName.startsWith("استاد") ||
-                    rawTeacherName.startsWith("دکتر")
-                    ? rawTeacherName
-                    : `استاد ${rawTeacherName}`
-                  : "استاد";
+                const cleanedTeacherName = (!rawTeacherName || rawTeacherName === "استاد دیجیتال" || rawTeacherName.includes("دیجیتال") || rawTeacherName === "استاد" || rawTeacherName.toLowerCase() === "teacher")
+                  ? "دکتر محمد اله بخش"
+                  : rawTeacherName;
+                const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر")
+                  ? cleanedTeacherName
+                  : `استاد ${cleanedTeacherName}`;
                 const isDeleting = deletingCommentIds.has(c.id);
                 const isUnread = Boolean(
                   isStudentViewer &&
@@ -420,14 +420,14 @@ export const MessageBubble = ({
               {/* Header */}
               <div className="flex items-center justify-between text-xs border-b border-[#2481cc]/20 dark:border-[#52a2f6]/20 pb-1.5">
                 <span className="font-bold text-xs text-[#2481cc] dark:text-[#52a2f6] font-vazir truncate">
-                  {teacherName
-                    ? teacherName.startsWith("استاد") ||
-                      teacherName.startsWith("دکتر")
-                      ? teacherName
-                      : `استاد ${teacherName}`
-                    : isMine
-                    ? t("writeStudentComment") || "افزودن نظر استاد روی پیام دانشجو"
-                    : t("writeComment") || "افزودن نظر استاد روی پیام بات"}
+                  {(() => {
+                    const cleanName = (!teacherName || teacherName === "استاد دیجیتال" || teacherName.includes("دیجیتال") || teacherName === "استاد" || teacherName.toLowerCase() === "teacher")
+                      ? "دکتر محمد اله بخش"
+                      : teacherName;
+                    return cleanName.startsWith("استاد") || cleanName.startsWith("دکتر")
+                      ? cleanName
+                      : `استاد ${cleanName}`;
+                  })()}
                 </span>
 
                 <div className="flex items-center gap-1.5 shrink-0">

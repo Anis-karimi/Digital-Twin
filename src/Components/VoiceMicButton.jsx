@@ -34,6 +34,11 @@ export const VoiceMicButton = ({
   });
 
   const currentLang = controlledLang || internalLang;
+  const isWhiteOrb =
+    Boolean(orbColor) &&
+    (orbColor.toLowerCase() === "#fff" ||
+      orbColor.toLowerCase() === "#ffffff" ||
+      orbColor.toLowerCase() === "white");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const holdTimerRef = useRef(null);
@@ -231,7 +236,11 @@ export const VoiceMicButton = ({
             <Mic
               className={`transition-all duration-300 ${
                 recording
-                  ? "text-red-500 scale-110 animate-pulse"
+                  ? isWhiteOrb
+                    ? "text-white scale-110 animate-pulse"
+                    : "text-red-500 scale-110 animate-pulse"
+                  : isWhiteOrb
+                  ? "text-white/90 group-hover:scale-105"
                   : "text-sky-300 group-hover:scale-105"
               } ${iconClassName}`}
             />
@@ -240,7 +249,11 @@ export const VoiceMicButton = ({
           {/* Language Badge on Corner (Clicks pass through to button via pointer-events-none) */}
           <span
             className={`pointer-events-none absolute z-20 min-w-[16px] h-[16px] px-1 rounded-full bg-[#1e1e1e] text-white font-inter text-[9px] font-bold flex items-center justify-center border border-white/20 shadow-xs select-none transition-all duration-300 ${
-              recording && !recordingOrbState ? "ring-1 ring-red-400" : ""
+              recording && !recordingOrbState
+                ? isWhiteOrb
+                  ? "ring-1 ring-white"
+                  : "ring-1 ring-red-400"
+                : ""
             } ${badgeClassName || "-top-0.5 -left-0.5"}`}
           >
             {badgeText}
@@ -252,17 +265,25 @@ export const VoiceMicButton = ({
           <div
             className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               recording
-                ? "opacity-100 scale-100 rotate-0 pointer-events-auto drop-shadow-[0_0_18px_rgba(56,189,248,0.65)] hover:scale-110 active:scale-95"
+                ? `opacity-100 scale-100 rotate-0 pointer-events-auto hover:scale-110 active:scale-95 ${
+                    isWhiteOrb
+                      ? "drop-shadow-[0_0_22px_rgba(255,255,255,0.85)]"
+                      : "drop-shadow-[0_0_18px_rgba(56,189,248,0.65)]"
+                  }`
                 : "opacity-0 scale-40 rotate-45 pointer-events-none"
             }`}
           >
             {/* Ambient soft glow aura */}
-            <div className="absolute inset-0 rounded-full bg-sky-400/25 blur-md pointer-events-none animate-pulse" />
+            <div
+              className={`absolute inset-0 rounded-full blur-md pointer-events-none animate-pulse ${
+                isWhiteOrb ? "bg-white/35" : "bg-sky-400/25"
+              }`}
+            />
             <ThinkingOrb
               state={recordingOrbState}
               size={64}
               theme="dark"
-              color={orbColor || "#38bdf8"}
+              color={orbColor || (isWhiteOrb ? "#ffffff" : "#38bdf8")}
               paused={!recording}
               style={{
                 width: 64,

@@ -15,3 +15,12 @@ export {
 } from "./voiceTextNormalizer";
 
 export { default as voiceTextNormalizer } from "./voiceTextNormalizer";
+
+export {
+  WebRtcVoiceActivityDetector,
+  WEBRTC_AUDIO_CONSTRAINTS,
+  downsampleTo16k,
+  floatToInt16PCM,
+} from "./webrtcVAD";
+
+export { useWebRtcVAD } from "./useWebRtcVAD";

@@ -270,18 +270,28 @@ export const ChatArea = () => {
     const [settings, setSettings] = useState(null);
     const [llmModel, setLlmModel] = useState(() => localStorage.getItem("llm_model") || "gemma4");
     // Real teacher name resolution directly from stored database user / course (NO mock data)
+    const resolveValidTeacherName = (user) => {
+      const full = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+      const raw = full || user?.full_name || user?.name || user?.username || "";
+      if (!raw || raw === "استاد دیجیتال" || raw.includes("دیجیتال") || raw === "استاد" || raw.toLowerCase() === "teacher") {
+        return "دکتر محمد اله بخش";
+      }
+      return raw;
+    };
+
     const [teacherName, setTeacherName] = useState(() => {
-      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
-      return full || currentUser?.full_name || currentUser?.name || currentUser?.username || "";
+      return resolveValidTeacherName(currentUser);
     });
 
     useEffect(() => {
       let isMounted = true;
-      const full = [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ").trim();
-      const currentResolved = full || currentUser?.full_name || currentUser?.name || currentUser?.username || "";
-      if (currentResolved) {
+      const currentResolved = resolveValidTeacherName(currentUser);
+      if (currentResolved && currentResolved !== "دکتر محمد اله بخش") {
         setTeacherName(currentResolved);
         return;
+      }
+      if (currentResolved) {
+        setTeacherName(currentResolved);
       }
 
       // If not yet available from currentUser, fetch course teacher from backend
@@ -289,7 +299,7 @@ export const ChatArea = () => {
       coursesApi.getCourseById(courseIdToFetch).then((course) => {
         if (isMounted) {
           const resolved = course?.teacher_name || course?.instructor_name || "";
-          if (resolved) {
+          if (resolved && resolved !== "استاد دیجیتال" && !resolved.includes("دیجیتال") && resolved !== "استاد") {
             setTeacherName(resolved);
           }
         }
@@ -680,11 +690,12 @@ export const ChatArea = () => {
 
     const handleAddComment = async (messageId, commentText) => {
       try {
-        const res = await chatHistoryApi.addMessageComment(messageId, teacherName, commentText);
+        const effectiveTeacherName = resolveValidTeacherName({ full_name: teacherName });
+        const res = await chatHistoryApi.addMessageComment(messageId, effectiveTeacherName, commentText);
         const now = new Date();
         const newComment = res?.comment || {
           id: String(Date.now()),
-          teacher_name: teacherName,
+          teacher_name: effectiveTeacherName,
           comment: commentText,
           created_at: now.toISOString(),
           time: formatChatTime(now, isRTL),

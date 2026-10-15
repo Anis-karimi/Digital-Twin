@@ -162,12 +162,22 @@ export async function httpRequest(url, options = {}, responseType = "json") {
       let errorData = null;
 
       try {
-        errorData = await response.json();
+        const text = await response.text();
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = text;
+        }
       } catch {
-        errorData = await response.text();
+        errorData = null;
       }
 
-      const error = new Error(`HTTP Error: ${response.status}`);
+      const detailMsg =
+        typeof errorData === "string"
+          ? errorData
+          : errorData?.detail || errorData?.message || errorData?.error;
+
+      const error = new Error(detailMsg || `HTTP Error: ${response.status}`);
       error.status = response.status;
       error.data = errorData;
 

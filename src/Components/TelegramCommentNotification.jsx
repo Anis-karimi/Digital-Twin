@@ -43,11 +43,12 @@ export const TelegramCommentNotification = ({
   if (!comment) return null;
 
   const rawTeacherName = (comment.teacher_name || "").trim();
-  const teacherDisplayName = rawTeacherName
-    ? rawTeacherName.startsWith("استاد") || rawTeacherName.startsWith("دکتر")
-      ? rawTeacherName
-      : `استاد ${rawTeacherName}`
-    : "استاد";
+  const cleanedTeacherName = (!rawTeacherName || rawTeacherName === "استاد دیجیتال" || rawTeacherName.includes("دیجیتال") || rawTeacherName === "استاد" || rawTeacherName.toLowerCase() === "teacher")
+    ? "دکتر محمد اله بخش"
+    : rawTeacherName;
+  const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر")
+    ? cleanedTeacherName
+    : `استاد ${cleanedTeacherName}`;
 
   const commentSnippet = comment.comment || comment.text || "";
 

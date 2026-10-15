@@ -124,11 +124,14 @@ export async function saveConversationTurn(chatType, targetId, payload) {
  * @returns {Promise<Object>}
  */
 export async function addMessageComment(messageId, teacherName, comment) {
+  const safeTeacherName = (!teacherName || teacherName === "استاد دیجیتال" || teacherName.includes("دیجیتال") || teacherName === "استاد" || teacherName.toLowerCase() === "teacher")
+    ? "دکتر محمد اله بخش"
+    : teacherName;
   return requestWithFallback(
     `/messages/${messageId}/comments`,
     {
       method: "POST",
-      body: JSON.stringify({ teacher_name: teacherName, comment }),
+      body: JSON.stringify({ teacher_name: safeTeacherName, comment }),
     },
     () => {
       const now = new Date();
@@ -136,7 +139,7 @@ export async function addMessageComment(messageId, teacherName, comment) {
         success: true,
         comment: {
           id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-          teacher_name: teacherName,
+          teacher_name: safeTeacherName,
           comment,
           created_at: now.toISOString(),
           time: formatChatTime(now, true),
