@@ -22,6 +22,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { AppContext } from "@/Context/AppContext";
 import { ExamsNavBar } from "@/Components/ExamsNavBar";
 import { examsApi } from "@/api/new/exams.api";
+import { ExamScheduleModal } from "@/Components/ExamScheduleModal";
 import { biometricsApi } from "@/api/new/biometrics.api";
 import {
   toPersianDigits,

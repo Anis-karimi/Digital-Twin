@@ -145,7 +145,9 @@ export const AdminCreateCoursePage = () => {
               {isRTL ? "ثبت اطلاعات درس جدید" : "Register New Course"}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? "افزودن درس و انتساب به استاد" : "Add course & assign instructor"}
+              {isRTL
+                ? "افزودن درس و انتساب به استاد"
+                : "Add course & assign instructor"}
             </p>
           </div>
         </div>
@@ -156,7 +158,11 @@ export const AdminCreateCoursePage = () => {
           aria-label="Toggle theme"
           className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center justify-center text-white transition-all cursor-pointer shrink-0"
         >
-          {isDark ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-white" />}
+          {isDark ? (
+            <Sun className="w-3.5 h-3.5 text-amber-300" />
+          ) : (
+            <Moon className="w-3.5 h-3.5 text-white" />
+          )}
         </button>
       </header>
 
@@ -192,7 +198,11 @@ export const AdminCreateCoursePage = () => {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isRTL ? "مثال: سیستم عامل، پایگاه داده، هوش مصنوعی" : "e.g., Operating Systems"}
+              placeholder={
+                isRTL
+                  ? "مثال: سیستم عامل، پایگاه داده، هوش مصنوعی"
+                  : "e.g., Operating Systems"
+              }
               className="w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl px-3.5 py-2.5 text-xs md:text-sm text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 transition-colors"
             />
           </div>
@@ -205,7 +215,9 @@ export const AdminCreateCoursePage = () => {
             </label>
             {loadingTeachers ? (
               <div className="text-xs text-neutral-scale500 py-2">
-                {isRTL ? "در حال دریافت لیست اساتید..." : "Loading instructors..."}
+                {isRTL
+                  ? "در حال دریافت لیست اساتید..."
+                  : "Loading instructors..."}
               </div>
             ) : (
               <select
@@ -258,7 +270,9 @@ export const AdminCreateCoursePage = () => {
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder={isRTL ? "مثال: مهندسی کامپیوتر" : "e.g., Computer Engineering"}
+                placeholder={
+                  isRTL ? "مثال: مهندسی کامپیوتر" : "e.g., Computer Engineering"
+                }
                 className="w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl px-3.5 py-2.5 text-xs md:text-sm text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 transition-colors"
               />
             </div>
@@ -285,7 +299,9 @@ export const AdminCreateCoursePage = () => {
           <div className="flex flex-col gap-1.5">
             <label className="text-xs md:text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-primery-700 dark:text-primery-400" />
-              <span>{isRTL ? "توضیحات و اهداف درس" : "Course Description"}</span>
+              <span>
+                {isRTL ? "توضیحات و اهداف درس" : "Course Description"}
+              </span>
             </label>
             <textarea
               rows={3}
@@ -310,7 +326,7 @@ export const AdminCreateCoursePage = () => {
               onClick={() => setIsActive((prev) => !prev)}
               className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer select-none text-start ${
                 isActive
-                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-300"
+                  ? "bg-blue-500/10 border-blue-500/40 text-blue-900 dark:text-blue-300"
                   : "bg-white dark:bg-neutral-scale1200 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1800 dark:text-neutral-scale70 hover:border-neutral-scale300"
               }`}
             >
@@ -318,7 +334,7 @@ export const AdminCreateCoursePage = () => {
                 <div
                   className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0 ${
                     isActive
-                      ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+                      ? "bg-blue-600 border-blue-600 text-white shadow-xs"
                       : "bg-neutral-scale100 dark:bg-neutral-scale1100 border-neutral-scale300 dark:border-neutral-scale900 text-transparent"
                   }`}
                 >
@@ -330,8 +346,12 @@ export const AdminCreateCoursePage = () => {
                   </span>
                   <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
                     {isActive
-                      ? (isRTL ? "درس فعال و در دسترس کاربران قرار می‌گیرد" : "Course is active & accessible")
-                      : (isRTL ? "درس به صورت غیرفعال ذخیره می‌شود" : "Course will be saved as inactive")}
+                      ? isRTL
+                        ? "درس فعال و در دسترس کاربران قرار می‌گیرد"
+                        : "Course is active & accessible"
+                      : isRTL
+                        ? "درس به صورت غیرفعال ذخیره می‌شود"
+                        : "Course will be saved as inactive"}
                   </span>
                 </div>
               </div>
@@ -376,8 +396,12 @@ export const AdminCreateCoursePage = () => {
                   </span>
                   <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
                     {isPublic
-                      ? (isRTL ? "قابل مشاهده و ثبت‌نام برای همه دانشجویان" : "Open for all students to enroll")
-                      : (isRTL ? "درس به صورت خصوصی ثبت می‌شود" : "Restricted / private course")}
+                      ? isRTL
+                        ? "قابل مشاهده و ثبت‌نام برای همه دانشجویان"
+                        : "Open for all students to enroll"
+                      : isRTL
+                        ? "درس به صورت خصوصی ثبت می‌شود"
+                        : "Restricted / private course"}
                   </span>
                 </div>
               </div>
@@ -400,7 +424,7 @@ export const AdminCreateCoursePage = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+              className="w-full bg-primery-800 hover:bg-primery-700 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -410,7 +434,9 @@ export const AdminCreateCoursePage = () => {
               ) : (
                 <>
                   <FolderPlus className="w-4 h-4" />
-                  <span>{isRTL ? "ثبت نهایی و ایجاد درس" : "Create Course"}</span>
+                  <span>
+                    {isRTL ? "ثبت نهایی و ایجاد درس" : "Create Course"}
+                  </span>
                 </>
               )}
             </button>

@@ -495,17 +495,6 @@ export const StudentExamResultPage = () => {
                 </div>
               )}
             </div>
-
-            {/* Bottom Back Button */}
-            <div className="pt-2 pb-6">
-              <button
-                type="button"
-                onClick={() => navigate("/StudentExams")}
-                className="w-full h-11 rounded-xl bg-primery-700 hover:bg-primery-800 active:scale-98 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-              >
-                {isRTL ? "بازگشت به فهرست آزمون‌ها" : "Return to Exams List"}
-              </button>
-            </div>
           </>
         )}
       </section>

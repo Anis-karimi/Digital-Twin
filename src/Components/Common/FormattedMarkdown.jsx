@@ -115,11 +115,8 @@ export const FormattedMarkdown = ({
 
         if (block.type === "numbered") {
           return (
-            <div
-              key={`num-${idx}`}
-              className="flex items-start gap-2 pt-0.5"
-            >
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold shrink-0 border border-amber-200 dark:border-amber-700/40 select-none">
+            <div key={`num-${idx}`} className="flex items-start gap-2 pt-0.5">
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-md bg-primery-100 dark:bg-primery-900 text-primery-1000 dark:text-primery-90 text-[11px] font-bold shrink-0 border border-primery-500 dark:border-primery-700 select-none">
                 {block.num}
               </span>
               <div className="flex-1 text-neutral-700 dark:text-neutral-200">

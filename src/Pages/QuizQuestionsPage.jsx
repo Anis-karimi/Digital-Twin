@@ -396,7 +396,9 @@ export const QuizQuestionsPage = ({
     >
       {/* ----------------- Sub-Header / Progress Bar ----------------- */}
       <header className="sticky top-0 z-40 w-full bg-primery-700 dark:bg-neutral-scale1300 border-b border-primery-800 dark:border-neutral-scale1100 text-white shadow-sm flex flex-col">
-        <div className={`${isModal ? "h-[48px]" : "h-[60px]"} flex items-center justify-between px-3`}>
+        <div
+          className={`${isModal ? "h-[48px]" : "h-[60px]"} flex items-center justify-between px-3`}
+        >
           {!isModal ? (
             <button
               type="button"
@@ -464,7 +466,9 @@ export const QuizQuestionsPage = ({
                     : "bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300"
                 }`}
               >
-                {selectedAnswer === correctAnswer ? t("correct") : t("incorrect")}
+                {selectedAnswer === correctAnswer
+                  ? t("correct")
+                  : t("incorrect")}
               </span>
             )}
           </div>
@@ -499,8 +503,7 @@ export const QuizQuestionsPage = ({
               if (isSelected) {
                 cardStyle =
                   "bg-primery-50/70 dark:bg-sky-950/40 border-primery-600 dark:border-sky-400 text-primery-900 dark:text-sky-100 shadow-sm shadow-primery-500/10 scale-[1.01]";
-                badgeStyle =
-                  "bg-primery-600 text-white shadow-xs scale-105";
+                badgeStyle = "bg-primery-600 text-white shadow-xs scale-105";
               }
             } else {
               // After Show Answer is clicked
@@ -581,12 +584,16 @@ export const QuizQuestionsPage = ({
             disabled={!showAnswer}
             className={`flex-1 h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               showAnswer
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 hover:brightness-105 active:scale-95"
+                ? "bg-white dark:bg-neutral-scale1300 border-2 border-primery-600 dark:border-sky-400 text-primery-700 dark:text-sky-300 hover:bg-primery-50 dark:hover:bg-sky-950/40 active:scale-95 shadow-xs"
                 : "bg-neutral-100 dark:bg-neutral-scale1200 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-scale1000 cursor-not-allowed opacity-60"
             }`}
           >
             <HelpCircle className="w-4 h-4 shrink-0" />
-            <span>{loadingExplanation ? t("gettingExplanation") : t("explainAnswer")}</span>
+            <span>
+              {loadingExplanation
+                ? t("gettingExplanation")
+                : t("explainAnswer")}
+            </span>
           </button>
         </div>
 
@@ -599,8 +606,8 @@ export const QuizQuestionsPage = ({
           }`}
         >
           <div className="overflow-hidden">
-            <div className="bg-gradient-to-br from-amber-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-amber-200/80 dark:border-amber-500/25 p-4 shadow-sm space-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400">
+            <div className="bg-gradient-to-br from-blue-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-blue-200/80 dark:border-blue-500/25 p-4 shadow-sm space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-primery-700 dark:text-primery-400">
                 <HelpCircle className="w-4 h-4 shrink-0" />
                 <span>{t("aiExplanationTitle")}</span>
               </div>
@@ -628,22 +635,23 @@ export const QuizQuestionsPage = ({
           type="button"
           onClick={handlePrevious}
           disabled={currentQuestionIndex === 0}
-          className="h-11 px-4.5 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300 font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+          className="h-11 px-4.5 rounded-xl border border-neutral-200 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-100 font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
         >
-          {isRTL ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
+          {isRTL ? (
+            <ChevronRight className="w-4 h-4 shrink-0" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+          )}
           <span>{t("previous")}</span>
         </button>
 
         {/* Next / Finish Button */}
+
         <button
           type="button"
           onClick={handleNext}
           disabled={!selectedAnswer}
-          className={`flex-1 h-11 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md ${
-            currentQuestionIndex === totalQuestions - 1
-              ? "bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25"
-              : "bg-primery-700 hover:bg-primery-800 dark:bg-primery-600 dark:hover:bg-primery-700 shadow-primery-700/20"
-          }`}
+          className="flex-1 h-11 rounded-xl text-white font-bold text-s flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md bg-primery-700 dark:bg-primery-600 shadow-primery-700/20"
         >
           <span>
             {currentQuestionIndex === totalQuestions - 1
@@ -652,8 +660,10 @@ export const QuizQuestionsPage = ({
           </span>
           {currentQuestionIndex === totalQuestions - 1 ? (
             <Award className="w-4 h-4 shrink-0" />
+          ) : isRTL ? (
+            <ChevronLeft className="w-4 h-4 shrink-0" />
           ) : (
-            isRTL ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />
+            <ChevronRight className="w-4 h-4 shrink-0" />
           )}
         </button>
       </footer>

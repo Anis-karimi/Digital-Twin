@@ -400,9 +400,7 @@ export const ReviewAnswers = ({
                   <HelpCircle className="w-4 h-4" />
                 )}
                 <span>
-                  {explanationOpen
-                    ? t("hideExplanation")
-                    : t("explainAnswer")}
+                  {explanationOpen ? t("hideExplanation") : t("explainAnswer")}
                 </span>
               </button>
 
@@ -415,8 +413,8 @@ export const ReviewAnswers = ({
                 }`}
               >
                 <div className="overflow-hidden">
-                  <div className="bg-gradient-to-br from-amber-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-amber-200/80 dark:border-amber-500/25 p-4 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400">
+                  <div className="bg-gradient-to-br from-blue-50/80 via-white to-sky-50/50 dark:from-neutral-scale1300 dark:via-neutral-scale1200 dark:to-neutral-scale1300 rounded-2xl border border-blue-200/80 dark:border-blue-500/25 p-4 shadow-sm space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-primery-700 dark:text-primery-400">
                       <HelpCircle className="w-4 h-4 shrink-0" />
                       <span>{t("aiExplanationTitle")}</span>
                     </div>

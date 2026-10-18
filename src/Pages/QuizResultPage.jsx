@@ -277,7 +277,7 @@ export const QuizResultPage = ({
           const titleBox = document.createElement("div");
 
           const title = document.createElement("h1");
-          title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+          title.textContent = t("quizResultTitle") || "کارنامه کوییز هوشمند";
           title.style.fontSize = "22px";
           title.style.margin = "0";
           title.style.fontWeight = "800";
@@ -337,7 +337,7 @@ export const QuizResultPage = ({
           miniTitleBox.style.gap = "10px";
 
           const miniTitle = document.createElement("h2");
-          miniTitle.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+          miniTitle.textContent = t("quizResultTitle") || "کارنامه کوییز هوشمند";
           miniTitle.style.fontSize = "15px";
           miniTitle.style.margin = "0";
           miniTitle.style.fontWeight = "800";
@@ -454,7 +454,6 @@ export const QuizResultPage = ({
           { title: t("question") || "سوال", width: "30%", align: isRTL ? "right" : "left" },
           { title: t("yourAnswer") || "پاسخ شما", width: "15%", align: isRTL ? "right" : "left" },
           { title: t("correctAnswer") || "پاسخ صحیح", width: "15%", align: isRTL ? "right" : "left" },
-          { title: t("result") || "نتیجه", width: "11%", align: "center" },
           { title: t("explainAnswer") || "توضیح هوش مصنوعی", width: "29%", align: isRTL ? "right" : "left" },
         ];
 
@@ -521,7 +520,7 @@ export const QuizResultPage = ({
         tdQ.style.lineHeight = "1.5";
         tdQ.style.fontWeight = "500";
         tdQ.style.color = "#0f172a";
-        tdQ.style.fontSize = "10.5px";
+        tdQ.style.fontSize = "15px";
         tdQ.textContent = questionText;
         row.appendChild(tdQ);
 
@@ -533,8 +532,8 @@ export const QuizResultPage = ({
         tdYour.style.borderRight = "1px solid #e2e8f0";
         tdYour.style.verticalAlign = "top";
         tdYour.style.lineHeight = "1.45";
-        tdYour.style.fontWeight = "600";
-        tdYour.style.fontSize = "10.5px";
+        tdYour.style.fontWeight = "400";
+        tdYour.style.fontSize = "15px";
         tdYour.style.color = isCorrect ? "#15803d" : isUnanswered ? "#64748b" : "#b91c1c";
         tdYour.textContent = selectedAnswerText;
         row.appendChild(tdYour);
@@ -547,48 +546,11 @@ export const QuizResultPage = ({
         tdCorrect.style.borderRight = "1px solid #e2e8f0";
         tdCorrect.style.verticalAlign = "top";
         tdCorrect.style.lineHeight = "1.45";
-        tdCorrect.style.fontWeight = "600";
-        tdCorrect.style.fontSize = "10.5px";
+        tdCorrect.style.fontWeight = "400";
+        tdCorrect.style.fontSize = "15px";
         tdCorrect.style.color = "#15803d";
         tdCorrect.textContent = correctAnswerText;
         row.appendChild(tdCorrect);
-
-        // 4. Result Cell with Check/Cross Badge (Native Unicode guaranteed rendering)
-        const tdResult = document.createElement("td");
-        tdResult.style.width = "11%";
-        tdResult.style.padding = "7px 6px";
-        tdResult.style.borderBottom = "1px solid #e2e8f0";
-        tdResult.style.borderRight = "1px solid #e2e8f0";
-        tdResult.style.verticalAlign = "middle";
-        tdResult.style.textAlign = "center";
-
-        const badge = document.createElement("div");
-        badge.style.display = "inline-block";
-        badge.style.textAlign = "center";
-        badge.style.height = "24px";
-        badge.style.lineHeight = "22px";
-        badge.style.padding = "0 10px";
-        badge.style.borderRadius = "9999px";
-        badge.style.boxSizing = "border-box";
-        badge.style.whiteSpace = "nowrap";
-
-        const iconSymbol = isCorrect ? "✓" : isUnanswered ? "−" : "✕";
-        const iconColor = isCorrect ? "#15803d" : isUnanswered ? "#4b5563" : "#b91c1c";
-        const bgColor = isCorrect ? "#dcfce7" : isUnanswered ? "#f3f4f6" : "#fee2e2";
-        const borderColor = isCorrect ? "#22c55e" : isUnanswered ? "#9ca3af" : "#ef4444";
-        const labelText = isCorrect
-          ? (isRTL ? "درست" : "Correct")
-          : isUnanswered
-          ? (isRTL ? "بی‌پاسخ" : "Unanswered")
-          : (isRTL ? "نادرست" : "Incorrect");
-
-        badge.style.backgroundColor = bgColor;
-        badge.style.border = `1.5px solid ${borderColor}`;
-
-        badge.innerHTML = `<span style="font-size:13px;font-weight:900;color:${iconColor};margin-${isRTL ? "left" : "right"}:4px;display:inline-block;vertical-align:middle;line-height:1;">${iconSymbol}</span><span style="font-size:11px;font-weight:700;color:${iconColor};display:inline-block;vertical-align:middle;line-height:1;font-family:${isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif"};">${labelText}</span>`;
-
-        tdResult.appendChild(badge);
-        row.appendChild(tdResult);
 
         // 5. AI Explanation Cell
         const tdExp = document.createElement("td");
@@ -597,7 +559,7 @@ export const QuizResultPage = ({
         tdExp.style.borderBottom = "1px solid #e2e8f0";
         tdExp.style.verticalAlign = "top";
         tdExp.style.lineHeight = "1.55";
-        tdExp.style.fontSize = "10px";
+        tdExp.style.fontSize = "15px";
         tdExp.style.color = "#1e293b";
         tdExp.style.wordBreak = "break-word";
         tdExp.dir = isRTL ? "rtl" : "ltr";
@@ -674,7 +636,7 @@ export const QuizResultPage = ({
 
       // Initialize jsPDF in Landscape A4 (297mm x 210mm)
       const pdf = new jsPDF({
-        orientation: "landscape",
+        orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
@@ -684,8 +646,8 @@ export const QuizResultPage = ({
         pageContainer.style.position = "absolute";
         pageContainer.style.left = "-10000px";
         pageContainer.style.top = "0";
-        pageContainer.style.width = "1120px";
-        pageContainer.style.minHeight = "790px";
+        pageContainer.style.width = "794px";
+        pageContainer.style.minHeight = "1123px";
         pageContainer.style.background = "#ffffff";
         pageContainer.style.padding = "24px 32px";
         pageContainer.style.boxSizing = "border-box";
@@ -737,9 +699,21 @@ export const QuizResultPage = ({
         }
 
         const imgData = canvas.toDataURL("image/png");
-        const imgWidth = 285;
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 8;
+
+        const imgWidth = pageWidth - margin * 2;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 6, 6, imgWidth, Math.min(imgHeight, 198));
+
+        pdf.addImage(
+          imgData,
+          "PNG",
+          margin,
+          margin,
+          imgWidth,
+          Math.min(imgHeight, pageHeight - margin * 2),
+        );
       }
 
       pdf.save("quiz-result.pdf");
@@ -973,51 +947,43 @@ export const QuizResultPage = ({
           <div className="flex flex-col gap-2.5">
             {actionItems.map((action) => {
               const ActionIcon = action.icon;
+
               return (
                 <button
                   key={action.id}
                   type="button"
                   onClick={() => handleAction(action.id)}
                   disabled={action.loading}
-                  className={`w-full p-4 rounded-2xl border text-right flex items-center justify-between gap-3.5 transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-xs ${
-                    action.primary
-                      ? "bg-primery-700 hover:bg-primery-800 dark:bg-primery-600 dark:hover:bg-primery-700 text-white border-transparent shadow-primery-700/20"
-                      : "bg-white hover:bg-neutral-50/80 dark:bg-neutral-scale1300 dark:hover:bg-neutral-scale1200 border-neutral-200 dark:border-neutral-scale1100 text-neutral-800 dark:text-neutral-200"
-                  }`}
+                  className="w-full p-4 rounded-2xl border border-neutral-200 dark:border-neutral-scale1100 bg-white hover:bg-neutral-50/80 dark:bg-neutral-scale1300 dark:hover:bg-neutral-scale1200 text-neutral-800 dark:text-neutral-200 text-right flex items-center justify-between gap-3.5 transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
                 >
                   <div className="flex items-center gap-3.5 flex-1 min-w-0">
                     {/* Action Icon Badge */}
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        action.primary
-                          ? "bg-white/20 text-white"
-                          : action.iconBg
-                      }`}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${action.iconBg}`}
                     >
                       <ActionIcon
-                        className={`w-5 h-5 ${
-                          action.loading ? "animate-spin" : ""
-                        }`}
+                        className={`w-5 h-5 ${action.loading ? "animate-spin" : ""}`}
                       />
                     </div>
 
                     {/* Action Details */}
                     <div className="flex flex-col items-start min-w-0 flex-1">
                       <span
-                        className={`text-xs sm:text-sm font-bold truncate ${
-                          action.primary
-                            ? "text-white"
-                            : "text-neutral-900 dark:text-neutral-100"
-                        } ${isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"}`}
+                        className={`text-xs sm:text-sm font-bold truncate text-neutral-900 dark:text-neutral-100 ${
+                          isRTL
+                            ? "fa-title-3 font-vazir"
+                            : "en-title-3 font-inter"
+                        }`}
                       >
                         {action.title}
                       </span>
+
                       <span
-                        className={`text-[11px] truncate mt-0.5 ${
-                          action.primary
-                            ? "text-white/80"
-                            : "text-neutral-400 dark:text-neutral-400"
-                        } ${isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"}`}
+                        className={`text-[11px] truncate mt-0.5 text-neutral-400 dark:text-neutral-400 ${
+                          isRTL
+                            ? "fa-caption-2 font-vazir"
+                            : "en-caption-2 font-inter"
+                        }`}
                       >
                         {action.subtitle}
                       </span>
@@ -1025,11 +991,7 @@ export const QuizResultPage = ({
                   </div>
 
                   {/* Directional Chevron */}
-                  <div
-                    className={`shrink-0 ${
-                      action.primary ? "text-white/80" : "text-neutral-400"
-                    }`}
-                  >
+                  <div className="shrink-0 text-neutral-400">
                     {isRTL ? (
                       <ChevronLeft className="w-4 h-4" />
                     ) : (

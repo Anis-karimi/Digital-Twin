@@ -983,7 +983,9 @@ export const ChatArea = () => {
                       currentStudent?.id || id,
                     )} text-white fa-caption-3`}
                   >
-                    {getInitials(currentStudent?.title || currentStudent?.name || "")}
+                    {getInitials(
+                      currentStudent?.title || currentStudent?.name || "",
+                    )}
                   </div>
                 )
               ) : (
@@ -1002,11 +1004,13 @@ export const ChatArea = () => {
 
             {/* Title */}
             <h1
-              dir={isPersianText(chatTitle) ? "rtl" : (isRTL ? "rtl" : "ltr")}
+              dir={isPersianText(chatTitle) ? "rtl" : isRTL ? "rtl" : "ltr"}
               className={`flex-1 min-w-0 truncate ${
                 isPersianText(chatTitle)
                   ? "fa-title-3 font-vazir"
-                  : (isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter")
+                  : isRTL
+                    ? "fa-title-3 font-vazir"
+                    : "en-title-3 font-inter"
               } ${isRTL ? "text-right" : "text-left"} dark:text-neutral-scale70`}
             >
               {chatTitle}
@@ -1112,9 +1116,7 @@ export const ChatArea = () => {
         {/* Telegram Floating Scroll-To-Comment Button with Badge */}
         {!isTeacherViewingStudentChat && unreadComments.length > 0 && (
           <div
-            className={`absolute ${
-              isRTL ? "left-4" : "right-4"
-            } ${
+            className={`absolute ${isRTL ? "left-4" : "right-4"} ${
               isQuizOpen && isQuizMinimized ? "bottom-[105px]" : "bottom-[70px]"
             } z-50 animate-in fade-in zoom-in-95 duration-200 select-none`}
           >
@@ -1135,208 +1137,220 @@ export const ChatArea = () => {
           </div>
         )}
 
-        {isTeacherViewingStudentChat ? (
-          <div
-            className="absolute left-1/2 -translate-x-1/2 bottom-[15px] w-[calc(100%-24px)] max-w-[390px] h-[44px] z-50 bg-white/95 dark:bg-neutral-scale1400/95 backdrop-blur-md rounded-[20px] border border-primery-300/60 dark:border-sky-500/40 shadow-sm flex items-center justify-center px-4 gap-2 text-primery-700 dark:text-sky-300 select-none animate-in fade-in duration-300"
-            dir={isRTL ? "rtl" : "ltr"}
-          >
-            <MessageSquareQuote className="w-4 h-4 shrink-0 text-primery-600 dark:text-sky-400" />
-            <span className="text-xs font-semibold font-vazir truncate">
-              {t("studentChatReviewMode")}
-            </span>
-          </div>
-        ) : isStudentBlockedFromChatting ? (
-          <div
-            className={`absolute left-1/2 -translate-x-1/2 ${
-              isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
-            } w-[calc(100%-24px)] max-w-[390px] min-h-[44px] z-50 bg-amber-50/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-[20px] border border-amber-200 dark:border-amber-800/60 px-4 py-2 flex items-center justify-center gap-2 shadow-xs select-none`}
-            dir={isRTL ? "rtl" : "ltr"}
-          >
-            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="text-xs font-vazir text-amber-800 dark:text-amber-300 font-medium text-center">
-              {isRTL
-                ? "این درس توسط استاد غیرفعال شده است و امکان ارسال پیام وجود ندارد."
-                : "This course is inactive and sending messages is disabled."}
-            </span>
-          </div>
-        ) : (
+        {!isTeacherViewingStudentChat && (
           <>
-            {/* Input */}
-            <form
-              className={`absolute left-1/2 -translate-x-1/2 ${
-                isQuizOpen && isQuizMinimized ? "bottom-[54px]" : "bottom-[15px]"
-              } w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100 transition-all duration-300`}
-              dir="ltr"
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-            >
-              <label htmlFor={composerInputId} className="sr-only">
-                {t("message")}
-              </label>
-
-              {/* Dynamic typing font & direction detection */}
-              {(() => {
-                const isTypedPersian = /[\u0600-\u06FF]/.test(message);
-                const textareaFontClass = message
-                  ? (isTypedPersian ? "fa-body font-vazir" : "en-body font-inter")
-                  : (isRTL ? "fa-body font-vazir" : "en-body font-inter");
-                const textareaDir = message
-                  ? (isTypedPersian ? "rtl" : "ltr")
-                  : (isRTL ? "rtl" : "ltr");
-                const textareaAlign = message
-                  ? (isTypedPersian ? "text-right" : "text-left")
-                  : (isRTL ? "text-right" : "text-left");
-
-                return (
-                  <textarea
-                    id={composerInputId}
-                    ref={textareaRef}
-                    dir={textareaDir}
-                    value={message}
-                    placeholder={t("writeMessage")}
-                    rows={1}
-                    className={`absolute bottom-0 left-0 w-full pl-[18px] pr-[84px] pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
-                    style={{
-                      minHeight: "37px",
-                      resize: "none",
-                    }}
-                    onChange={(event) => {
-                      const value = event.target.value;
-
-                      setMessage(value);
-                      setIsTyping(value.length > 0);
-
-                      if (!value && textareaRef.current) {
-                        textareaRef.current.style.height = "37px";
-                        textareaRef.current.parentElement.style.height = "39px";
-                      }
-                    }}
-                    onInput={(e) => {
-                      const el = e.target;
-
-                      el.style.height = "auto";
-                      el.style.height = el.scrollHeight + "px";
-
-                      el.parentElement.style.height = el.scrollHeight + "px";
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
-                      }
-                    }}
-                    disabled={isLoading || recording}
-                  />
-                );
-              })()}
-
-              {/* Send / Mic button - Always on right */}
-              {isTyping && !recording ? (
-                <button
-                  type="button"
-                  className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20 transition-all duration-300 flex items-center justify-center cursor-pointer"
-                  onClick={sendMessage}
-                  title={isRTL ? "ارسال پیام" : "Send message"}
-                >
-                  <Send className="!w-[35px] !h-[35px] text-primery-500" />
-                </button>
-              ) : (
-                <VoiceMicButton
-                  recording={recording}
-                  voiceLang={voiceLang}
-                  onLanguageChange={setVoiceLang}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                  disabled={isStudentBlockedFromChatting}
-                  isRTL={isRTL}
-                  className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20"
-                  buttonClassName="w-[35px] h-[35px] rounded-full flex items-center justify-center cursor-pointer"
-                  iconClassName="w-[24px] h-[24px]"
-                />
-              )}
-
-              {/* Quiz button - Always on right (to the left of mic/send button) */}
-              <button
-                type="button"
-                onClick={handleOpenQuiz}
-                aria-label={quizBarTitle}
-                title={quizBarTitle}
-                className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer z-20"
-              >
-                <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
-              </button>
-            </form>
-
-            {/* Telegram Mini App Minimized Docked Bar (Below typing section) */}
-            {isQuizOpen && isQuizMinimized && (
+            {isStudentBlockedFromChatting ? (
               <div
-                onClick={() => setIsQuizMinimized(false)}
+                className={`absolute left-1/2 -translate-x-1/2 ${
+                  isQuizOpen && isQuizMinimized
+                    ? "bottom-[54px]"
+                    : "bottom-[15px]"
+                } w-[calc(100%-24px)] max-w-[390px] min-h-[44px] z-50 bg-amber-50/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-[20px] border border-amber-200 dark:border-amber-800/60 px-4 py-2 flex items-center justify-center gap-2 shadow-xs select-none`}
                 dir={isRTL ? "rtl" : "ltr"}
-                className="absolute left-1/2 -translate-x-1/2 bottom-[8px] w-[calc(100%-24px)] max-w-[390px] h-[38px] z-50 bg-white/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-2xl border border-primery-500/30 dark:border-sky-500/30 shadow-md shadow-primery-900/10 flex items-center justify-between px-3 cursor-pointer select-none transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] animate-in slide-in-from-bottom-2 fade-in"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="relative w-6 h-6 rounded-lg bg-gradient-to-tr from-primery-600 to-sky-400 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Quiz className="w-3.5 h-3.5" />
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-scale1300 animate-pulse" />
-                  </div>
-
-                  {/* Title: کوییز سیستم عامل */}
-                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-100 truncate font-vazir">
-                    {quizBarTitle}
-                  </span>
-
-                  {/* Status Tag */}
-                  <span className="text-[10px] font-medium text-primery-700 dark:text-sky-400 bg-primery-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-full border border-primery-200/50 dark:border-sky-800/40 truncate">
-                    {t("inProgressQuiz") || "در حال اجرا"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsQuizMinimized(false);
-                    }}
-                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-primery-600 dark:hover:text-sky-400 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    title={t("expandQuiz") || "بزرگ کردن"}
-                    aria-label={t("expandQuiz") || "بزرگ کردن"}
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCloseQuiz();
-                    }}
-                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                    title={t("closeQuiz") || "بستن"}
-                    aria-label={t("closeQuiz") || "بستن"}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-xs font-vazir text-amber-800 dark:text-amber-300 font-medium text-center">
+                  {isRTL
+                    ? "این درس توسط استاد غیرفعال شده است و امکان ارسال پیام وجود ندارد."
+                    : "This course is inactive and sending messages is disabled."}
+                </span>
               </div>
+            ) : (
+              <>
+                {/* Input */}
+                <form
+                  className={`absolute left-1/2 -translate-x-1/2 ${
+                    isQuizOpen && isQuizMinimized
+                      ? "bottom-[54px]"
+                      : "bottom-[15px]"
+                  } w-[calc(100%-24px)] max-w-[390px] min-h-[39px] z-50 bg-white dark:bg-neutral-scale1400 rounded-[20px] border border-neutral-scale100 dark:border-neutral-scale1100 transition-all duration-300`}
+                  dir="ltr"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    sendMessage();
+                  }}
+                >
+                  <label htmlFor={composerInputId} className="sr-only">
+                    {t("message")}
+                  </label>
+
+                  {/* Dynamic typing font & direction detection */}
+                  {(() => {
+                    const isTypedPersian = /[\u0600-\u06FF]/.test(message);
+                    const textareaFontClass = message
+                      ? isTypedPersian
+                        ? "fa-body font-vazir"
+                        : "en-body font-inter"
+                      : isRTL
+                        ? "fa-body font-vazir"
+                        : "en-body font-inter";
+                    const textareaDir = message
+                      ? isTypedPersian
+                        ? "rtl"
+                        : "ltr"
+                      : isRTL
+                        ? "rtl"
+                        : "ltr";
+                    const textareaAlign = message
+                      ? isTypedPersian
+                        ? "text-right"
+                        : "text-left"
+                      : isRTL
+                        ? "text-right"
+                        : "text-left";
+
+                    return (
+                      <textarea
+                        id={composerInputId}
+                        ref={textareaRef}
+                        dir={textareaDir}
+                        value={message}
+                        placeholder={t("writeMessage")}
+                        rows={1}
+                        className={`absolute bottom-0 left-0 w-full pl-[18px] pr-[84px] pt-[7px] pb-[7px] resize-none overflow-y-hidden whitespace-pre-wrap break-words ${textareaFontClass} ${textareaAlign} text-black dark:text-neutral-scale100 dark:placeholder:text-neutral-scale600 leading-[24px]`}
+                        style={{
+                          minHeight: "37px",
+                          resize: "none",
+                        }}
+                        onChange={(event) => {
+                          const value = event.target.value;
+
+                          setMessage(value);
+                          setIsTyping(value.length > 0);
+
+                          if (!value && textareaRef.current) {
+                            textareaRef.current.style.height = "37px";
+                            textareaRef.current.parentElement.style.height =
+                              "39px";
+                          }
+                        }}
+                        onInput={(e) => {
+                          const el = e.target;
+
+                          el.style.height = "auto";
+                          el.style.height = el.scrollHeight + "px";
+
+                          el.parentElement.style.height =
+                            el.scrollHeight + "px";
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                          }
+                        }}
+                        disabled={isLoading || recording}
+                      />
+                    );
+                  })()}
+
+                  {/* Send / Mic button - Always on right */}
+                  {isTyping && !recording ? (
+                    <button
+                      type="button"
+                      className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20 transition-all duration-300 flex items-center justify-center cursor-pointer"
+                      onClick={sendMessage}
+                      title={isRTL ? "ارسال پیام" : "Send message"}
+                    >
+                      <Send className="!w-[35px] !h-[35px] text-primery-500" />
+                    </button>
+                  ) : (
+                    <VoiceMicButton
+                      recording={recording}
+                      voiceLang={voiceLang}
+                      onLanguageChange={setVoiceLang}
+                      onStartRecording={startRecording}
+                      onStopRecording={stopRecording}
+                      disabled={isStudentBlockedFromChatting}
+                      isRTL={isRTL}
+                      className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20"
+                      buttonClassName="w-[35px] h-[35px] rounded-full flex items-center justify-center cursor-pointer"
+                      iconClassName="w-[24px] h-[24px]"
+                    />
+                  )}
+
+                  {/* Quiz button - Always on right (to the left of mic/send button) */}
+                  <button
+                    type="button"
+                    onClick={handleOpenQuiz}
+                    aria-label={quizBarTitle}
+                    title={quizBarTitle}
+                    className="absolute bottom-[6.5px] right-12 w-7 h-7 flex items-center justify-center cursor-pointer z-20"
+                  >
+                    <Quiz className="!w-8 !h-8 text-warning-900 dark:text-neutral-scale70" />
+                  </button>
+                </form>
+
+                {/* Telegram Mini App Minimized Docked Bar (Below typing section) */}
+                {isQuizOpen && isQuizMinimized && (
+                  <div
+                    onClick={() => setIsQuizMinimized(false)}
+                    dir={isRTL ? "rtl" : "ltr"}
+                    className="absolute left-1/2 -translate-x-1/2 bottom-[8px] w-[calc(100%-24px)] max-w-[390px] h-[38px] z-50 bg-white/95 dark:bg-neutral-scale1300/95 backdrop-blur-md rounded-2xl border border-primery-500/30 dark:border-sky-500/30 shadow-md shadow-primery-900/10 flex items-center justify-between px-3 cursor-pointer select-none transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] animate-in slide-in-from-bottom-2 fade-in"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative w-6 h-6 rounded-lg bg-gradient-to-tr from-primery-600 to-sky-400 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <Quiz className="w-3.5 h-3.5" />
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-scale1300 animate-pulse" />
+                      </div>
+
+                      {/* Title: کوییز سیستم عامل */}
+                      <span className="text-xs font-bold text-neutral-800 dark:text-neutral-100 truncate font-vazir">
+                        {quizBarTitle}
+                      </span>
+
+                      {/* Status Tag */}
+                      <span className="text-[10px] font-medium text-primery-700 dark:text-sky-400 bg-primery-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-full border border-primery-200/50 dark:border-sky-800/40 truncate">
+                        {t("inProgressQuiz") || "در حال اجرا"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsQuizMinimized(false);
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-primery-600 dark:hover:text-sky-400 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        title={t("expandQuiz") || "بزرگ کردن"}
+                        aria-label={t("expandQuiz") || "بزرگ کردن"}
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCloseQuiz();
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                        title={t("closeQuiz") || "بستن"}
+                        aria-label={t("closeQuiz") || "بستن"}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Telegram Mini App Bottom Sheet Modal */}
+                <TelegramQuizBottomSheet
+                  isOpen={isQuizOpen}
+                  isMinimized={isQuizMinimized}
+                  onMinimize={() => setIsQuizMinimized(true)}
+                  onExpand={() => setIsQuizMinimized(false)}
+                  onClose={handleCloseQuiz}
+                  courseTitle={courseDisplayName}
+                />
+              </>
             )}
 
-            {/* Telegram Mini App Bottom Sheet Modal */}
-            <TelegramQuizBottomSheet
-              isOpen={isQuizOpen}
-              isMinimized={isQuizMinimized}
-              onMinimize={() => setIsQuizMinimized(true)}
-              onExpand={() => setIsQuizMinimized(false)}
-              onClose={handleCloseQuiz}
-              courseTitle={courseDisplayName}
-            />
+            {/* Footer blur */}
+            <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[55px] flex bg-transparent backdrop-blur-[1px] pointer-events-none" />
           </>
         )}
-
-        {/* Footer blur */}
-        <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[55px] flex bg-transparent backdrop-blur-[1px] pointer-events-none" />
       </main>
     );
 };
