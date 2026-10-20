@@ -256,7 +256,7 @@ export const ChatArea = () => {
       }
 
       // Default fallback for course chats
-      navigate("/", { replace: true });
+      navigate("/Teacher", { replace: true });
     };
 
     const textareaRef = useRef(null);

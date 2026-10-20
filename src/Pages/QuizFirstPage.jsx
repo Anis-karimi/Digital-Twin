@@ -98,7 +98,7 @@ export const QuizFirstPage = ({
         return;
       }
     }
-    navigate("/", { replace: true });
+    navigate("/Teacher", { replace: true });
   };
 
   const handleCountChange = (delta) => {

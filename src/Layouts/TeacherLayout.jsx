@@ -21,7 +21,7 @@ const MemoTeacherExams = React.memo(TeacherExams);
 const MemoTeacherSettings = React.memo(TeacherSettings);
 
 const TEACHER_TABS = [
-  { id: "chats", path: "/", component: MemoTeacherHome },
+  { id: "chats", path: "/Teacher", component: MemoTeacherHome },
   { id: "courses", path: "/TeacherCourses", component: MemoTeacherCourses },
   { id: "exams", path: "/TeacherExams", component: MemoTeacherExams },
   { id: "settings", path: "/TeacherSettings", component: MemoTeacherSettings },
@@ -33,7 +33,7 @@ const normalizePath = (pathname) =>
 const getTeacherTabIndex = (pathname) => {
   const path = normalizePath(pathname);
 
-  if (path === "/" || path.startsWith("/teacherlessonspage")) {
+  if (path === "/teacher" || path.startsWith("/teacherlessonspage")) {
     return 0;
   }
   if (path === "/teachercourses") {
@@ -121,7 +121,7 @@ export const TeacherLayout = () => {
         if (lastLesson && lastLesson !== "lessons") {
           navigate(`/TeacherLessonsPage/${lastLesson}`, { replace: true });
         } else {
-          navigate("/", { replace: true });
+          navigate("/Teacher", { replace: true });
         }
       } else {
         navigate(targetTab.path, { replace: true });

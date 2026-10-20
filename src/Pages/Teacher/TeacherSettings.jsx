@@ -120,7 +120,6 @@ export const TeacherSettings = () => {
         setAudioDuration(0);
         setAudioCurrentTime(0);
       }
-
     } catch (error) {
       console.error("Failed to get user files:", error);
     }
@@ -777,7 +776,7 @@ export const TeacherSettings = () => {
             type="button"
             onClick={() => {
               if (logoutUser) logoutUser();
-              navigate("/login");
+              navigate("/");
             }}
             className="mx-3.5 w-auto h-[38px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[8px] overflow-hidden cursor-pointer hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors"
             aria-label={t("logout")}

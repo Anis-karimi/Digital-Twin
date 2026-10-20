@@ -40,8 +40,10 @@ export const getExamTimingState = (exam, isRTL = true) => {
     return {
       status: "ended",
       label: isRTL ? "پایان یافته" : "Ended",
-      colorClass: "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
-      badgeClass: "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale400",
+      colorClass:
+        "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
+      badgeClass:
+        "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale400",
       dotClass: "bg-neutral-scale700",
       iconBoxClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
       iconClass: "text-neutral-scale700 dark:text-neutral-scale400",
@@ -78,12 +80,24 @@ export const getExamTimingState = (exam, isRTL = true) => {
       if (parts[1]) endTimeStr = parts[1];
     } else if (exam.start_at && exam.end_at) {
       try {
-        if (typeof exam.start_at === "string" && exam.start_at.includes(":") && !exam.start_at.includes("T")) {
+        if (
+          typeof exam.start_at === "string" &&
+          exam.start_at.includes(":") &&
+          !exam.start_at.includes("T")
+        ) {
           startTimeStr = toEnglishDigits(exam.start_at);
           endTimeStr = toEnglishDigits(exam.end_at);
         } else {
-          startTimeStr = new Date(exam.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-          endTimeStr = new Date(exam.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+          startTimeStr = new Date(exam.start_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+          endTimeStr = new Date(exam.end_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
         }
       } catch {
         startTimeStr = "10:00";
@@ -96,8 +110,8 @@ export const getExamTimingState = (exam, isRTL = true) => {
       const [sh, sm] = startTimeStr.split(":").map(Number);
       const [eh, em] = endTimeStr.split(":").map(Number);
 
-      if (rawDateStr.includes("/")) {
-        const [jy, jm, jd] = rawDateStr.split("/").map(Number);
+      if (rawDateStr.includes("/Teacher")) {
+        const [jy, jm, jd] = rawDateStr.split("/Teacher").map(Number);
         const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
         examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
         examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
@@ -121,8 +135,10 @@ export const getExamTimingState = (exam, isRTL = true) => {
       return {
         status: "upcoming",
         label: isRTL ? "شروع نشده" : "Upcoming",
-        colorClass: "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
-        badgeClass: "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90",
+        colorClass:
+          "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
+        badgeClass:
+          "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90",
         dotClass: "bg-primery-900 dark:bg-primery-90",
         iconBoxClass: "bg-primery-100 dark:bg-primery-1000",
         iconClass: "text-primery-1000 dark:text-primery-90",
@@ -134,8 +150,10 @@ export const getExamTimingState = (exam, isRTL = true) => {
       return {
         status: "active",
         label: isRTL ? "در حال برگزاری" : "Active",
-        colorClass: "border-success-500 dark:border-success-600 bg-green-50 dark:bg-green-950/30",
-        badgeClass: "bg-success-100 dark:bg-success-1000 text-success-1000 dark:text-success-100",
+        colorClass:
+          "border-success-500 dark:border-success-600 bg-green-50 dark:bg-green-950/30",
+        badgeClass:
+          "bg-success-100 dark:bg-success-1000 text-success-1000 dark:text-success-100",
         dotClass: "bg-success-900 dark:bg-success-100",
         iconBoxClass: "bg-success-100 dark:bg-success-1000",
         iconClass: "text-success-1000 dark:text-success-100",
@@ -147,8 +165,10 @@ export const getExamTimingState = (exam, isRTL = true) => {
       return {
         status: "ended",
         label: isRTL ? "پایان یافته" : "Ended",
-        colorClass: "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
-        badgeClass: "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale400",
+        colorClass:
+          "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
+        badgeClass:
+          "bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale400",
         dotClass: "bg-neutral-scale700",
         iconBoxClass: "bg-neutral-scale300 dark:bg-neutral-scale1200",
         iconClass: "text-neutral-scale700 dark:text-neutral-scale400",
@@ -163,8 +183,10 @@ export const getExamTimingState = (exam, isRTL = true) => {
   return {
     status: "upcoming",
     label: isRTL ? "شروع نشده" : "Upcoming",
-    colorClass: "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
-    badgeClass: "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90",
+    colorClass:
+      "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
+    badgeClass:
+      "bg-primery-100 dark:bg-primery-1000 text-primery-1000 dark:text-primery-90",
     dotClass: "bg-primery-900 dark:bg-primery-90",
     iconBoxClass: "bg-primery-100 dark:bg-primery-1000",
     iconClass: "text-primery-1000 dark:text-primery-90",
@@ -209,7 +231,11 @@ export const TeacherExams = () => {
           let timeDisplay = "10:00 - 10:25";
           if (q.start_at && q.end_at) {
             try {
-              if (typeof q.start_at === "string" && q.start_at.includes(":") && !q.start_at.includes("T")) {
+              if (
+                typeof q.start_at === "string" &&
+                q.start_at.includes(":") &&
+                !q.start_at.includes("T")
+              ) {
                 timeDisplay = `${q.start_at} - ${q.end_at}`;
               } else {
                 const s = new Date(q.start_at).toLocaleTimeString([], {
@@ -228,11 +254,21 @@ export const TeacherExams = () => {
               timeDisplay = `${q.start_at} - ${q.end_at}`;
             }
           }
-          const topic = (Array.isArray(q.goals) && q.goals.length > 0)
-            ? q.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean).join("، ")
-            : (q.description || "مباحث آزمون");
+          const topic =
+            Array.isArray(q.goals) && q.goals.length > 0
+              ? q.goals
+                  .map((g) =>
+                    typeof g === "object" && g !== null
+                      ? g.title || g.name || ""
+                      : String(g),
+                  )
+                  .filter(Boolean)
+                  .join("، ")
+              : q.description || "مباحث آزمون";
 
-          const effectiveDate = q.exam_date || (q.start_at ? isoToJalaliDate(q.start_at) : getTodayJalaliDate());
+          const effectiveDate =
+            q.exam_date ||
+            (q.start_at ? isoToJalaliDate(q.start_at) : getTodayJalaliDate());
 
           return {
             id: q.quiz_id || q.id,
@@ -274,7 +310,9 @@ export const TeacherExams = () => {
     setActiveTab("active");
     setFilterStatus("all");
     setSuccessMessage(
-      isRTL ? "آزمون جدید با موفقیت ایجاد شد و در لیست آزمون‌های فعال قرار گرفت!" : "New exam created successfully!"
+      isRTL
+        ? "آزمون جدید با موفقیت ایجاد شد و در لیست آزمون‌های فعال قرار گرفت!"
+        : "New exam created successfully!",
     );
     if (newExam) {
       setExams((prev) => deduplicateExams([newExam, ...prev]));
@@ -297,15 +335,19 @@ export const TeacherExams = () => {
     setEditingExam(null);
     setIsCreatingExam(false);
     setSuccessMessage(
-      isRTL ? "مشخصات آزمون با موفقیت ویرایش شد!" : "Exam updated successfully!"
+      isRTL
+        ? "مشخصات آزمون با موفقیت ویرایش شد!"
+        : "Exam updated successfully!",
     );
     if (updatedExam) {
-      const uId = String(updatedExam.id || updatedExam.quiz_id || updatedExam.assignment_id);
+      const uId = String(
+        updatedExam.id || updatedExam.quiz_id || updatedExam.assignment_id,
+      );
       setExams((prev) =>
         prev.map((e) => {
           const eId = String(e.id || e.quiz_id || e.assignment_id);
           return eId === uId ? { ...e, ...updatedExam } : e;
-        })
+        }),
       );
     }
     loadExams();
@@ -1063,4 +1105,3 @@ export const TeacherExams = () => {
     </main>
   );
 };
-

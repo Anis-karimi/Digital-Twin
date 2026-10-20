@@ -1,6 +1,6 @@
 /**
  * Centralized Application Translations Dictionary
- * 
+ *
  * To add a new language in the future:
  * 1. Add a new key (e.g. 'ar', 'fr', 'de') to the `translations` object below.
  * 2. Populate the translated strings corresponding to the keys.
@@ -97,9 +97,11 @@ export const translations = {
 
     // Login & Roles
     chooseProfileTitle: "سامانه دستیار آموزشی هوشمند دانشگاه فردوسی مشهد",
-    chooseProfileSubtitle: "برای ورود به محیط کاربری، یکی از حساب‌های نمونه زیر را انتخاب کنید:",
-    loginToDigitalTwin: "ورود به دوقلوی دیجیتال",
-    quickLoginSubtitle: "ورود سریع با انتخاب پروفایل نمونه (ارسال خودکار توکن و شناسه):",
+    chooseProfileSubtitle:
+      "برای ورود به محیط کاربری، یکی از حساب‌های نمونه زیر را انتخاب کنید:",
+    loginToDigitalTwin: "ورود به دانای",
+    quickLoginSubtitle:
+      "ورود سریع با انتخاب پروفایل نمونه (ارسال خودکار توکن و شناسه):",
     backToApp: "بازگشت به برنامه",
     activeUser: "کاربر فعلی:",
     teacherRole: "استاد درس سیستم عامل",
@@ -220,12 +222,15 @@ export const translations = {
     teacherComment: "نظر استاد",
     writeComment: "افزودن نظر استاد روی پاسخ بات",
     writeStudentComment: "افزودن نظر استاد روی پیام دانشجو",
-    commentPlaceholder: "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید...",
-    commentStudentPlaceholder: "توضیحات یا نکات راهنمایی خود را درباره پیام دانشجو بنویسید...",
+    commentPlaceholder:
+      "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید...",
+    commentStudentPlaceholder:
+      "توضیحات یا نکات راهنمایی خود را درباره پیام دانشجو بنویسید...",
     saveComment: "ثبت نظر",
     deleteComment: "حذف نظر",
     cancelComment: "انصراف",
-    studentChatReviewMode: "حالت بازبینی گفت‌وگوی دانشجو با بات • امکان کامنت‌گذاری فعال است",
+    studentChatReviewMode:
+      "حالت بازبینی گفت‌وگوی دانشجو با بات • امکان کامنت‌گذاری فعال است",
     teacher: "استاد",
     studentLiked: "پسندیده",
     studentDisliked: "نپسندیده",
@@ -320,8 +325,9 @@ export const translations = {
 
     // Login & Roles
     chooseProfileTitle: "Ferdowsi University AI Educational Assistant",
-    chooseProfileSubtitle: "Select one of the sample accounts below to enter the workspace:",
-    loginToDigitalTwin: "Digital Twin Login",
+    chooseProfileSubtitle:
+      "Select one of the sample accounts below to enter the workspace:",
+    loginToDigitalTwin: "DANAI Login",
     quickLoginSubtitle: "Quick login by selecting a sample profile:",
     backToApp: "Back to App",
     activeUser: "Active:",
@@ -444,11 +450,13 @@ export const translations = {
     writeComment: "Add Teacher Comment on Bot Message",
     writeStudentComment: "Add Teacher Comment on Student Message",
     commentPlaceholder: "Write your notes, explanations, or corrections...",
-    commentStudentPlaceholder: "Write your feedback or guidance on student message...",
+    commentStudentPlaceholder:
+      "Write your feedback or guidance on student message...",
     saveComment: "Save Comment",
     deleteComment: "Delete Comment",
     cancelComment: "Cancel",
-    studentChatReviewMode: "Student-Bot Chat Review Mode • Teacher Commenting Enabled",
+    studentChatReviewMode:
+      "Student-Bot Chat Review Mode • Teacher Commenting Enabled",
     teacher: "Teacher",
     studentLiked: "Student Liked",
     studentDisliked: "Student Disliked",
