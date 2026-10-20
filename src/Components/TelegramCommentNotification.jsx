@@ -127,7 +127,7 @@ export const TelegramCommentNotification = ({
             )}
           </span>
           <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-            {isRTL ? "تلگرام دوقلوی دیجیتال" : "Digital Twin"}
+            {isRTL ? "دانای" : "DANAI"}
           </span>
         </div>
       </div>

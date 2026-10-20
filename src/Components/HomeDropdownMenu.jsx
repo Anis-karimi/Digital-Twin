@@ -15,7 +15,9 @@ export const HomeDropdownMenu = () => {
   const { isRTL, logoutUser, currentUser, t } = useContext(AppContext);
   const navigate = useNavigate();
 
-  const captionClass = isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter";
+  const captionClass = isRTL
+    ? "fa-caption-2 font-vazir"
+    : "en-caption-2 font-inter";
 
   const themeLabel = isDark ? t("dayMode") : t("nightMode");
 
@@ -23,11 +25,11 @@ export const HomeDropdownMenu = () => {
     if (logoutUser) {
       logoutUser();
     }
-    navigate("/login");
+    navigate("/");
   };
 
   const handleGoToLogin = () => {
-    navigate("/login");
+    navigate("/");
   };
 
   return (

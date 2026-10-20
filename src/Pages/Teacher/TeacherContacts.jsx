@@ -88,7 +88,7 @@ export const TeacherContacts = () => {
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate("/");
+      navigate("/Teacher");
     }
   };
 
@@ -151,7 +151,9 @@ export const TeacherContacts = () => {
               <li className="w-full h-full min-h-[500px] flex items-center justify-center">
                 <p
                   className={`text-neutral-scale700 dark:text-neutral-scale200 text-center ${
-                    isRTL ? "fa-body-medium font-vazir" : "en-body-medium font-inter"
+                    isRTL
+                      ? "fa-body-medium font-vazir"
+                      : "en-body-medium font-inter"
                   }`}
                   dir={isRTL ? "rtl" : "ltr"}
                 >
@@ -169,8 +171,8 @@ export const TeacherContacts = () => {
                   student.status === "online"
                     ? t("online")
                     : isRTL
-                    ? student.statusFa || student.status
-                    : student.statusEn || student.status;
+                      ? student.statusFa || student.status
+                      : student.statusEn || student.status;
 
                 return (
                   <li
@@ -244,7 +246,9 @@ export const TeacherContacts = () => {
 
                       <div
                         className={`truncate mt-0.5 ${
-                          isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+                          isRTL
+                            ? "fa-caption-2 font-vazir"
+                            : "en-caption-2 font-inter"
                         } ${
                           student.is_online || student.status === "online"
                             ? "text-emerald-600 dark:text-emerald-400 font-semibold"
@@ -258,8 +262,8 @@ export const TeacherContacts = () => {
                               ? "آنلاین"
                               : "Online"
                             : isRTL
-                            ? "اخیراً آنلاین بوده"
-                            : "Last seen recently")}
+                              ? "اخیراً آنلاین بوده"
+                              : "Last seen recently")}
                       </div>
                     </div>
 
@@ -310,7 +314,9 @@ export const TeacherContacts = () => {
                             role="menuitem"
                             onClick={() => handleBlockToggle(student.id)}
                             className={`w-full px-2.5 py-1.5 flex items-center justify-center gap-1.5 ${
-                              isRTL ? "fa-caption-1 font-vazir" : "en-caption-1 font-inter"
+                              isRTL
+                                ? "fa-caption-1 font-vazir"
+                                : "en-caption-1 font-inter"
                             } text-neutral-scale1000 dark:text-neutral-scale200 hover:bg-neutral-scale80 dark:hover:bg-neutral-scale1100 cursor-pointer`}
                           >
                             {!isBlocked && (
@@ -320,9 +326,7 @@ export const TeacherContacts = () => {
                               />
                             )}
 
-                            <span>
-                              {isBlocked ? t("unblock") : t("block")}
-                            </span>
+                            <span>{isBlocked ? t("unblock") : t("block")}</span>
                           </button>
                         </div>
                       </>
@@ -346,4 +350,3 @@ export const TeacherContacts = () => {
     </main>
   );
 };
-

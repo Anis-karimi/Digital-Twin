@@ -29,7 +29,11 @@ const settingsItems = [
     subtitleKey: "darkLight",
     path: "/Theme",
     icon: (
-      <img className="w-[23px] h-[23px] object-contain" alt="" src={PaintBrush} />
+      <img
+        className="w-[23px] h-[23px] object-contain"
+        alt=""
+        src={PaintBrush}
+      />
     ),
   },
   {
@@ -37,7 +41,13 @@ const settingsItems = [
     titleKey: "language",
     subtitleKey: "englishPersian",
     path: "/Language",
-    icon: <img className="w-[23px] h-[23px] object-contain" alt="Language" src={Language} />,
+    icon: (
+      <img
+        className="w-[23px] h-[23px] object-contain"
+        alt="Language"
+        src={Language}
+      />
+    ),
   },
 ];
 
@@ -54,7 +64,9 @@ export const StudentSettings = () => {
     (currentUser?.name ? currentUser.name.split(" ")[0] : "علیرضا");
   const lastName =
     currentUser?.last_name ||
-    (currentUser?.name ? currentUser.name.split(" ").slice(1).join(" ") : "رضایی");
+    (currentUser?.name
+      ? currentUser.name.split(" ").slice(1).join(" ")
+      : "رضایی");
   const fullName = `${firstName} ${lastName}`.trim() || "علیرضا رضایی";
   const email =
     currentUser?.email ||
@@ -63,7 +75,8 @@ export const StudentSettings = () => {
         ? currentUser.username
         : `${currentUser.username}@dt.internal`
       : "alireza_rezaei@dt.internal");
-  const avatar = photoPreview || currentUser?.photo_url || currentUser?.profile_url;
+  const avatar =
+    photoPreview || currentUser?.photo_url || currentUser?.profile_url;
 
   const loadSettings = async () => {
     try {
@@ -250,7 +263,7 @@ export const StudentSettings = () => {
             type="button"
             onClick={() => {
               if (logoutUser) logoutUser();
-              navigate("/login");
+              navigate("/");
             }}
             className="mx-3.5 w-auto h-[38px] relative mt-1.5 bg-neutral-scale70 dark:bg-neutral-scale1400 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[8px] overflow-hidden cursor-pointer hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors"
             aria-label={t("logout")}

@@ -52,7 +52,10 @@ export const TeacherConversationsPage = () => {
         }
       })
       .catch((err) => {
-        console.warn("Failed to load navigation tabs for conversations page:", err);
+        console.warn(
+          "Failed to load navigation tabs for conversations page:",
+          err,
+        );
       });
 
     notificationsApi
@@ -92,8 +95,8 @@ export const TeacherConversationsPage = () => {
 
   // Helper to test if current pathname is a lesson route
   const isLessonPath = useCallback((path) => {
-    const p = (path || "").toLowerCase().replace(/\/+$/, "") || "/";
-    return p === "/" || p.startsWith("/teacherlessonspage");
+    const p = (path || "").toLowerCase().replace(/\/+$/, "") || "/Teacher";
+    return p === "/teacher" || p.startsWith("/teacherlessonspage");
   }, []);
 
   // Determine active lesson tab ID from route
@@ -101,7 +104,7 @@ export const TeacherConversationsPage = () => {
     if (params.lessonId) return params.lessonId;
     const match = location.pathname.match(/\/TeacherLessonsPage\/([^/]+)/i);
     if (match) return match[1];
-    if (location.pathname === "/") return "lessons";
+    if (location.pathname === "/Teacher") return "lessons";
     return null;
   }, [params.lessonId, location.pathname]);
 
@@ -125,7 +128,7 @@ export const TeacherConversationsPage = () => {
   // Find index of current active tab
   const currentIndex = Math.max(
     0,
-    items.findIndex((item) => item.id === activeTabId)
+    items.findIndex((item) => item.id === activeTabId),
   );
 
   // Navigate to target tab (ONLY when on a lesson route)
@@ -134,12 +137,12 @@ export const TeacherConversationsPage = () => {
       if (!isLessonPath(location.pathname)) return;
 
       if (item.id === "lessons") {
-        navigate("/", { replace });
+        navigate("/Teacher", { replace });
       } else {
         navigate(`/TeacherLessonsPage/${item.id}`, { replace });
       }
     },
-    [navigate, location.pathname, isLessonPath]
+    [navigate, location.pathname, isLessonPath],
   );
 
   // Reset drag state on route change
@@ -194,15 +197,15 @@ export const TeacherConversationsPage = () => {
         >
           <h1
             className={`${
-              isRTL ? "fa-title-1" : "en-title-1"
-            } text-[#f7f7f7] text-center whitespace-nowrap`}
+              isRTL ? "fa-display" : "en-display"
+            } text-[#f7f7f7] text-center whitespace-nowrap mr-[5px]`}
           >
-            {isRTL ? "دوقلوی دیجیتال" : "Digital Twin"}
+            {isRTL ? "دانای" : "DANAI"}
           </h1>
 
           <div className="flex items-center gap-3">
             {/* Students roster & online statuses icon */}
-            {location.pathname !== "/" && (
+            {location.pathname !== "/Teacher" && (
               <button
                 type="button"
                 aria-label={isRTL ? "دانشجویان" : "Students"}
@@ -336,7 +339,10 @@ export const TeacherConversationsPage = () => {
           style={{ width: "100%", height: "100%" }}
         >
           {items.map((item) => (
-            <SwiperSlide key={item.id} className="w-full h-full overflow-hidden">
+            <SwiperSlide
+              key={item.id}
+              className="w-full h-full overflow-hidden"
+            >
               <div className="w-full h-full overflow-y-auto overflow-x-hidden">
                 {item.id === "lessons" ? (
                   <HomeChatFeedSection />

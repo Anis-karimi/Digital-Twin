@@ -28,7 +28,7 @@ export const TeacherNavigationBar = ({ swipeIndex = null, activeTabId = null }) 
     {
       id: "chats",
       label: t("chats"),
-      route: "/",
+      route: "/Teacher",
       icon: Chat,
       iconActive: ChatFilled,
       iconClassName: "w-[25px] h-[25px]",
@@ -60,7 +60,7 @@ export const TeacherNavigationBar = ({ swipeIndex = null, activeTabId = null }) 
   ];
 
   const isHomePage =
-    location.pathname === "/" ||
+    location.pathname === "/Teacher" ||
     location.pathname.startsWith("/TeacherLessonsPage");
 
   const getActiveId = () => {

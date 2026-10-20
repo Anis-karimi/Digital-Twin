@@ -18,14 +18,15 @@ import { useTheme } from "@/Context/ThemeContext";
 
 export const AdminSettingsPage = () => {
   const navigate = useNavigate();
-  const { isRTL, language, toggleLanguage, logoutUser, currentUser } = useContext(AppContext);
+  const { isRTL, language, toggleLanguage, logoutUser, currentUser } =
+    useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     if (logoutUser) {
       logoutUser();
     }
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   return (
@@ -48,7 +49,9 @@ export const AdminSettingsPage = () => {
               {isRTL ? "تنظیمات و وضعیت سیستم" : "System Settings"}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? "مدیریت دسترسی و پیکربندی سامانه" : "Administration & Configuration"}
+              {isRTL
+                ? "مدیریت دسترسی و پیکربندی سامانه"
+                : "Administration & Configuration"}
             </p>
           </div>
         </div>
@@ -64,7 +67,11 @@ export const AdminSettingsPage = () => {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                {currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ""}` : (isRTL ? "مدیر ارشد سامانه" : "System Administrator")}
+                {currentUser?.first_name
+                  ? `${currentUser.first_name} ${currentUser.last_name || ""}`
+                  : isRTL
+                    ? "مدیر ارشد سامانه"
+                    : "System Administrator"}
               </h2>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
@@ -87,14 +94,24 @@ export const AdminSettingsPage = () => {
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1100 flex items-center justify-center shrink-0">
-                {isDark ? <Moon className="w-3.5 h-3.5 text-amber-300" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+                {isDark ? (
+                  <Moon className="w-3.5 h-3.5 text-amber-300" />
+                ) : (
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                )}
               </div>
               <div>
                 <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
                   {isRTL ? "حالت پوسته" : "Theme Mode"}
                 </span>
                 <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">
-                  {isDark ? (isRTL ? "تاریک" : "Dark") : (isRTL ? "روشن" : "Light")}
+                  {isDark
+                    ? isRTL
+                      ? "تاریک"
+                      : "Dark"
+                    : isRTL
+                      ? "روشن"
+                      : "Light"}
                 </span>
               </div>
             </div>
@@ -104,7 +121,7 @@ export const AdminSettingsPage = () => {
               onClick={toggleTheme}
               className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
             >
-              {isDark ? (isRTL ? "روشن" : "Light") : (isRTL ? "تاریک" : "Dark")}
+              {isDark ? (isRTL ? "روشن" : "Light") : isRTL ? "تاریک" : "Dark"}
             </button>
           </div>
 
@@ -144,20 +161,32 @@ export const AdminSettingsPage = () => {
           <div className="grid grid-cols-3 gap-2">
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Server className="w-3.5 h-3.5 text-emerald-500 mb-1" />
-              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "سرویس اصلی" : "Main Svc"}</span>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "آنلاین" : "Online"}</span>
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
+                {isRTL ? "سرویس اصلی" : "Main Svc"}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                {isRTL ? "آنلاین" : "Online"}
+              </span>
             </div>
 
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Database className="w-3.5 h-3.5 text-emerald-500 mb-1" />
-              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "داده‌گاه" : "PostgreSQL"}</span>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "متصل" : "Ready"}</span>
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
+                {isRTL ? "داده‌گاه" : "PostgreSQL"}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                {isRTL ? "متصل" : "Ready"}
+              </span>
             </div>
 
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Cpu className="w-3.5 h-3.5 text-emerald-500 mb-1" />
-              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">{isRTL ? "مدل هوش" : "AI Models"}</span>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{isRTL ? "فعال" : "Active"}</span>
+              <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
+                {isRTL ? "مدل هوش" : "AI Models"}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                {isRTL ? "فعال" : "Active"}
+              </span>
             </div>
           </div>
         </section>

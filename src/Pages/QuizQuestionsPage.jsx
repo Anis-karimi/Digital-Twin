@@ -84,7 +84,7 @@ export const QuizQuestionsPage = ({
     }
 
     // fallback
-    navigate("/", { replace: true });
+    navigate("/Teacher", { replace: true });
   };
 
   useEffect(() => {

@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { useContext } from "react";
 
 import { TeacherCourses } from "@/Pages/Teacher/TeacherCoursesPage";
@@ -67,157 +72,181 @@ function App() {
       <ErrorBoundary>
         <div className="w-full h-full h-dvh flex flex-col overflow-hidden text-center">
           <Router>
-          <Routes>
-            {/* ==================== Auth ==================== */}
-            <Route path="/login" element={<Login />} />
+            <Routes>
+              {/* ==================== Auth ==================== */}
+              <Route path="/" element={<Login />} />
 
-            {/* ==================== Shared Settings ==================== */}
-            <Route element={<AdaptiveLayout />}>
-              <Route path="/Language" element={<Language />} />
-              <Route path="/language" element={<Language />} />
-              <Route path="/Theme" element={<Theme />} />
-              <Route path="/theme" element={<Theme />} />
-            </Route>
+              {/* ==================== Shared Settings ==================== */}
+              <Route element={<AdaptiveLayout />}>
+                <Route path="/Language" element={<Language />} />
+                <Route path="/language" element={<Language />} />
+                <Route path="/Theme" element={<Theme />} />
+                <Route path="/theme" element={<Theme />} />
+              </Route>
 
-            {/* ==================== Teacher ==================== */}
+              {/* ==================== Teacher ==================== */}
 
-            <Route element={<TeacherLayout />}>
-              <Route path="/" element={<TeacherHome />} />
+              <Route element={<TeacherLayout />}>
+                <Route path="/Teacher" element={<TeacherHome />} />
 
-              <Route path="/TeacherCourses" element={<TeacherCourses />} />
+                <Route path="/TeacherCourses" element={<TeacherCourses />} />
 
+                <Route
+                  path="/TeacherCourseDoc/:id"
+                  element={<TeacherCourseDoc />}
+                />
+
+                <Route
+                  path="/TeacherNotification"
+                  element={<NotificationDispatcher />}
+                />
+                <Route
+                  path="/teachernotification"
+                  element={<NotificationDispatcher />}
+                />
+                <Route
+                  path="/TeacherNotifications"
+                  element={<NotificationDispatcher />}
+                />
+                <Route
+                  path="/teachernotifications"
+                  element={<NotificationDispatcher />}
+                />
+
+                <Route path="/TeacherSettings" element={<TeacherSettings />} />
+
+                <Route path="/TeacherExams" element={<TeacherExams />}></Route>
+
+                <Route
+                  path="/TeacherContacts/:lessonId"
+                  element={<TeacherContacts />}
+                />
+                <Route
+                  path="/TeacherContacts"
+                  element={<Navigate to="/TeacherContacts/os" replace />}
+                />
+
+                <Route
+                  path="/TeacherLessonsPage/:lessonId"
+                  element={<TeacherLessonsPage />}
+                />
+              </Route>
+
+              {/* ==================== Chat ==================== */}
+
+              <Route path="/ChatArea/course/:id" element={<ChatArea />} />
+
+              <Route path="/ChatArea/student/:id" element={<ChatArea />} />
+
+              {/* ==================== Student ==================== */}
+
+              <Route element={<StudentLayout />}>
+                <Route path="/Student" element={<StudentHome />} />
+                <Route path="/student" element={<StudentHome />} />
+                <Route path="/StudentHome" element={<StudentHome />} />
+                <Route path="/students" element={<StudentsRoute />} />
+                <Route path="/Students" element={<StudentsRoute />} />
+
+                <Route path="/StudentSettings" element={<StudentSettings />} />
+                <Route
+                  path="/StudentSettings/Biometrics"
+                  element={<StudentBiometricsPage />}
+                />
+                <Route
+                  path="/studentsettings/biometrics"
+                  element={<StudentBiometricsPage />}
+                />
+                <Route path="/StudentExams" element={<StudentExams />} />
+                <Route
+                  path="/studentexams"
+                  element={<Navigate to="/StudentExams" replace />}
+                />
+                <Route
+                  path="/StudentExam"
+                  element={<Navigate to="/StudentExams" replace />}
+                />
+                <Route
+                  path="/studentexam"
+                  element={<Navigate to="/StudentExams" replace />}
+                />
+                <Route path="/StudentExam/:id" element={<StudentExamPage />} />
+                <Route path="/studentexam/:id" element={<StudentExamPage />} />
+                <Route
+                  path="/StudentExamResult/:id"
+                  element={<StudentExamResultPage />}
+                />
+                <Route
+                  path="/studentexamresult/:id"
+                  element={<StudentExamResultPage />}
+                />
+                <Route
+                  path="/ExamResult/:id"
+                  element={<StudentExamResultPage />}
+                />
+                <Route
+                  path="/examresult/:id"
+                  element={<StudentExamResultPage />}
+                />
+                <Route path="/StudentExplore" element={<StudentExplore />} />
+                <Route
+                  path="/CourseInformation/:id"
+                  element={<CourseInformation />}
+                />
+                <Route
+                  path="/StudentNotification"
+                  element={<StudentNotification />}
+                />
+                <Route
+                  path="/studentnotification"
+                  element={<StudentNotification />}
+                />
+                <Route
+                  path="/StudentNotifications"
+                  element={<StudentNotification />}
+                />
+                <Route
+                  path="/studentnotifications"
+                  element={<StudentNotification />}
+                />
+              </Route>
+              {/* ==================== Admin ==================== */}
+              <Route element={<AdminLayout />}>
+                <Route path="/Admin" element={<AdminCoursesPage />} />
+                <Route path="/admin" element={<AdminCoursesPage />} />
+                <Route path="/AdminCourses" element={<AdminCoursesPage />} />
+                <Route path="/admincourses" element={<AdminCoursesPage />} />
+                <Route path="/AdminUsers" element={<AdminUsersPage />} />
+                <Route path="/adminusers" element={<AdminUsersPage />} />
+                <Route
+                  path="/AdminCreateCourse"
+                  element={<AdminCreateCoursePage />}
+                />
+                <Route
+                  path="/admincreatecourse"
+                  element={<AdminCreateCoursePage />}
+                />
+                <Route path="/AdminSettings" element={<AdminSettingsPage />} />
+                <Route path="/adminsettings" element={<AdminSettingsPage />} />
+              </Route>
+
+              {/* =================== Quiz Pages =================== */}
+
+              <Route path="/QuizFirstPage" element={<QuizFirstPage />} />
               <Route
-                path="/TeacherCourseDoc/:id"
-                element={<TeacherCourseDoc />}
+                path="/QuizQuestionsPage"
+                element={<QuizQuestionsPage />}
               />
+              <Route path="/Quiz-result" element={<QuizResultPage />} />
+              <Route path="/Review-Answers" element={<ReviewAnswers />} />
 
-              <Route
-                path="/TeacherNotification"
-                element={<NotificationDispatcher />}
-              />
-              <Route
-                path="/teachernotification"
-                element={<NotificationDispatcher />}
-              />
-              <Route
-                path="/TeacherNotifications"
-                element={<NotificationDispatcher />}
-              />
-              <Route
-                path="/teachernotifications"
-                element={<NotificationDispatcher />}
-              />
+              {/* ==================== Not Found ==================== */}
 
-              <Route path="/TeacherSettings" element={<TeacherSettings />} />
-
-              <Route path="/TeacherExams" element={<TeacherExams />}></Route>
-
-              <Route
-                path="/TeacherContacts/:lessonId"
-                element={<TeacherContacts />}
-              />
-              <Route
-                path="/TeacherContacts"
-                element={<Navigate to="/TeacherContacts/os" replace />}
-              />
-
-              <Route
-                path="/TeacherLessonsPage/:lessonId"
-                element={<TeacherLessonsPage />}
-              />
-            </Route>
-
-            {/* ==================== Chat ==================== */}
-
-            <Route path="/ChatArea/course/:id" element={<ChatArea />} />
-
-            <Route path="/ChatArea/student/:id" element={<ChatArea />} />
-
-            {/* ==================== Student ==================== */}
-
-            <Route element={<StudentLayout />}>
-              <Route path="/Student" element={<StudentHome />} />
-              <Route path="/student" element={<StudentHome />} />
-              <Route path="/StudentHome" element={<StudentHome />} />
-              <Route path="/students" element={<StudentsRoute />} />
-              <Route path="/Students" element={<StudentsRoute />} />
-
-              <Route path="/StudentSettings" element={<StudentSettings />} />
-              <Route
-                path="/StudentSettings/Biometrics"
-                element={<StudentBiometricsPage />}
-              />
-              <Route
-                path="/studentsettings/biometrics"
-                element={<StudentBiometricsPage />}
-              />
-              <Route path="/StudentExams" element={<StudentExams />} />
-              <Route
-                path="/studentexams"
-                element={<Navigate to="/StudentExams" replace />}
-              />
-              <Route
-                path="/StudentExam"
-                element={<Navigate to="/StudentExams" replace />}
-              />
-              <Route
-                path="/studentexam"
-                element={<Navigate to="/StudentExams" replace />}
-              />
-              <Route path="/StudentExam/:id" element={<StudentExamPage />} />
-              <Route path="/studentexam/:id" element={<StudentExamPage />} />
-              <Route
-                path="/StudentExamResult/:id"
-                element={<StudentExamResultPage />}
-              />
-              <Route
-                path="/studentexamresult/:id"
-                element={<StudentExamResultPage />}
-              />
-              <Route
-                path="/ExamResult/:id"
-                element={<StudentExamResultPage />}
-              />
-              <Route
-                path="/examresult/:id"
-                element={<StudentExamResultPage />}
-              />
-              <Route path="/StudentExplore" element={<StudentExplore />} />
-              <Route path="/CourseInformation/:id" element={<CourseInformation/>} />
-              <Route path="/StudentNotification" element={<StudentNotification />} />
-              <Route path="/studentnotification" element={<StudentNotification />} />
-              <Route path="/StudentNotifications" element={<StudentNotification />} />
-              <Route path="/studentnotifications" element={<StudentNotification />} />
-            </Route>
-            {/* ==================== Admin ==================== */}
-            <Route element={<AdminLayout />}>
-              <Route path="/Admin" element={<AdminCoursesPage />} />
-              <Route path="/admin" element={<AdminCoursesPage />} />
-              <Route path="/AdminCourses" element={<AdminCoursesPage />} />
-              <Route path="/admincourses" element={<AdminCoursesPage />} />
-              <Route path="/AdminUsers" element={<AdminUsersPage />} />
-              <Route path="/adminusers" element={<AdminUsersPage />} />
-              <Route path="/AdminCreateCourse" element={<AdminCreateCoursePage />} />
-              <Route path="/admincreatecourse" element={<AdminCreateCoursePage />} />
-              <Route path="/AdminSettings" element={<AdminSettingsPage />} />
-              <Route path="/adminsettings" element={<AdminSettingsPage />} />
-            </Route>
-
-            {/* =================== Quiz Pages =================== */}
-
-            <Route path="/QuizFirstPage" element={<QuizFirstPage />} />
-            <Route path="/QuizQuestionsPage" element={<QuizQuestionsPage />} />
-            <Route path="/Quiz-result" element={<QuizResultPage />} />
-            <Route path="/Review-Answers" element={<ReviewAnswers />} />
-
-            {/* ==================== Not Found ==================== */}
-
-            <Route path="*" element={<div>Not Found</div>} />
-          </Routes>
-        </Router>
-      </div>
-    </ErrorBoundary>
-  </AppProvider>
+              <Route path="*" element={<div>Not Found</div>} />
+            </Routes>
+          </Router>
+        </div>
+      </ErrorBoundary>
+    </AppProvider>
   );
 }
 

@@ -60,10 +60,10 @@ export const StudentHome = () => {
         >
           <h1
             className={`${
-              isRTL ? "fa-title-1" : "en-title-1"
-            } text-[#f7f7f7] text-center whitespace-nowrap`}
+              isRTL ? "fa-display" : "en-display"
+            } text-[#f7f7f7] text-center whitespace-nowrap mr-[5px]`}
           >
-            {isRTL ? "دوقلوی دیجیتال" : "Digital Twin"}
+            {isRTL ? "دانای" : "DANAI"}
           </h1>
 
           <div className="flex items-center gap-3">
@@ -102,25 +102,25 @@ export const StudentHome = () => {
 
       {/* ✅ OVERLAY MENU (added only) */}
       <div className="relative">
-              {isMenuOpen && (
-                <>
-                  {/* Backdrop */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsMenuOpen(false)}
-                  />
-      
-                  {/* Menu */}
-                  <div
-                    className={`absolute top-3 ${
-                      isRTL ? "left-4" : "right-4"
-                    } mt-2 z-50 overflow-hidden rounded-lg shadow-lg`}
-                  >
-                    <HomeDropdownMenu />
-                  </div>
-                </>
-              )}
+        {isMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsMenuOpen(false)}
+            />
+
+            {/* Menu */}
+            <div
+              className={`absolute top-3 ${
+                isRTL ? "left-4" : "right-4"
+              } mt-2 z-50 overflow-hidden rounded-lg shadow-lg`}
+            >
+              <HomeDropdownMenu />
             </div>
+          </>
+        )}
+      </div>
     </main>
   );
 };

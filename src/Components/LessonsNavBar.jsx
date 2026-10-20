@@ -23,7 +23,10 @@ export const LessonsNavBar = ({
   const tabsRef = useRef({});
   const [internalItems, setInternalItems] = useState(defaultLessonItems);
 
-  const items = controlledItems && controlledItems.length > 0 ? controlledItems : internalItems;
+  const items =
+    controlledItems && controlledItems.length > 0
+      ? controlledItems
+      : internalItems;
 
   // Fetch dynamic navigation tabs from API if not provided via props
   useEffect(() => {
@@ -99,17 +102,39 @@ export const LessonsNavBar = ({
         if (dragOffset < 0 && currentIndex < items.length - 1) {
           const nextMetrics = getTabMetrics(items[currentIndex + 1]?.id);
           if (nextMetrics) {
-            const fraction = Math.min(1, Math.max(0, -dragOffset / effectiveVpWidth));
-            targetWidth = currentMetrics.width + fraction * (nextMetrics.width - currentMetrics.width) + 16;
-            targetOffset = Math.max(0, (currentMetrics.offset + fraction * (nextMetrics.offset - currentMetrics.offset)) - 8);
+            const fraction = Math.min(
+              1,
+              Math.max(0, -dragOffset / effectiveVpWidth),
+            );
+            targetWidth =
+              currentMetrics.width +
+              fraction * (nextMetrics.width - currentMetrics.width) +
+              16;
+            targetOffset = Math.max(
+              0,
+              currentMetrics.offset +
+                fraction * (nextMetrics.offset - currentMetrics.offset) -
+                8,
+            );
           }
         } else if (dragOffset > 0 && currentIndex > 0) {
           // dragOffset > 0 moves towards PREVIOUS tab (leftwards in DOM)
           const prevMetrics = getTabMetrics(items[currentIndex - 1]?.id);
           if (prevMetrics) {
-            const fraction = Math.min(1, Math.max(0, dragOffset / effectiveVpWidth));
-            targetWidth = currentMetrics.width + fraction * (prevMetrics.width - currentMetrics.width) + 16;
-            targetOffset = Math.max(0, (currentMetrics.offset + fraction * (prevMetrics.offset - currentMetrics.offset)) - 8);
+            const fraction = Math.min(
+              1,
+              Math.max(0, dragOffset / effectiveVpWidth),
+            );
+            targetWidth =
+              currentMetrics.width +
+              fraction * (prevMetrics.width - currentMetrics.width) +
+              16;
+            targetOffset = Math.max(
+              0,
+              currentMetrics.offset +
+                fraction * (prevMetrics.offset - currentMetrics.offset) -
+                8,
+            );
           }
         }
       }
@@ -167,10 +192,14 @@ export const LessonsNavBar = ({
       e.stopPropagation();
     };
 
-    container.addEventListener("touchstart", stopPropagation, { passive: true });
+    container.addEventListener("touchstart", stopPropagation, {
+      passive: true,
+    });
     container.addEventListener("touchmove", stopPropagation, { passive: true });
     container.addEventListener("touchend", stopPropagation, { passive: true });
-    container.addEventListener("touchcancel", stopPropagation, { passive: true });
+    container.addEventListener("touchcancel", stopPropagation, {
+      passive: true,
+    });
     container.addEventListener("mousedown", stopPropagation);
     container.addEventListener("pointerdown", stopPropagation);
 
@@ -196,7 +225,10 @@ export const LessonsNavBar = ({
         handleTabClick(items[currentIndex + 1]);
       } else if (currentIndex === items.length - 1) {
         // At the end of the lessons, navigate to the parent Courses tab
-        sessionStorage.setItem("last_teacher_lesson", items[currentIndex]?.id || "lessons");
+        sessionStorage.setItem(
+          "last_teacher_lesson",
+          items[currentIndex]?.id || "lessons",
+        );
         navigate("/TeacherCourses");
       }
     } else if (deltaX > threshold) {
@@ -268,7 +300,11 @@ export const LessonsNavBar = ({
     const deltaX = currentX - startXRef.current;
     const deltaY = currentY - startYRef.current;
 
-    if (!hasDraggedRef.current && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+    if (
+      !hasDraggedRef.current &&
+      Math.abs(deltaY) > Math.abs(deltaX) &&
+      Math.abs(deltaY) > 8
+    ) {
       return;
     }
 
@@ -296,7 +332,7 @@ export const LessonsNavBar = ({
     }
 
     if (item.id === "lessons") {
-      navigate("/");
+      navigate("/Teacher");
       return;
     }
 
@@ -370,7 +406,9 @@ export const LessonsNavBar = ({
 
                     <div
                       className={`relative top-[1px] ${
-                        isPersianLabel ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
+                        isPersianLabel
+                          ? "fa-caption-2 font-vazir"
+                          : "en-caption-2 font-inter"
                       } text-white leading-none text-center`}
                     >
                       {item.unreadCount > 99 ? "+99" : item.unreadCount}

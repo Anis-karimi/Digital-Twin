@@ -44,7 +44,7 @@ export const TeacherSwipeLayout = () => {
   // Current page
   // ==================================================
 
-  const isHome = location.pathname === "/";
+  const isHome = location.pathname === "/Teacher";
 
   const lessonMatch = location.pathname.match(/^\/TeacherLessonsPage\/([^/]+)/);
 
@@ -292,7 +292,7 @@ export const TeacherSwipeLayout = () => {
 
       setTimeout(() => {
         if (nextItem.id === "lessons") {
-          navigate("/");
+          navigate("/Teacher");
         } else {
           navigate(`/TeacherLessonsPage/${nextItem.id}`);
         }
@@ -311,7 +311,7 @@ export const TeacherSwipeLayout = () => {
 
       setTimeout(() => {
         if (previousItem.id === "lessons") {
-          navigate("/");
+          navigate("/Teacher");
         } else {
           navigate(`/TeacherLessonsPage/${previousItem.id}`);
         }
@@ -384,7 +384,7 @@ export const TeacherSwipeLayout = () => {
           <h1
             className={`${isRTL ? "fa-title-1" : "en-title-1"} text-[#f7f7f7] text-center whitespace-nowrap`}
           >
-            {isRTL ? "دوقلوی دیجیتال" : "Digital Twin"}
+            {isRTL ? "دانای" : "DANAI"}
           </h1>
 
           <div className="flex items-center gap-3">

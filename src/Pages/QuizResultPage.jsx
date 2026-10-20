@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { markdownToCleanHtml } from "@/utils/markdownUtils.js";
 import "@/styles/fonts.css";
+import danaiLogo from "@/assets/logo/logo-img.jpg";
 
 export const QuizResultPage = ({
   onAction,
@@ -93,12 +94,12 @@ export const QuizResultPage = ({
         return;
       } catch (error) {
         console.error("Invalid quiz return data:", error);
-        navigate("/", { replace: true });
+        navigate("/Teacher", { replace: true });
         return;
       }
     }
 
-    navigate("/", { replace: true });
+    navigate("/Teacher", { replace: true });
   };
 
   const stateData = (isModal && modalResultData ? modalResultData : location.state) || {};
@@ -651,14 +652,39 @@ export const QuizResultPage = ({
         pageContainer.style.background = "#ffffff";
         pageContainer.style.padding = "24px 32px";
         pageContainer.style.boxSizing = "border-box";
-        pageContainer.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        pageContainer.style.fontFamily = isRTL
+          ? "Vazirmatn, Arial, sans-serif"
+          : "Inter, Arial, sans-serif";
         pageContainer.style.color = "#0f172a";
         pageContainer.dir = isRTL ? "rtl" : "ltr";
 
         // 1. Page Header
-        pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
+        // pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
 
         // 2. Summary cards (only on page 1)
+        // لوگو فقط در بالای صفحه اول
+        if (p === 0) {
+          const logoContainer = document.createElement("div");
+          logoContainer.style.display = "flex";
+          logoContainer.style.justifyContent = "center";
+          logoContainer.style.alignItems = "center";
+          logoContainer.style.marginBottom = "12px";
+          logoContainer.style.width = "100%";
+
+          const logoImg = document.createElement("img");
+          logoImg.src = danaiLogo;
+          logoImg.style.width = "120px";
+          logoImg.style.height = "auto";
+          logoImg.style.maxHeight = "80px";
+          logoImg.style.objectFit = "contain";
+
+          logoContainer.appendChild(logoImg);
+          pageContainer.appendChild(logoContainer);
+        }
+
+        // عنوان گزارش
+        pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
+
         if (p === 0) {
           pageContainer.appendChild(createSummaryCards());
         }
@@ -670,7 +696,9 @@ export const QuizResultPage = ({
         pageTable.style.borderSpacing = "0";
         pageTable.style.tableLayout = "fixed";
         pageTable.style.fontSize = "11px";
-        pageTable.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
+        pageTable.style.fontFamily = isRTL
+          ? "Vazirmatn, Arial, sans-serif"
+          : "Inter, Arial, sans-serif";
         pageTable.dir = isRTL ? "rtl" : "ltr";
         pageTable.style.borderRadius = "8px";
         pageTable.style.overflow = "hidden";
