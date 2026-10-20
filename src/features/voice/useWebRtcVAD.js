@@ -33,9 +33,30 @@ export function useWebRtcVAD({
   const manualOverrideRef = useRef(false);
   const activeLangRef = useRef(voiceLang);
 
+  const onTranscriptRef = useRef(onTranscript);
+  const onSpeechStartedRef = useRef(onSpeechStarted);
+  const onSpeechEndedRef = useRef(onSpeechEnded);
+  const isAutoVADEnabledRef = useRef(isAutoVADEnabled);
+
   useEffect(() => {
     activeLangRef.current = voiceLang;
   }, [voiceLang]);
+
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+  }, [onTranscript]);
+
+  useEffect(() => {
+    onSpeechStartedRef.current = onSpeechStarted;
+  }, [onSpeechStarted]);
+
+  useEffect(() => {
+    onSpeechEndedRef.current = onSpeechEnded;
+  }, [onSpeechEnded]);
+
+  useEffect(() => {
+    isAutoVADEnabledRef.current = isAutoVADEnabled;
+  }, [isAutoVADEnabled]);
 
   // Persist auto VAD toggle setting
   const toggleAutoVAD = useCallback(() => {
@@ -68,8 +89,8 @@ export function useWebRtcVAD({
         console.log(`[VAD WebSocket] Connected (${currentLang})`);
       },
       onTranscript: (fullText, meta) => {
-        if (fullText && onTranscript) {
-          onTranscript(fullText, meta);
+        if (fullText && onTranscriptRef.current) {
+          onTranscriptRef.current(fullText, meta);
         }
       },
       onError: (err) => {
@@ -82,7 +103,7 @@ export function useWebRtcVAD({
 
     wsRef.current = ws;
     return ws;
-  }, [onTranscript]);
+  }, []);
 
   /**
    * Internal handler when speech begins (either via VAD auto-trigger or manual start).
@@ -97,8 +118,8 @@ export function useWebRtcVAD({
     // Initialize STT WebSocket stream
     ensureSTTWebSocket();
 
-    onSpeechStarted?.();
-  }, [ensureSTTWebSocket, onSpeechStarted]);
+    onSpeechStartedRef.current?.();
+  }, [ensureSTTWebSocket]);
 
   /**
    * Internal handler when speech ends (after hangover silence).
@@ -116,19 +137,19 @@ export function useWebRtcVAD({
     setRecording(false);
     setIsVoiceActive(false);
 
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.finalize?.();
-      wsRef.current.send(JSON.stringify({ type: "stop" }));
-      setTimeout(() => {
-        if (!isRecordingRef.current && wsRef.current) {
+    if (wsRef.current) {
+      try {
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.finalize?.();
+          wsRef.current.send(JSON.stringify({ type: "stop" }));
           wsRef.current.close();
-          wsRef.current = null;
         }
-      }, 500);
+      } catch {}
+      wsRef.current = null;
     }
 
-    onSpeechEnded?.();
-  }, [onSpeechEnded]);
+    onSpeechEndedRef.current?.();
+  }, []);
 
   /**
    * Handle streaming PCM audio chunk from VAD to STT.
@@ -156,12 +177,12 @@ export function useWebRtcVAD({
         silenceTimeoutMs,
         preRollMs,
         onSpeechStart: () => {
-          if (isAutoVADEnabled) {
+          if (isAutoVADEnabledRef.current) {
             handleSpeechStart();
           }
         },
         onSpeechEnd: () => {
-          if (isAutoVADEnabled) {
+          if (isAutoVADEnabledRef.current) {
             handleSpeechEnd();
           }
         },
@@ -179,7 +200,7 @@ export function useWebRtcVAD({
     } catch (err) {
       console.warn("⚠️ [useWebRtcVAD] Microphone initialization deferred or failed:", err);
     }
-  }, [silenceTimeoutMs, preRollMs, isAutoVADEnabled, isBotSpeaking, handleSpeechStart, handleSpeechEnd, handleAudioChunk]);
+  }, [silenceTimeoutMs, preRollMs, isBotSpeaking, handleSpeechStart, handleSpeechEnd, handleAudioChunk]);
 
   /**
    * Manual Record Trigger (student clicks mic button).
@@ -202,15 +223,19 @@ export function useWebRtcVAD({
     setRecording(false);
     setIsVoiceActive(false);
 
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.finalize?.();
-      wsRef.current.send(JSON.stringify({ type: "stop" }));
-      wsRef.current.close();
+    if (wsRef.current) {
+      try {
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.finalize?.();
+          wsRef.current.send(JSON.stringify({ type: "stop" }));
+          wsRef.current.close();
+        }
+      } catch {}
       wsRef.current = null;
     }
 
-    onSpeechEnded?.();
-  }, [onSpeechEnded]);
+    onSpeechEndedRef.current?.();
+  }, []);
 
   /**
    * Teardown & cleanup.

@@ -224,7 +224,20 @@ export const StudentExamPage = () => {
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentTurnIndex, setCurrentTurnIndex] = useState(1);
   const [currentDifficulty, setCurrentDifficulty] = useState(0.5);
-  const [answerText, setAnswerText] = useState("");
+  const [answerText, setAnswerTextState] = useState("");
+  const answerTextRef = useRef("");
+  const baseTextRef = useRef("");
+  const activeTranscriptRef = useRef("");
+  const isSpeechSessionActiveRef = useRef(false);
+
+  const setAnswerText = useCallback((textOrUpdater) => {
+    setAnswerTextState((prev) => {
+      const next = typeof textOrUpdater === "function" ? textOrUpdater(prev) : textOrUpdater;
+      answerTextRef.current = next || "";
+      return next;
+    });
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Feedback & Progression
@@ -242,7 +255,6 @@ export const StudentExamPage = () => {
 
   // Microphone and Recording state
   const [voiceLang, setVoiceLang] = useState(() => localStorage.getItem("voice_lang") || "fa");
-  const baseTextRef = useRef("");
 
   // Full-Screen Video Call Webcam state
   const videoRef = useRef(null);
@@ -1195,6 +1207,38 @@ export const StudentExamPage = () => {
     };
   }, [startWebcam, stopQuestionTTS]);
 
+  // When speech recognition begins (Auto-VAD detection or manual mic toggle)
+  const handleSpeechStarted = useCallback(() => {
+    stopQuestionTTS();
+    setHasFinishedCurrentQuestion(true);
+    setSpokenWordCount(questionWords.length);
+    isSpeechSessionActiveRef.current = true;
+    // Snapshot current text in answer box as the base text for this utterance
+    baseTextRef.current = (answerTextRef.current || "").trim();
+    activeTranscriptRef.current = "";
+  }, [stopQuestionTTS, questionWords.length]);
+
+  // When speech recognition returns transcription text
+  const handleTranscript = useCallback((msg) => {
+    if (typeof msg === "string") {
+      activeTranscriptRef.current = msg;
+      const base = (baseTextRef.current || "").trim();
+      const currentSpeech = msg.trim();
+      const combined = base
+        ? (currentSpeech ? `${base} ${currentSpeech}` : base)
+        : currentSpeech;
+      setAnswerText(combined);
+    }
+  }, [setAnswerText]);
+
+  // When speech session ends (silence timeout or user turns mic off)
+  const handleSpeechEnded = useCallback(() => {
+    isSpeechSessionActiveRef.current = false;
+    // Lock in the combined result so any subsequent speech or typing appends to it
+    baseTextRef.current = (answerTextRef.current || "").trim();
+    activeTranscriptRef.current = "";
+  }, []);
+
   // WebRTC Voice Activity Detection (VAD) & Hands-Free Auto-Activation
   const {
     isAutoVADEnabled,
@@ -1209,36 +1253,21 @@ export const StudentExamPage = () => {
     enabled: isIdentityVerified && !isCompleted,
     voiceLang,
     isBotSpeaking: isBotReading || isSpeakingQuestion || isBufferingTTS,
-    onSpeechStarted: () => {
-      stopQuestionTTS();
-      setHasFinishedCurrentQuestion(true);
-      setSpokenWordCount(questionWords.length);
-      baseTextRef.current = answerText;
-    },
-    onTranscript: (msg) => {
-      if (msg) {
-        const base = baseTextRef.current ? baseTextRef.current.trim() + " " : "";
-        setAnswerText(base + msg);
-      }
-    },
-    onSpeechEnded: () => {
-      baseTextRef.current = answerText;
-    },
+    onSpeechStarted: handleSpeechStarted,
+    onTranscript: handleTranscript,
+    onSpeechEnded: handleSpeechEnded,
   });
 
   const startRecording = useCallback((selectedLang) => {
     if (selectedLang) setVoiceLang(selectedLang);
-    stopQuestionTTS();
-    setHasFinishedCurrentQuestion(true);
-    setSpokenWordCount(questionWords.length);
-    baseTextRef.current = answerText;
+    handleSpeechStarted();
     startManualRecording();
-  }, [answerText, startManualRecording, stopQuestionTTS, questionWords.length]);
+  }, [handleSpeechStarted, startManualRecording]);
 
   const stopRecording = useCallback(() => {
     stopManualRecording();
-    baseTextRef.current = answerText;
-  }, [answerText, stopManualRecording]);
+    handleSpeechEnded();
+  }, [stopManualRecording, handleSpeechEnded]);
 
   const handleFinishExam = useCallback(
     async (reason = "completed") => {
@@ -1456,6 +1485,13 @@ export const StudentExamPage = () => {
     };
   }, [id, isRTL, examDurationMinutes, passedExam]);
 
+  const resetAnswerTurn = useCallback(() => {
+    setAnswerText("");
+    baseTextRef.current = "";
+    activeTranscriptRef.current = "";
+    isSpeechSessionActiveRef.current = false;
+  }, [setAnswerText]);
+
   const handleSubmitAnswer = async (e) => {
     e?.preventDefault();
     stopRecording();
@@ -1482,7 +1518,7 @@ export const StudentExamPage = () => {
           setCurrentQuestion(qText);
           setCurrentTurnIndex((prev) => (res.next_question?.turn_index || prev + 1));
           setCurrentDifficulty(res.next_question?.difficulty ?? 0.5);
-          setAnswerText("");
+          resetAnswerTurn();
         }
       } else {
         if (currentTurnIndex >= 3) {
@@ -1490,7 +1526,7 @@ export const StudentExamPage = () => {
         } else {
           setHasFinishedCurrentQuestion(false);
           setCurrentTurnIndex((prev) => prev + 1);
-          setAnswerText("");
+          resetAnswerTurn();
           setCurrentQuestion(
             isRTL
               ? "مفهوم ریسه (Thread) و تفاوت فضای آدرسدهی آن با فرآیند مستقل را شرح دهید."
@@ -1504,7 +1540,7 @@ export const StudentExamPage = () => {
         handleFinishExam("submitted");
       } else {
         setCurrentTurnIndex((prev) => prev + 1);
-        setAnswerText("");
+        resetAnswerTurn();
       }
     } finally {
       setIsSubmitting(false);
@@ -2343,7 +2379,13 @@ export const StudentExamPage = () => {
                         dir={isAnswerRTL ? "rtl" : "ltr"}
                         rows={2}
                         value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAnswerText(val);
+                          if (!isSpeechSessionActiveRef.current) {
+                            baseTextRef.current = val.trim();
+                          }
+                        }}
                         placeholder={
                           isQuestionRTL
                             ? (isAutoVADEnabled ? "پاسخ را بنویسید یا کافیست صحبت کنید..." : "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید...")
