@@ -6,6 +6,7 @@
 import { requestWithFallback } from "../client";
 
 const DEFAULT_LESSON_ID = "c0000000-0000-4000-8000-000000000001";
+const CANONICAL_OS_LESSON_ID = "bbd22574-beac-4bdc-8cc4-afdc663a10d5";
 
 /**
  * Fetches all exams/quizzes for a specific lesson/course.
@@ -13,9 +14,11 @@ const DEFAULT_LESSON_ID = "c0000000-0000-4000-8000-000000000001";
  * @param {string} [lessonId]
  * @returns {Promise<Array<Object>>}
  */
-export async function getLessonQuizzes(lessonId = DEFAULT_LESSON_ID) {
+export async function getLessonQuizzes(lessonId = CANONICAL_OS_LESSON_ID) {
   const resolvedLessonId =
-    !lessonId || lessonId === "os" ? DEFAULT_LESSON_ID : lessonId;
+    !lessonId || lessonId === "os" || lessonId === DEFAULT_LESSON_ID
+      ? CANONICAL_OS_LESSON_ID
+      : lessonId;
 
   const [dbQuizzes, pipelineExams] = await Promise.all([
     requestWithFallback(
@@ -79,12 +82,15 @@ export async function getLessonQuizzes(lessonId = DEFAULT_LESSON_ID) {
  * @param {Object} quizPayload
  * @returns {Promise<Object>}
  */
-export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload) {
+export async function createLessonQuiz(lessonId = CANONICAL_OS_LESSON_ID, quizPayload) {
   const resolvedLessonId =
-    !lessonId || lessonId === "os" ? DEFAULT_LESSON_ID : lessonId;
+    !lessonId || lessonId === "os" || lessonId === DEFAULT_LESSON_ID
+      ? CANONICAL_OS_LESSON_ID
+      : lessonId;
 
   // 1. Primary: Save directly via lessons DB endpoint (persists in DB & auto-syncs with pipeline)
   let dbRes = null;
+  let dbErr = null;
   try {
     dbRes = await requestWithFallback(
       `/lessons/${resolvedLessonId}/quizzes`,
@@ -95,6 +101,7 @@ export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload
       null
     );
   } catch (err) {
+    dbErr = err;
     console.warn("Direct lesson quiz creation route error, attempting pipeline creation fallback:", err);
   }
 
@@ -109,6 +116,7 @@ export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload
 
   // 2. Fallback: Adaptive pipeline
   let pipelineRes = null;
+  let pipeErr = null;
   try {
     pipelineRes = await requestWithFallback(
       "/exams/create",
@@ -123,6 +131,7 @@ export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload
       null
     );
   } catch (err) {
+    pipeErr = err;
     console.warn("Pipeline exam creation fallback error:", err);
   }
 
@@ -135,12 +144,8 @@ export async function createLessonQuiz(lessonId = DEFAULT_LESSON_ID, quizPayload
     };
   }
 
-  return {
-    success: true,
-    quiz_id: `quiz_${Date.now()}`,
-    ...quizPayload,
-    created_at: new Date().toISOString(),
-  };
+  const errorDetail = dbErr?.message || pipeErr?.message || "خطا در برقراری ارتباط با سرور";
+  throw new Error(`ایجاد آزمون در پایگاه داده با خطا مواجه شد: ${errorDetail}`);
 }
 
 /**
