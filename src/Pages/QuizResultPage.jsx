@@ -264,118 +264,202 @@ export const QuizResultPage = ({
       );
 
       // Helper: Create Header for Page (Full header for page 1, compact for subsequent pages)
-      const createHeader = (isFirstPage, pageNum, totalPages) => {
-        const headerDiv = document.createElement("div");
-        headerDiv.style.display = "flex";
-        headerDiv.style.justifyContent = "space-between";
-        headerDiv.style.alignItems = "center";
-        headerDiv.style.marginBottom = isFirstPage ? "14px" : "12px";
-        headerDiv.style.paddingBottom = isFirstPage ? "10px" : "8px";
-        headerDiv.style.borderBottom = "2px solid #e2e8f0";
-        headerDiv.dir = isRTL ? "rtl" : "ltr";
+      
+const createHeader = (isFirstPage, pageNum, totalPages) => {
+  const headerDiv = document.createElement("div");
 
-        if (isFirstPage) {
-          const titleBox = document.createElement("div");
+  headerDiv.style.display = "flex";
+  headerDiv.style.alignItems = "center";
+  headerDiv.style.justifyContent = "space-between";
+  headerDiv.style.gap = "16px";
+  headerDiv.style.width = "100%";
+  headerDiv.style.boxSizing = "border-box";
+  headerDiv.style.marginBottom = isFirstPage ? "10px" : "12px";
+  headerDiv.style.paddingBottom = isFirstPage ? "10px" : "8px";
+  headerDiv.style.borderBottom = "2px solid #e2e8f0";
+  headerDiv.dir = isRTL ? "rtl" : "ltr";
 
-          const title = document.createElement("h1");
-          title.textContent = t("quizResultTitle") || "کارنامه کوییز هوشمند";
-          title.style.fontSize = "22px";
-          title.style.margin = "0";
-          title.style.fontWeight = "800";
-          title.style.color = "#0f172a";
-          title.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-          titleBox.appendChild(title);
+  const fontFamily = isRTL
+    ? "Vazirmatn, Arial, sans-serif"
+    : "Inter, Arial, sans-serif";
 
-          const subtitle = document.createElement("div");
-          subtitle.textContent = t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
-          subtitle.style.fontSize = "11.5px";
-          subtitle.style.color = "#64748b";
-          subtitle.style.marginTop = "3px";
-          titleBox.appendChild(subtitle);
+  if (isFirstPage) {
+    // بخش عنوان و اطلاعات آزمون
+    const titleBox = document.createElement("div");
+    titleBox.style.display = "flex";
+    titleBox.style.flexDirection = "column";
+    titleBox.style.alignItems = isRTL ? "flex-start" : "flex-start";
+    titleBox.style.flex = "1";
+    titleBox.style.minWidth = "0";
+    titleBox.style.gap = "2px";
 
-          const topicBadge = document.createElement("div");
-          topicBadge.style.display = "inline-block";
-          topicBadge.style.marginTop = "6px";
-          topicBadge.style.padding = "4px 12px";
-          topicBadge.style.backgroundColor = "#eff6ff";
-          topicBadge.style.border = "1.5px solid #bfdbfe";
-          topicBadge.style.borderRadius = "6px";
-          topicBadge.style.fontSize = "12px";
-          topicBadge.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-          topicBadge.style.textAlign = isRTL ? "right" : "left";
-          topicBadge.innerHTML = `<span style="color:#2563eb;font-weight:700;margin-${isRTL ? "left" : "right"}:6px;">${isRTL ? "موضوع آزمون: " : "Quiz Topic: "}</span><strong style="color:#0f172a;font-weight:800;">${effectiveTopic}</strong>`;
-          titleBox.appendChild(topicBadge);
+    const title = document.createElement("h1");
+    title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+    title.style.fontSize = "22px";
+    title.style.lineHeight = "1.5";
+    title.style.margin = "0";
+    title.style.fontWeight = "800";
+    title.style.color = "#0f172a";
+    title.style.fontFamily = fontFamily;
+    titleBox.appendChild(title);
 
-          headerDiv.appendChild(titleBox);
+    const subtitle = document.createElement("div");
+    subtitle.textContent =
+      t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
+    subtitle.style.fontSize = "11.5px";
+    subtitle.style.lineHeight = "1.7";
+    subtitle.style.color = "#64748b";
+    subtitle.style.marginTop = "2px";
+    subtitle.style.fontFamily = fontFamily;
+    titleBox.appendChild(subtitle);
 
-          const metaBox = document.createElement("div");
-          metaBox.style.display = "flex";
-          metaBox.style.flexDirection = "column";
-          metaBox.style.alignItems = isRTL ? "flex-start" : "flex-end";
-          metaBox.style.gap = "4px";
+    const topicBadge = document.createElement("div");
+    topicBadge.style.display = "inline-block";
+    topicBadge.style.alignSelf = "flex-start";
+    topicBadge.style.marginTop = "5px";
+    topicBadge.style.padding = "4px 10px";
+    topicBadge.style.backgroundColor = "#eff6ff";
+    topicBadge.style.border = "1.5px solid #bfdbfe";
+    topicBadge.style.borderRadius = "6px";
+    topicBadge.style.fontSize = "12px";
+    topicBadge.style.lineHeight = "1.6";
+    topicBadge.style.fontFamily = fontFamily;
+    topicBadge.style.textAlign = isRTL ? "right" : "left";
+    topicBadge.dir = isRTL ? "rtl" : "ltr";
 
-          const dateStamp = document.createElement("div");
-          dateStamp.textContent = `${isRTL ? "تاریخ آزمون: " : "Date: "}${new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US")}`;
-          dateStamp.style.fontSize = "11.5px";
-          dateStamp.style.color = "#64748b";
-          dateStamp.style.fontWeight = "600";
-          metaBox.appendChild(dateStamp);
+    const topicLabel = document.createElement("span");
+    topicLabel.textContent = isRTL ? "موضوع آزمون: " : "Quiz Topic: ";
+    topicLabel.style.color = "#2563eb";
+    topicLabel.style.fontWeight = "700";
 
-          if (totalPages > 1) {
-            const pageStamp = document.createElement("div");
-            pageStamp.textContent = `${isRTL ? "صفحه" : "Page"} 1 ${isRTL ? "از" : "of"} ${totalPages}`;
-            pageStamp.style.fontSize = "11px";
-            pageStamp.style.color = "#94a3b8";
-            pageStamp.style.fontWeight = "600";
-            metaBox.appendChild(pageStamp);
-          }
+    const topicValue = document.createElement("strong");
+    topicValue.textContent = effectiveTopic;
+    topicValue.style.color = "#0f172a";
+    topicValue.style.fontWeight = "800";
 
-          headerDiv.appendChild(metaBox);
-        } else {
-          const miniTitleBox = document.createElement("div");
-          miniTitleBox.style.display = "flex";
-          miniTitleBox.style.alignItems = "center";
-          miniTitleBox.style.gap = "10px";
+    topicBadge.append(topicLabel, topicValue);
+    titleBox.appendChild(topicBadge);
 
-          const miniTitle = document.createElement("h2");
-          miniTitle.textContent = t("quizResultTitle") || "کارنامه کوییز هوشمند";
-          miniTitle.style.fontSize = "15px";
-          miniTitle.style.margin = "0";
-          miniTitle.style.fontWeight = "800";
-          miniTitle.style.color = "#0f172a";
-          miniTitle.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-          miniTitleBox.appendChild(miniTitle);
+    // تاریخ و شماره صفحه
+    const metaBox = document.createElement("div");
+    metaBox.style.display = "flex";
+    metaBox.style.flexDirection = "column";
+    metaBox.style.alignItems = isRTL ? "flex-start" : "flex-end";
+    metaBox.style.justifyContent = "center";
+    metaBox.style.gap = "5px";
+    metaBox.style.flexShrink = "0";
+    metaBox.style.fontFamily = fontFamily;
 
-          const miniTopicBadge = document.createElement("div");
-          miniTopicBadge.style.display = "inline-block";
-          miniTopicBadge.style.padding = "3px 10px";
-          miniTopicBadge.style.backgroundColor = "#eff6ff";
-          miniTopicBadge.style.border = "1px solid #bfdbfe";
-          miniTopicBadge.style.borderRadius = "6px";
-          miniTopicBadge.style.fontSize = "11px";
-          miniTopicBadge.style.fontFamily = isRTL ? "Vazirmatn, Arial, sans-serif" : "Inter, Arial, sans-serif";
-          miniTopicBadge.innerHTML = `<span style="color:#2563eb;font-weight:700;margin-${isRTL ? "left" : "right"}:4px;">${isRTL ? "موضوع:" : "Topic:"}</span><strong style="color:#0f172a;font-weight:800;">${effectiveTopic}</strong>`;
-          miniTitleBox.appendChild(miniTopicBadge);
+    const dateStamp = document.createElement("div");
+    dateStamp.textContent =
+      `${isRTL ? "تاریخ آزمون: " : "Date: "}` +
+      new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US");
+    dateStamp.style.fontSize = "11.5px";
+    dateStamp.style.color = "#64748b";
+    dateStamp.style.fontWeight = "600";
+    dateStamp.style.whiteSpace = "nowrap";
+    metaBox.appendChild(dateStamp);
 
-          headerDiv.appendChild(miniTitleBox);
+    if (totalPages > 1) {
+      const pageStamp = document.createElement("div");
+      pageStamp.textContent =
+        `${isRTL ? "صفحه 1 از " : "Page 1 of "}${totalPages}`;
+      pageStamp.style.fontSize = "11px";
+      pageStamp.style.color = "#94a3b8";
+      pageStamp.style.fontWeight = "600";
+      metaBox.appendChild(pageStamp);
+    }
 
-          const miniMetaBox = document.createElement("div");
-          miniMetaBox.style.display = "flex";
-          miniMetaBox.style.alignItems = "center";
-          miniMetaBox.style.gap = "12px";
+    // لوگو؛ فقط در صفحه اول
+    const logoContainer = document.createElement("div");
+    logoContainer.style.display = "flex";
+    logoContainer.style.alignItems = "center";
+    logoContainer.style.justifyContent = "center";
+    logoContainer.style.flex = "0 0 100px";
+    logoContainer.style.width = "100px";
 
-          const miniPageStamp = document.createElement("div");
-          miniPageStamp.textContent = `${isRTL ? "صفحه" : "Page"} ${pageNum} ${isRTL ? "از" : "of"} ${totalPages}`;
-          miniPageStamp.style.fontSize = "11.5px";
-          miniPageStamp.style.color = "#334155";
-          miniPageStamp.style.fontWeight = "700";
-          miniMetaBox.appendChild(miniPageStamp);
+    const logoImg = document.createElement("img");
+    logoImg.src = danaiLogo;
+    logoImg.alt = "Danai";
+    logoImg.style.display = "block";
+    logoImg.style.width = "110px";
+    logoImg.style.maxHeight = "110px";
+    logoImg.style.height = "auto";
+    logoImg.style.objectFit = "contain";
 
-          headerDiv.appendChild(miniMetaBox);
-        }
+    logoContainer.appendChild(logoImg);
 
-        return headerDiv;
-      };
+    // فارسی: لوگو سمت راست؛ انگلیسی: لوگو سمت چپ
+    if (isRTL) {
+      headerDiv.append(logoContainer, titleBox, metaBox);
+    } else {
+      headerDiv.append(logoContainer, titleBox, metaBox);
+    }
+
+  } else {
+    // هدر صفحات بعدی بدون لوگو
+    const miniTitleBox = document.createElement("div");
+    miniTitleBox.style.display = "flex";
+    miniTitleBox.style.alignItems = "center";
+    miniTitleBox.style.flexWrap = "wrap";
+    miniTitleBox.style.gap = "10px";
+    miniTitleBox.style.minWidth = "0";
+
+    const miniTitle = document.createElement("h2");
+    miniTitle.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+    miniTitle.style.fontSize = "15px";
+    miniTitle.style.margin = "0";
+    miniTitle.style.fontWeight = "800";
+    miniTitle.style.color = "#0f172a";
+    miniTitle.style.fontFamily = fontFamily;
+    miniTitleBox.appendChild(miniTitle);
+
+    const miniTopicBadge = document.createElement("div");
+    miniTopicBadge.style.display = "inline-block";
+    miniTopicBadge.style.padding = "3px 10px";
+    miniTopicBadge.style.backgroundColor = "#eff6ff";
+    miniTopicBadge.style.border = "1px solid #bfdbfe";
+    miniTopicBadge.style.borderRadius = "6px";
+    miniTopicBadge.style.fontSize = "11px";
+    miniTopicBadge.style.fontFamily = fontFamily;
+    miniTopicBadge.dir = isRTL ? "rtl" : "ltr";
+
+    const miniTopicLabel = document.createElement("span");
+    miniTopicLabel.textContent = isRTL ? "موضوع: " : "Topic: ";
+    miniTopicLabel.style.color = "#2563eb";
+    miniTopicLabel.style.fontWeight = "700";
+
+    const miniTopicValue = document.createElement("strong");
+    miniTopicValue.textContent = effectiveTopic;
+    miniTopicValue.style.color = "#0f172a";
+    miniTopicValue.style.fontWeight = "800";
+
+    miniTopicBadge.append(miniTopicLabel, miniTopicValue);
+    miniTitleBox.appendChild(miniTopicBadge);
+    headerDiv.appendChild(miniTitleBox);
+
+    const miniMetaBox = document.createElement("div");
+    miniMetaBox.style.display = "flex";
+    miniMetaBox.style.alignItems = "center";
+    miniMetaBox.style.flexShrink = "0";
+
+    const miniPageStamp = document.createElement("div");
+    miniPageStamp.textContent =
+      `${isRTL ? "صفحه " : "Page "}${pageNum} ` +
+      `${isRTL ? "از " : "of "}${totalPages}`;
+    miniPageStamp.style.fontSize = "11.5px";
+    miniPageStamp.style.color = "#334155";
+    miniPageStamp.style.fontWeight = "700";
+    miniMetaBox.appendChild(miniPageStamp);
+
+    headerDiv.appendChild(miniMetaBox);
+  }
+
+  return headerDiv;
+};
+
+      
+
 
       // Helper: Summary Cards
       const createSummaryCards = () => {
@@ -659,32 +743,9 @@ export const QuizResultPage = ({
         pageContainer.dir = isRTL ? "rtl" : "ltr";
 
         // 1. Page Header
-        // pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
-
-        // 2. Summary cards (only on page 1)
-        // لوگو فقط در بالای صفحه اول
-        if (p === 0) {
-          const logoContainer = document.createElement("div");
-          logoContainer.style.display = "flex";
-          logoContainer.style.justifyContent = "center";
-          logoContainer.style.alignItems = "center";
-          logoContainer.style.marginBottom = "12px";
-          logoContainer.style.width = "100%";
-
-          const logoImg = document.createElement("img");
-          logoImg.src = danaiLogo;
-          logoImg.style.width = "120px";
-          logoImg.style.height = "auto";
-          logoImg.style.maxHeight = "80px";
-          logoImg.style.objectFit = "contain";
-
-          logoContainer.appendChild(logoImg);
-          pageContainer.appendChild(logoContainer);
-        }
-
-        // عنوان گزارش
         pageContainer.appendChild(createHeader(p === 0, p + 1, totalPdfPages));
 
+        // 2. Summary cards (only on page 1)
         if (p === 0) {
           pageContainer.appendChild(createSummaryCards());
         }

@@ -182,14 +182,13 @@ export const Login = () => {
         {/* Header Branding */}
 
         <div className="flex flex-col items-center text-center gap-1.5 pt-1">
-          <div className="w-16 h-16 flex items-center justify-center">
+          <div className="w-22 h-22 flex items-center justify-center">
             <img
               src={mainlogo}
               alt={isRTL ? "دانای" : "DANAI"}
-              className="w-16 h-16 object-contain"
+              className="w-21 h-24 object-contain"
             />
           </div>
-
           <h1 className="text-lg font-bold dark:text-neutral-scale100 text-neutral-scale1800 font-vazir mt-1">
             {t("loginToDigitalTwin", "ورود به سامانه دانای")}
           </h1>
