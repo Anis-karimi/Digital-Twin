@@ -18,6 +18,11 @@ import {
   ShieldAlert,
   Target,
   Clock3,
+  Users,
+  UserX,
+  EyeOff,
+  Camera,
+  ZoomIn,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -273,6 +278,51 @@ export const StudentExamPage = () => {
   // Biometrics & Distraction Proctoring State
   const [distractionCount, setDistractionCount] = useState(0);
   const lastDistractionLogTimeRef = useRef(0);
+
+  // 3-Strike Proctoring Violation & Incident Documentation State
+  const [strikesCount, setStrikesCount] = useState(0);
+  const strikesCountRef = useRef(0);
+  useEffect(() => {
+    strikesCountRef.current = strikesCount;
+  }, [strikesCount]);
+
+  const [activeStrikeModal, setActiveStrikeModal] = useState(null);
+  const [incidentsList, setIncidentsList] = useState([]);
+  const [isEjected, setIsEjected] = useState(false);
+  const isEjectedRef = useRef(false);
+  useEffect(() => {
+    isEjectedRef.current = isEjected;
+  }, [isEjected]);
+
+  const strikeCooldownUntilRef = useRef(0);
+  const handleFinishExamRef = useRef(null);
+
+  // Consecutive counters for debouncing transient movements (in seconds)
+  const noFaceDurationRef = useRef(0);
+  const gazeAwayDurationRef = useRef(0);
+  const multipleFacesDurationRef = useRef(0);
+
+  const playWarningBeep = useCallback((isCritical = false) => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = isCritical ? "sawtooth" : "triangle";
+      osc.frequency.setValueAtTime(isCritical ? 880 : 587, ctx.currentTime);
+      if (isCritical) {
+        osc.frequency.setValueAtTime(440, ctx.currentTime + 0.15);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3);
+      }
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + (isCritical ? 0.6 : 0.35));
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + (isCritical ? 0.6 : 0.35));
+    } catch {}
+  }, []);
 
   // Pre-exam Face Identity Verification Gate
   const containerRef = useRef(null);
@@ -721,34 +771,192 @@ export const StudentExamPage = () => {
     ? "drop-shadow(0 0 14px rgba(56, 189, 248, 0.9))"
     : "drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))";
 
-  // 2. Real-time Telemetry & Fast Distraction Logger
-  const handleTelemetryUpdate = useCallback((data) => {
-    if (!data) return;
-    const isFocused = data.is_focused ?? (data.attention_score >= 45);
-    const attention = data.attention_score ?? 100;
-    const gazeDir = String(data.gaze_direction || "Direct");
-    const faceDetected = data.face_detected !== false;
-
-    const isLookingAway =
-      !faceDetected ||
-      !isFocused ||
-      attention < 45 ||
-      (gazeDir !== "Direct" && gazeDir !== "Direct / Center" && gazeDir !== "Screen" && gazeDir !== "Forward" && gazeDir !== "Center");
-
-    if (isLookingAway) {
+  // 3-Strike Proctoring Violation Dispatcher
+  const triggerProctorViolation = useCallback(
+    async (violationType, violationDetails = {}) => {
+      if (isCompleted || isEjectedRef.current) return;
       const now = Date.now();
-      if (now - lastDistractionLogTimeRef.current > 4000) {
-        lastDistractionLogTimeRef.current = now;
-        setDistractionCount((prev) => prev + 1);
-        biometricsApi.logExamDistraction(sessionId || id, studentId, {
-          attention_score: attention,
-          gaze_direction: gazeDir,
-          dominant_emotion: data.dominant_emotion || "neutral",
-          stress_score: data.stress_score || 0,
-        }).catch((e) => console.warn("Distraction log error:", e));
+      if (now < strikeCooldownUntilRef.current) {
+        return;
       }
-    }
-  }, [sessionId, id, studentId]);
+      // Apply 6.5s grace period between strikes to allow student to re-align
+      strikeCooldownUntilRef.current = now + 6500;
+
+      const currentStrikes = strikesCountRef.current;
+      const newStrike = Math.min(3, currentStrikes + 1);
+      setStrikesCount(newStrike);
+
+      // Play alert tone
+      playWarningBeep(newStrike >= 2);
+
+      // 1. Capture snapshot immediately at moment of violation
+      const blob = await captureExamFrameBlob(0.88, 640);
+      const localPreviewUrl = blob ? URL.createObjectURL(blob) : null;
+
+      let title = "";
+      let reasonText = "";
+      if (violationType === "multiple_faces") {
+        title = isRTL ? "حضور بیش از یک نفر در کادر دوربین" : "Multiple Faces in Camera Frame";
+        reasonText = isRTL
+          ? "سیستم هوشمند آزمون حضور بیش از یک نفر را در کادر تصویر تشخیص داد. آزمون باید منحصراً و به صورت فردی توسط شما انجام شود."
+          : "Multiple people detected in frame. The exam must be taken strictly alone.";
+      } else if (violationType === "no_face") {
+        title = isRTL ? "عدم حضور چهره در کادر دوربین" : "No Face Detected in Frame";
+        reasonText = isRTL
+          ? "چهره شما در برابر دوربین مشاهده نشد. لطفاً مستقیماً در برابر وبکم قرار بگیرید تا تصویر شما به درستی ثبت شود."
+          : "Your face is not visible to the camera. Please stay centered in frame.";
+      } else if (violationType === "gaze_out_of_bounds") {
+        title = isRTL ? "انحراف مکرر دید / نگاه به خارج از کادر" : "Looking Away from Exam Screen";
+        reasonText = isRTL
+          ? "نگاه شما مکرراً به خارج از صفحه آزمون یا به سمت پایین منحرف شده است. لطفاً تمام توجه خود را به سوالات معطوف کنید."
+          : "Your gaze was repeatedly directed away from the screen. Please look directly at the exam.";
+      } else if (violationType === "face_mismatch") {
+        title = isRTL ? "عدم تطابق هویت با چهره ثبت‌شده" : "Identity Verification Mismatch";
+        reasonText = isRTL
+          ? "چهره حاضر در برابر دوربین با هویت و الگوی بیومتریک احراز شده دانشجو مطابقت ندارد."
+          : "The person in front of the camera does not match the enrolled student identity.";
+      }
+
+      const incidentEntry = {
+        strikeNumber: newStrike,
+        violationType,
+        title,
+        reasonText,
+        snapshotUrl: localPreviewUrl,
+        timestamp: new Date().toLocaleTimeString(isRTL ? "fa-IR" : "en-US"),
+        details: violationDetails,
+      };
+
+      setIncidentsList((prev) => [...prev, incidentEntry]);
+
+      // Upload snapshot and incident to backend
+      const resolvedSessionId = sessionId || id;
+      if (resolvedSessionId && studentId) {
+        biometricsApi
+          .reportExamIncident(resolvedSessionId, studentId, violationType, newStrike, blob, {
+            ...violationDetails,
+            assignment_id: assignmentId || examMeta?.id || null,
+            title,
+            reasonText,
+          })
+          .then((res) => {
+            if (res?.image_url) {
+              incidentEntry.serverImageUrl = res.image_url;
+            }
+          })
+          .catch((err) => console.warn("Incident upload warning:", err));
+      }
+
+      // Display active strike modal
+      setActiveStrikeModal({
+        isOpen: true,
+        strikeNumber: newStrike,
+        violationType,
+        title,
+        reasonText,
+        snapshotUrl: localPreviewUrl,
+      });
+
+      // Strike 3: Eject and Terminate
+      if (newStrike >= 3) {
+        setIsEjected(true);
+        setTimeout(() => {
+          if (handleFinishExamRef.current) {
+            handleFinishExamRef.current("ejected_violations");
+          }
+        }, 4000);
+      }
+    },
+    [
+      isCompleted,
+      playWarningBeep,
+      captureExamFrameBlob,
+      sessionId,
+      id,
+      studentId,
+      assignmentId,
+      examMeta?.id,
+      isRTL,
+    ]
+  );
+
+  // 2. Real-time Telemetry & Fast Multi-Violation Proctoring
+  const handleTelemetryUpdate = useCallback(
+    (data) => {
+      if (!data || isCompleted || isEjectedRef.current) return;
+      const isFocused = data.is_focused ?? (data.attention_score >= 45);
+      const attention = data.attention_score ?? 100;
+      const gazeDir = String(data.gaze_direction || "Direct");
+      const faceDetected = data.face_detected !== false;
+      const hasMultipleFaces = Boolean(data.multiple_faces || (data.face_count && data.face_count > 1));
+
+      // A. Check Multiple Faces Violation (>= 2 consecutive ticks)
+      if (hasMultipleFaces) {
+        multipleFacesDurationRef.current += 1;
+        if (multipleFacesDurationRef.current >= 2) {
+          multipleFacesDurationRef.current = 0;
+          triggerProctorViolation("multiple_faces", {
+            face_count: data.face_count || 2,
+          });
+        }
+      } else {
+        multipleFacesDurationRef.current = 0;
+      }
+
+      // B. Check Absence of Face Violation (>= 3 consecutive ticks)
+      if (!faceDetected) {
+        noFaceDurationRef.current += 1;
+        if (noFaceDurationRef.current >= 3) {
+          noFaceDurationRef.current = 0;
+          triggerProctorViolation("no_face", {
+            status: data.status || "Face Not Detected",
+          });
+        }
+      } else {
+        noFaceDurationRef.current = 0;
+      }
+
+      // C. Check Gaze Out of Bounds / Looking Away (>= 3 consecutive ticks)
+      const isLookingAway =
+        faceDetected &&
+        !hasMultipleFaces &&
+        (attention < 40 ||
+          gazeDir === "Out of Frame" ||
+          gazeDir.includes("Away") ||
+          (gazeDir === "Looking Down" && attention < 45) ||
+          (!isFocused && attention < 45));
+
+      if (isLookingAway) {
+        gazeAwayDurationRef.current += 1;
+        if (gazeAwayDurationRef.current >= 3) {
+          gazeAwayDurationRef.current = 0;
+          triggerProctorViolation("gaze_out_of_bounds", {
+            attention_score: attention,
+            gaze_direction: gazeDir,
+            yaw: data.yaw,
+            pitch: data.pitch,
+          });
+        }
+
+        const now = Date.now();
+        if (now - lastDistractionLogTimeRef.current > 4000) {
+          lastDistractionLogTimeRef.current = now;
+          setDistractionCount((prev) => prev + 1);
+          biometricsApi
+            .logExamDistraction(sessionId || id, studentId, {
+              attention_score: attention,
+              gaze_direction: gazeDir,
+              dominant_emotion: data.dominant_emotion || "neutral",
+              stress_score: data.stress_score || 0,
+            })
+            .catch((e) => console.warn("Distraction log error:", e));
+        }
+      } else {
+        gazeAwayDurationRef.current = 0;
+      }
+    },
+    [isCompleted, triggerProctorViolation, sessionId, id, studentId]
+  );
 
   const {
     telemetry: biometricTelemetry,
@@ -767,10 +975,11 @@ export const StudentExamPage = () => {
       return "good";
     }
     const faceDetected = biometricTelemetry.face_detected !== false;
+    const hasMultipleFaces = Boolean(biometricTelemetry.multiple_faces || (biometricTelemetry.face_count && biometricTelemetry.face_count > 1));
     const attentionScore = Number(biometricTelemetry.attention_score ?? 100);
     const gazeDir = String(biometricTelemetry.gaze_direction || "Direct");
 
-    if (!faceDetected) {
+    if (!faceDetected || hasMultipleFaces) {
       return "critical";
     }
     if (attentionScore < 40 || gazeDir === "Out of Frame" || gazeDir.includes("Away")) {
@@ -799,16 +1008,26 @@ export const StudentExamPage = () => {
       const randomDelay = Math.floor(Math.random() * (150000 - 90000 + 1)) + 90000;
       timeoutId = setTimeout(async () => {
         try {
-          const blob = await captureExamFrameBlob(0.65, 320, 240);
+          const blob = await captureExamFrameBlob(0.85, 480, 360);
           if (blob) {
             const res = await biometricsApi.verifyStudentFace(studentId, blob, "balanced");
             if (res && res.verified === false) {
               setPeriodicAlert("هشدار امنیتی: عدم تطابق چهره مقابل دوربین با هویت ثبتشده دانشجو!");
+              triggerProctorViolation("face_mismatch", {
+                cosine_distance: res.cosine_distance,
+                threshold: res.threshold,
+              });
               setTimeout(() => setPeriodicAlert(""), 6000);
             }
           }
         } catch (e) {
           console.warn("Periodic identity check error:", e);
+          const msg = e?.message || "";
+          if (msg.includes("بیش از یک چهره") || msg.includes("تنها یک چهره")) {
+            triggerProctorViolation("multiple_faces", { error: msg });
+          } else if (msg.includes("هیچ چهره‌ای")) {
+            triggerProctorViolation("no_face", { error: msg });
+          }
         }
         scheduleNextCheck();
       }, randomDelay);
@@ -819,7 +1038,7 @@ export const StudentExamPage = () => {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [isIdentityVerified, isCompleted, loading, error, captureExamFrameBlob, studentId]);
+  }, [isIdentityVerified, isCompleted, loading, error, captureExamFrameBlob, studentId, triggerProctorViolation]);
 
   // TTS & Live Word-by-Word State for Question Box
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
@@ -1279,10 +1498,20 @@ export const StudentExamPage = () => {
       setCompletionReason(reason);
       setAutoRedirectSeconds(15);
 
+      if (reason === "ejected_violations") {
+        setFinalScore(0);
+        setIsPassed(false);
+        setLastFeedback(
+          isRTL
+            ? "آزمون شما به دلیل دریافت ۳ اخطار امنیتی متوقف گردید. مستندات ثبت‌شده توسط دوربین برای بررسی نهایی به استاد ارجاع داده شد."
+            : "Your exam was terminated due to 3 security violations. Camera evidence has been submitted to the instructor."
+        );
+      }
+
       try {
         if (sessionId) {
           const res = await examsApi.completeInterview(sessionId);
-          if (res) {
+          if (res && reason !== "ejected_violations") {
             if (res.overall_score != null) {
               const sc = Math.round(res.overall_score * 100);
               setFinalScore(sc);
@@ -1305,19 +1534,25 @@ export const StudentExamPage = () => {
               setLastFeedback(res.recommendations.join("\n"));
             }
           }
-        } else {
+        } else if (reason !== "ejected_violations") {
           setFinalScore(lastMastery ?? 85);
           setIsPassed((lastMastery ?? 85) >= 60);
         }
       } catch (err) {
         console.warn("Failed to complete interview on backend:", err);
-        setFinalScore((prev) => (prev !== null ? prev : lastMastery ?? 85));
+        if (reason !== "ejected_violations") {
+          setFinalScore((prev) => (prev !== null ? prev : lastMastery ?? 85));
+        }
       } finally {
         setIsFinishing(false);
       }
     },
-    [isCompleted, isFinishing, sessionId, lastMastery]
+    [isCompleted, isFinishing, sessionId, lastMastery, isRTL]
   );
+
+  useEffect(() => {
+    handleFinishExamRef.current = handleFinishExam;
+  }, [handleFinishExam]);
 
   useEffect(() => {
     if (!isCompleted || autoRedirectSeconds === null) return;
@@ -1599,15 +1834,57 @@ export const StudentExamPage = () => {
       {/* ================= 2. Top Bar (Exit Button, Exactly Centered Live Eye & Flip-Down Clock) ================= */}
       <header className="relative z-30 w-full py-2.5 px-3.5 shrink-0 flex items-center justify-between max-w-xl mx-auto min-h-[52px]">
         {/* Hang up / Exit Button */}
-        <button
-          type="button"
-          onClick={() => setShowExitModal(true)}
-          aria-label={isRTL ? "خروج از آزمون" : "Exit Exam"}
-          className="w-9 h-9 rounded-full bg-rose-600/85 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-90 transition-all cursor-pointer shrink-0 border border-rose-400/30"
-          title={isRTL ? "پایان و خروج از آزمون" : "Exit Exam"}
-        >
-          <DoorOpen className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowExitModal(true)}
+            aria-label={isRTL ? "خروج از آزمون" : "Exit Exam"}
+            className="w-9 h-9 rounded-full bg-rose-600/85 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-90 transition-all cursor-pointer shrink-0 border border-rose-400/30"
+            title={isRTL ? "پایان و خروج از آزمون" : "Exit Exam"}
+          >
+            <DoorOpen className="w-4 h-4" />
+          </button>
+
+          {/* 3-Strike Security Status Pill */}
+          {isIdentityVerified && (
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full backdrop-blur-md border text-[11px] font-vazir shadow-sm transition-all duration-300 ${
+                strikesCount >= 2
+                  ? "bg-rose-950/80 border-rose-500/80 text-rose-300 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.4)]"
+                  : strikesCount === 1
+                  ? "bg-amber-950/70 border-amber-500/60 text-amber-300"
+                  : "bg-slate-900/65 border-white/10 text-slate-300"
+              }`}
+              title={
+                strikesCount > 0
+                  ? isRTL
+                    ? `تعداد اخطارهای ثبت‌شده: ${toPersianDigits(strikesCount)} از ۳`
+                    : `Strikes: ${strikesCount}/3`
+                  : isRTL
+                  ? "امنیت فعال - بدون اخطار"
+                  : "Security optimal - 0 strikes"
+              }
+            >
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((num) => (
+                  <span
+                    key={num}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      strikesCount >= num
+                        ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)] animate-pulse"
+                        : "bg-white/20"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="font-bold text-[10px]">
+                {isRTL
+                  ? `${toPersianDigits(strikesCount)} از ۳ اخطار`
+                  : `${strikesCount}/3 strikes`}
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Exactly Centered Live Eye on the same horizontal line */}
         {isIdentityVerified && (
@@ -1907,6 +2184,130 @@ export const StudentExamPage = () => {
           </div>
         ) : isCompleted ? (
           /* ================= Complete Result View ================= */
+          completionReason === "ejected_violations" ? (
+            <div className="m-auto w-full max-w-md rounded-3xl bg-slate-900/90 backdrop-blur-2xl border border-rose-500/30 p-6 flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="w-16 h-16 rounded-full bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center text-rose-400 mb-3 shadow-[0_0_20px_rgba(244,63,94,0.4)] animate-pulse">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+
+              <h2 className="font-vazir font-bold text-lg text-white mb-1">
+                {isRTL ? "خاتمه و ابطال آزمون به دلیل تخلف امنیتی" : "Exam Disqualified - Security Violations"}
+              </h2>
+
+              <p className="font-vazir text-xs text-rose-300/90 mb-4 leading-relaxed">
+                {isRTL
+                  ? "سیستم هوشمند نظارت تصویری ۳ اخطار تخلف در این آزمون ثبت کرده است. به دلیل نقض مکرر قوانین، آزمون شما متوقف و با نمره صفر خاتمه یافت."
+                  : "The proctoring system recorded 3 security violations. The session has been terminated and disqualified."}
+              </p>
+
+              {/* 3 Strikes Evidence Grid */}
+              {incidentsList && incidentsList.length > 0 && (
+                <div className="w-full bg-slate-950/70 border border-white/10 rounded-2xl p-3 mb-4 text-right">
+                  <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
+                    <span className="font-vazir text-xs font-bold text-white flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-rose-400" />
+                      {isRTL ? "مستندات و تصاویر تخلفات ثبت‌شده:" : "Recorded Violation Snapshots:"}
+                    </span>
+                    <span className="font-vazir text-[11px] text-rose-400 font-semibold">
+                      {isRTL ? `${toPersianDigits(incidentsList.length)} از ۳ اخطار` : `${incidentsList.length}/3 Strikes`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {incidentsList.map((inc, idx) => (
+                      <div
+                        key={idx}
+                        className="relative rounded-xl overflow-hidden bg-black/60 border border-rose-500/30 group"
+                      >
+                        {inc.snapshotUrl || inc.serverImageUrl ? (
+                          <img
+                            src={inc.snapshotUrl || inc.serverImageUrl}
+                            alt={`Strike ${inc.strikeNumber}`}
+                            className="w-full h-20 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-20 flex items-center justify-center text-slate-500">
+                            <Camera className="w-6 h-6" />
+                          </div>
+                        )}
+                        <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-rose-600/90 text-white font-vazir text-[9px] font-bold shadow">
+                          {isRTL ? `اخطار ${toPersianDigits(inc.strikeNumber || idx + 1)}` : `Strike ${inc.strikeNumber || idx + 1}`}
+                        </div>
+                        <div className="p-1 bg-slate-900/90 text-center">
+                          <p className="font-vazir text-[9px] text-slate-300 truncate">
+                            {inc.violationType === "multiple_faces"
+                              ? (isRTL ? "بیش از ۱ نفر" : "Multiple Faces")
+                              : inc.violationType === "no_face"
+                              ? (isRTL ? "عدم حضور" : "No Face")
+                              : inc.violationType === "gaze_out_of_bounds"
+                              ? (isRTL ? "انحراف دید" : "Looking Away")
+                              : (isRTL ? "عدم انطباق" : "Mismatch")}
+                          </p>
+                          <span className="font-mono text-[8px] text-slate-500 block">
+                            {inc.timestamp}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status summary */}
+              <div className="w-full bg-slate-950/60 border border-white/10 rounded-2xl p-3.5 mb-4 flex items-center justify-around">
+                <div className="flex flex-col items-center">
+                  <span className="font-vazir text-[11px] text-slate-400 mb-0.5">
+                    {isRTL ? "نمره نهایی" : "Final Score"}
+                  </span>
+                  <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-rose-400`}>
+                    {isRTL ? "۰٪" : "0%"}
+                  </span>
+                </div>
+                <div className="w-[1px] h-8 bg-white/10" />
+                <div className="flex flex-col items-center">
+                  <span className="font-vazir text-[11px] text-slate-400 mb-0.5">
+                    {isRTL ? "وضعیت نهایی" : "Status"}
+                  </span>
+                  <span className="font-vazir text-xs font-bold text-rose-400 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {isRTL ? "مردود (اخراج امنیتی)" : "Disqualified"}
+                  </span>
+                </div>
+              </div>
+
+              {lastFeedback && (
+                <div className="w-full text-right bg-black/40 rounded-xl p-3 mb-4 text-xs font-vazir text-slate-200 border border-white/10">
+                  <div className="font-bold mb-1 flex items-center gap-1 text-rose-400">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {isRTL ? "توضیحات و گزارش تخلف:" : "Violation Report:"}
+                  </div>
+                  <p className="leading-relaxed text-slate-300">{lastFeedback}</p>
+                </div>
+              )}
+
+              {autoRedirectSeconds !== null && (
+                <div className="w-full mb-3 text-center text-xs font-vazir text-slate-400 flex items-center justify-center gap-1.5">
+                  <Clock3 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span>
+                    {isRTL
+                      ? `انتقال به فهرست آزمونها در ${toPersianDigits(autoRedirectSeconds)} ثانیه...`
+                      : `Redirecting in ${autoRedirectSeconds}s...`}
+                  </span>
+                </div>
+              )}
+
+              <div className="w-full flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/StudentExams")}
+                  className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
+                >
+                  <DoorOpen className="w-4 h-4" />
+                  {isRTL ? "خروج و بازگشت به فهرست آزمونها" : "Return to Exams List"}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/20 p-6 flex flex-col items-center text-center shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 mb-3 shadow-[0_0_20px_rgba(52,211,153,0.3)]">
               <Award className="w-8 h-8" />
@@ -2008,6 +2409,7 @@ export const StudentExamPage = () => {
               </button>
             </div>
           </div>
+        )
         ) : isSubmitting ? (
           /* ================= 4. Thinking-Orbs AI Transition State ================= */
           <div className="m-auto w-full max-w-sm rounded-3xl bg-slate-900/85 backdrop-blur-2xl border border-white/20 p-8 flex flex-col items-center justify-center text-center gap-5 shadow-2xl animate-in zoom-in-95 duration-300">
@@ -2466,6 +2868,150 @@ export const StudentExamPage = () => {
           </div>
         )}
       </section>
+
+      {/* ================= 5.5 Active Strike Warning Modal ================= */}
+      {activeStrikeModal && activeStrikeModal.isOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4 animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-[380px] rounded-3xl bg-slate-900/95 border ${
+              activeStrikeModal.strikeNumber >= 3
+                ? "border-rose-500 shadow-[0_0_35px_rgba(244,63,94,0.4)]"
+                : activeStrikeModal.strikeNumber === 2
+                ? "border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.35)]"
+                : "border-amber-400/80 shadow-[0_0_25px_rgba(251,191,36,0.3)]"
+            } p-5 text-center space-y-3.5 animate-in zoom-in-95 duration-200`}
+          >
+            {/* Strike indicator badge & Icon */}
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-14 h-14 rounded-full flex items-center justify-center mb-2.5 shadow-lg ${
+                  activeStrikeModal.strikeNumber >= 3
+                    ? "bg-rose-500/20 border-2 border-rose-500 text-rose-400 shadow-rose-500/30 animate-pulse"
+                    : activeStrikeModal.strikeNumber === 2
+                    ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400 shadow-orange-500/30"
+                    : "bg-amber-400/20 border-2 border-amber-400 text-amber-300 shadow-amber-400/20"
+                }`}
+              >
+                {activeStrikeModal.violationType === "multiple_faces" ? (
+                  <Users className="w-7 h-7" />
+                ) : activeStrikeModal.violationType === "no_face" ? (
+                  <UserX className="w-7 h-7" />
+                ) : activeStrikeModal.violationType === "gaze_out_of_bounds" ? (
+                  <EyeOff className="w-7 h-7" />
+                ) : (
+                  <AlertTriangle className="w-7 h-7" />
+                )}
+              </div>
+
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-vazir font-bold tracking-tight shadow-md ${
+                  activeStrikeModal.strikeNumber >= 3
+                    ? "bg-rose-600 text-white"
+                    : activeStrikeModal.strikeNumber === 2
+                    ? "bg-orange-600 text-white"
+                    : "bg-amber-500 text-slate-950"
+                }`}
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>
+                  {isRTL
+                    ? activeStrikeModal.strikeNumber === 1
+                      ? "اخطار اول (۱ از ۳)"
+                      : activeStrikeModal.strikeNumber === 2
+                      ? "اخطار دوم (۲ از ۳) - هشدار جدی"
+                      : "اخطار سوم (۳ از ۳) - خاتمه آزمون"
+                    : `Strike ${activeStrikeModal.strikeNumber} of 3`}
+                </span>
+              </div>
+            </div>
+
+            {/* Violation Title & Description */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white font-vazir">
+                {activeStrikeModal.title}
+              </h3>
+              <p className="text-[11px] text-slate-300 leading-relaxed font-vazir">
+                {activeStrikeModal.reasonText}
+              </p>
+            </div>
+
+            {/* Captured Evidence Snapshot */}
+            {activeStrikeModal.snapshotUrl && (
+              <div className="w-full bg-slate-950/80 border border-white/10 rounded-2xl p-2 space-y-1.5">
+                <div className="flex items-center justify-between px-1">
+                  <span className="font-vazir text-[10px] text-slate-400 flex items-center gap-1">
+                    <Camera className="w-3 h-3 text-sky-400" />
+                    {isRTL ? "تصویر ثبت‌شده در لحظه تخلف (مستندات آزمون)" : "Recorded Violation Snapshot"}
+                  </span>
+                  <span className="font-mono text-[9px] text-rose-400 font-bold">
+                    REC ●
+                  </span>
+                </div>
+                <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black max-h-40 flex items-center justify-center">
+                  <img
+                    src={activeStrikeModal.snapshotUrl}
+                    alt="Violation Evidence Snapshot"
+                    className="w-full h-auto max-h-40 object-cover"
+                  />
+                  <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded bg-black/75 text-[9px] font-vazir text-slate-300 backdrop-blur-xs">
+                    {isRTL ? "مستند تخلف ارسال‌شده برای استاد" : "Reported to instructor"}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Warning rule note */}
+            <div
+              className={`rounded-xl p-2.5 text-right text-[11px] font-vazir leading-relaxed border ${
+                activeStrikeModal.strikeNumber >= 3
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                  : "bg-amber-500/10 border-amber-500/30 text-amber-200/90"
+              }`}
+            >
+              {activeStrikeModal.strikeNumber >= 3 ? (
+                <p>
+                  {isRTL
+                    ? "به علت دریافت ۳ اخطار پیاپی، آزمون شما متوقف شده و با نمره صفر پایان یافت. تصاویر و لاگ تخلفات برای بررسی استاد ارسال گردید."
+                    : "Due to 3 strikes, your exam has been terminated. The incident evidence was sent to the instructor."}
+                </p>
+              ) : (
+                <p>
+                  {isRTL
+                    ? `قانون نظارت هوشمند: در صورت دریافت ۳ اخطار، جلسه بلافاصله قطع شده و نمره صفر لحاظ می‌گردد. (شما تاکنون ${toPersianDigits(
+                        activeStrikeModal.strikeNumber
+                      )} اخطار دریافت کرده‌اید)`
+                    : `Proctoring Policy: 3 strikes will immediately disqualify the exam. You have received ${activeStrikeModal.strikeNumber} strike(s).`}
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="pt-1">
+              {activeStrikeModal.strikeNumber >= 3 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveStrikeModal(null);
+                    handleFinishExam("ejected_violations");
+                  }}
+                  className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-600/30 font-vazir flex items-center justify-center gap-1.5"
+                >
+                  <DoorOpen className="w-4 h-4" />
+                  {isRTL ? "خروج از آزمون و ثبت مستندات" : "Exit Exam"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveStrikeModal(null)}
+                  className="w-full h-10 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-sky-600/30 font-vazir"
+                >
+                  {isRTL ? "متوجه شدم و بازگشت به آزمون" : "Understood, Return to Exam"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= 6. Video Call Hangup Confirmation Modal ================= */}
       {showExitModal && (

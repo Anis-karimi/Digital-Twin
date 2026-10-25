@@ -42,6 +42,7 @@ import { AdminCoursesPage } from "@/Pages/Admin/AdminCoursesPage";
 import { AdminUsersPage } from "@/Pages/Admin/AdminUsersPage";
 import { AdminCreateCoursePage } from "@/Pages/Admin/AdminCreateCoursePage";
 import { AdminSettingsPage } from "@/Pages/Admin/AdminSettingsPage";
+import { AdminExamsSchedulePage } from "@/Pages/Admin/AdminExamsSchedulePage";
 import { Login } from "@/Pages/Login";
 import { ErrorBoundary } from "@/Components/ErrorBoundary";
 
@@ -227,6 +228,14 @@ function App() {
                 />
                 <Route path="/AdminSettings" element={<AdminSettingsPage />} />
                 <Route path="/adminsettings" element={<AdminSettingsPage />} />
+                <Route
+                  path="/AdminExamsSchedule"
+                  element={<AdminExamsSchedulePage />}
+                />
+                <Route
+                  path="/adminexamsschedule"
+                  element={<AdminExamsSchedulePage />}
+                />
               </Route>
 
               {/* =================== Quiz Pages =================== */}

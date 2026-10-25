@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
+import { biometricsApi } from "@/api/new/biometrics.api";
 import {
   X,
   Users,
@@ -19,6 +20,12 @@ import {
   Loader2,
   Calendar,
   BookOpen,
+  ShieldAlert,
+  Camera,
+  ZoomIn,
+  EyeOff,
+  UserX,
+  AlertTriangle,
 } from "lucide-react";
 import "@/styles/fonts.css";
 import { getTodayJalaliDate } from "@/utils/dateUtils";
@@ -37,10 +44,11 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "completed", "in_progress", "not_started"
 
-  // Selected student session for inspecting conversation transcript
+  // Selected student session for inspecting conversation transcript & proctoring evidence
   const [selectedSessionStudent, setSelectedSessionStudent] = useState(null);
   const [sessionDetail, setSessionDetail] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const assignmentId = exam?.id || exam?.quiz_id || exam?.assignment_id;
 
@@ -52,6 +60,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
     setError(null);
     setSelectedSessionStudent(null);
     setSessionDetail(null);
+    setPreviewImage(null);
 
     examsApi
       .getExamResults(assignmentId)
@@ -84,10 +93,22 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
     setSelectedSessionStudent(student);
     setLoadingSession(true);
     setSessionDetail(null);
+    setPreviewImage(null);
 
     try {
       const detail = await examsApi.getSessionDetail(assignmentId, student.session_id);
-      setSessionDetail(detail);
+      let incidents = detail?.incidents || [];
+      if (!Array.isArray(incidents) || incidents.length === 0) {
+        try {
+          const incRes = await biometricsApi.getExamIncidents(student.session_id);
+          if (incRes?.incidents?.length > 0) {
+            incidents = incRes.incidents;
+          }
+        } catch (e) {
+          console.warn("Failed to fetch incidents fallback:", e);
+        }
+      }
+      setSessionDetail({ ...detail, incidents });
     } catch (err) {
       console.error("Failed to load session detail:", err);
     } finally {
@@ -219,6 +240,127 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                           : "Needs Review"}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Proctoring Evidence & Violation Snapshots */}
+                  <div className="bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl p-3 border border-neutral-scale200 dark:border-neutral-scale1000 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-vazir text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale80 flex items-center gap-1.5">
+                        <ShieldAlert className="w-4 h-4 text-primery-700 dark:text-primery-300" />
+                        {isRTL ? "مستندات نظارت تصویری و تخلفات (وبکم)" : "Proctoring Evidence & Photos"}
+                      </span>
+                      {Array.isArray(sessionDetail.incidents) && sessionDetail.incidents.length > 0 ? (
+                        <span className="font-vazir text-[11px] font-bold text-rose-500 bg-rose-500/10 dark:bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-500/20">
+                          {isRTL ? `${toPersianDigits(sessionDetail.incidents.length)} اخطار ثبت‌شده` : `${sessionDetail.incidents.length} Strikes`}
+                        </span>
+                      ) : (
+                        <span className="font-vazir text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {isRTL ? "بدون تخلف (تأیید کامل)" : "Clean Session"}
+                        </span>
+                      )}
+                    </div>
+
+                    {Array.isArray(sessionDetail.incidents) && sessionDetail.incidents.length > 0 ? (
+                      <div className="space-y-2">
+                        {sessionDetail.incidents.length >= 3 && (
+                          <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs font-vazir text-rose-600 dark:text-rose-400 flex items-center gap-1.5 font-semibold">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>
+                              {isRTL
+                                ? "دانشجو به دلیل دریافت ۳ اخطار تخلف از آزمون اخراج و جلسه با نمره صفر ابطال گردید."
+                                : "Student was disqualified and ejected due to 3 proctoring strikes."}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {sessionDetail.incidents.map((inc, iIdx) => (
+                            <div
+                              key={iIdx}
+                              className="bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl overflow-hidden flex flex-col group hover:border-rose-400 transition-all shadow-xs"
+                            >
+                              {/* Thumbnail with zoom trigger */}
+                              <div
+                                onClick={() => inc.image_url && setPreviewImage(inc)}
+                                className={`relative w-full h-24 bg-black/80 flex items-center justify-center overflow-hidden ${
+                                  inc.image_url ? "cursor-pointer" : ""
+                                }`}
+                              >
+                                {inc.image_url ? (
+                                  <>
+                                    <img
+                                      src={inc.image_url}
+                                      alt={`Strike ${inc.strike_number || iIdx + 1}`}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                      <ZoomIn className="w-5 h-5 drop-shadow" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center text-slate-500 gap-1">
+                                    <Camera className="w-6 h-6" />
+                                    <span className="font-vazir text-[9px]">{isRTL ? "تصویر ثبت نشده" : "No image"}</span>
+                                  </div>
+                                )}
+                                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-rose-600 text-white font-vazir text-[9px] font-bold shadow">
+                                  {isRTL ? `اخطار ${toPersianDigits(inc.strike_number || iIdx + 1)}` : `Strike ${inc.strike_number || iIdx + 1}`}
+                                </div>
+                              </div>
+
+                              {/* Incident Meta */}
+                              <div className="p-2 flex flex-col gap-1 text-[11px] font-vazir">
+                                <div className="flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400 truncate">
+                                  {inc.violation_type === "multiple_faces" ? (
+                                    <>
+                                      <Users className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">{isRTL ? "بیش از ۱ چهره" : "Multiple Faces"}</span>
+                                    </>
+                                  ) : inc.violation_type === "no_face" ? (
+                                    <>
+                                      <UserX className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">{isRTL ? "عدم حضور چهره" : "No Face"}</span>
+                                    </>
+                                  ) : inc.violation_type === "gaze_out_of_bounds" ? (
+                                    <>
+                                      <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">{isRTL ? "انحراف دید" : "Looking Away"}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">{isRTL ? "عدم انطباق چهره" : "Face Mismatch"}</span>
+                                    </>
+                                  )}
+                                </div>
+
+                                {inc.notes && (
+                                  <p className="text-[10px] text-neutral-scale1000 dark:text-neutral-scale400 line-clamp-2 leading-relaxed">
+                                    {inc.notes}
+                                  </p>
+                                )}
+
+                                <span className="font-mono text-[9px] text-neutral-scale900 dark:text-neutral-scale500 mt-0.5">
+                                  {inc.created_at
+                                    ? new Date(inc.created_at).toLocaleTimeString(isRTL ? "fa-IR" : "en-US")
+                                    : inc.timestamp || ""}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-vazir text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>
+                          {isRTL
+                            ? "هیچ تخلفی در طول این آزمون ثبت نشده است. حضور پیوسته، عدم حضور افراد دیگر و انطباق هویت دانشجو تأیید شده است."
+                            : "Clean session. Full attendance, solo presence, and biometric verification confirmed."}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Turns list */}
@@ -401,15 +543,22 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                         {/* Score & Status */}
                         <div className="flex items-center gap-2 shrink-0">
                           {s.score !== null ? (
-                            <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-primery-800 dark:text-primery-200 bg-primery-100/60 dark:bg-primery-900/40 px-2 py-0.5 rounded-md`}>
-                              {isRTL ? `${toPersianDigits(s.score)}٪` : `${s.score}%`}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {s.strikes > 0 && (
+                                <span className="font-vazir text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                                  {isRTL ? `${toPersianDigits(s.strikes)} اخطار` : `${s.strikes} strikes`}
+                                </span>
+                              )}
+                              <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-primery-800 dark:text-primery-200 bg-primery-100/60 dark:bg-primery-900/40 px-2 py-0.5 rounded-md`}>
+                                {isRTL ? `${toPersianDigits(s.score)}٪` : `${s.score}%`}
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-[11px] font-vazir text-neutral-scale900 dark:text-neutral-scale400">
                               {s.status === "started" || s.status === "active"
                                 ? isRTL
-                                  ? "در حال آزمون"
-                                  : "In progress"
+                                ? "در حال آزمون"
+                                : "In progress"
                                 : isRTL
                                 ? "شرکت نکرده"
                                 : "Not started"}
@@ -438,8 +587,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                             <MessageSquare className="w-3.5 h-3.5" />
                             <span>
                               {isRTL
-                                ? `مشاهده متن آزمون (${toPersianDigits(s.turns_count)} سوال)`
-                                : `View Interview (${s.turns_count} turns)`}
+                                ? `مشاهده متن و مستندات آزمون (${toPersianDigits(s.turns_count)} سوال)`
+                                : `View Interview & Evidence (${s.turns_count} turns)`}
                             </span>
                           </button>
                         </div>
@@ -456,6 +605,63 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
           )}
         </div>
       </div>
+
+      {/* Proctoring Evidence Full-Size Lightbox Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-white/20 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-3.5 bg-slate-800/80 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-sky-400" />
+                <span className="font-vazir font-bold text-xs text-white">
+                  {isRTL
+                    ? `مستند تصویری اخطار ${toPersianDigits(previewImage.strike_number || 1)}`
+                    : `Strike ${previewImage.strike_number || 1} Evidence`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 text-slate-300 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-black flex items-center justify-center max-h-[60vh] overflow-hidden">
+              <img
+                src={previewImage.image_url}
+                alt="Incident Snapshot"
+                className="max-h-[55vh] w-auto object-contain rounded-lg border border-white/10 shadow"
+              />
+            </div>
+
+            <div className="p-3.5 bg-slate-900 space-y-2 border-t border-white/10 text-xs font-vazir text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  {previewImage.violation_type === "multiple_faces"
+                    ? (isRTL ? "حضور بیش از یک نفر در کادر دوربین" : "Multiple Faces")
+                    : previewImage.violation_type === "no_face"
+                    ? (isRTL ? "عدم حضور چهره در کادر تصویر" : "No Face Detected")
+                    : previewImage.violation_type === "gaze_out_of_bounds"
+                    ? (isRTL ? "انحراف دید از صفحه آزمون" : "Gaze Out of Bounds")
+                    : (isRTL ? "عدم انطباق چهره با هویت دانشجو" : "Face Mismatch")}
+                </span>
+                <span className="font-mono text-[11px] text-slate-400">
+                  {previewImage.created_at
+                    ? new Date(previewImage.created_at).toLocaleTimeString(isRTL ? "fa-IR" : "en-US")
+                    : previewImage.timestamp || ""}
+                </span>
+              </div>
+              {previewImage.notes && (
+                <p className="text-[11px] text-slate-400 leading-relaxed bg-white/5 p-2 rounded-lg">
+                  {previewImage.notes}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

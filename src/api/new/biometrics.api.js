@@ -253,6 +253,70 @@ export async function logExamDistraction(sessionId, userId, details = {}) {
 }
 
 /**
+ * 9.5. Report Exam Incident with Camera Snapshot Evidence (3-Strike Proctoring)
+ * @param {string} sessionId
+ * @param {string} studentId
+ * @param {string} violationType - "multiple_faces" | "face_mismatch" | "no_face" | "gaze_out_of_bounds"
+ * @param {number} strikeNumber - 1 | 2 | 3
+ * @param {Blob|null} imageBlob - Snapshot of the camera frame
+ * @param {Object} [details={}] - Additional metadata (scores, gaze, face count)
+ * @returns {Promise<Object>}
+ */
+export async function reportExamIncident(sessionId, studentId, violationType, strikeNumber, imageBlob = null, details = {}) {
+  const formData = new FormData();
+  formData.append("session_id", String(sessionId || "").trim());
+  formData.append("student_id", String(studentId || "").trim());
+  formData.append("violation_type", String(violationType).trim());
+  formData.append("strike_number", String(strikeNumber));
+  formData.append("details", JSON.stringify(details || {}));
+  if (details.notes) {
+    formData.append("notes", String(details.notes));
+  }
+  if (details.assignment_id) {
+    formData.append("assignment_id", String(details.assignment_id));
+  }
+  if (imageBlob) {
+    formData.append("file", imageBlob, `incident_${violationType}_strike${strikeNumber}.jpg`);
+  }
+
+  return requestWithFallback(
+    `${BASE_PREFIX}/exam-incident`,
+    {
+      method: "POST",
+      body: formData,
+    },
+    () => ({
+      status: "recorded",
+      session_id: sessionId,
+      student_id: studentId,
+      violation_type: violationType,
+      strike_number: strikeNumber,
+      image_url: null,
+      details,
+      timestamp: new Date().toISOString(),
+    })
+  );
+}
+
+/**
+ * 9.6. Get Exam Incidents & Evidence Snapshots for a Session
+ * @param {string} sessionId
+ * @returns {Promise<Object>}
+ */
+export async function getExamIncidents(sessionId) {
+  return requestWithFallback(
+    `${BASE_PREFIX}/exam/${encodeURIComponent(sessionId)}/incidents`,
+    { method: "GET" },
+    () => ({
+      session_id: sessionId,
+      total_incidents: 0,
+      strikes: 0,
+      incidents: [],
+    })
+  );
+}
+
+/**
  * 10. Reset Student Biometrics (Allow Re-Registration if can_edit is true)
  * @param {string} userId
  * @returns {Promise<Object>}
@@ -393,6 +457,8 @@ export const biometricsApi = {
   sendBiometricTelemetry,
   getStudentBiometricProfile,
   logExamDistraction,
+  reportExamIncident,
+  getExamIncidents,
   resetStudentBiometrics,
   toggleBiometricEditPermission,
   getCandidateBiometricIds,

@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "@/styles/fonts.css";
 import { AppContext } from "@/Context/AppContext";
-import { BookOpen, Users, FolderPlus, Settings as SettingsIcon } from "lucide-react";
+import { BookOpen, Users, FolderPlus, Settings as SettingsIcon, CalendarClock } from "lucide-react";
 
 export const AdminNavigationBar = () => {
   const { isRTL } = useContext(AppContext);
@@ -21,28 +21,35 @@ export const AdminNavigationBar = () => {
       label: isRTL ? "دروس" : "Courses",
       route: "/Admin",
       icon: BookOpen,
-      iconClassName: "w-[19px] h-[19px]",
+      iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "users",
       label: isRTL ? "کاربران" : "Users",
       route: "/AdminUsers",
       icon: Users,
-      iconClassName: "w-[19px] h-[19px]",
+      iconClassName: "w-[18px] h-[18px]",
+    },
+    {
+      id: "schedule",
+      label: isRTL ? "زمان‌بندی" : "Schedule",
+      route: "/AdminExamsSchedule",
+      icon: CalendarClock,
+      iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "create",
-      label: isRTL ? "ثبت درس" : "New Course",
+      label: isRTL ? "ثبت درس" : "New",
       route: "/AdminCreateCourse",
       icon: FolderPlus,
-      iconClassName: "w-[19px] h-[19px]",
+      iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "settings",
       label: isRTL ? "تنظیمات" : "Settings",
       route: "/AdminSettings",
       icon: SettingsIcon,
-      iconClassName: "w-[19px] h-[19px]",
+      iconClassName: "w-[18px] h-[18px]",
     },
   ];
 
@@ -50,6 +57,7 @@ export const AdminNavigationBar = () => {
     const p = location.pathname.toLowerCase();
     if (p === "/admin" || p === "/admincourses") return "courses";
     if (p === "/adminusers") return "users";
+    if (p === "/adminexamsschedule") return "schedule";
     if (p === "/admincreatecourse") return "create";
     if (p === "/adminsettings") return "settings";
     return null;
@@ -75,7 +83,7 @@ export const AdminNavigationBar = () => {
     <nav
       dir="ltr"
       className="fixed left-1/2 -translate-x-1/2 z-50
-        w-[330px] h-[55px] flex
+        w-[350px] max-w-[95vw] h-[55px] flex
         bg-[#f8fcfd] dark:bg-neutral-scale1300
         border border-neutral-scale100 dark:border-neutral-scale1100
         rounded-[40px] overflow-hidden

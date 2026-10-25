@@ -11,7 +11,8 @@ export {
   isPersianText,
   detectTextLanguage,
   resolveParenthesesTerms,
-  disambiguateTechnicalPersian
+  disambiguateTechnicalPersian,
+  enhancePunctuationForTTS
 } from "./voiceTextNormalizer";
 
 export { default as voiceTextNormalizer } from "./voiceTextNormalizer";

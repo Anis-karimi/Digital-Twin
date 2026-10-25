@@ -9,7 +9,7 @@ export { API_CONFIG } from "./config";
 export { httpRequest, requestWithFallback, handleApiError, ApiError } from "./client";
 
 // Existing Backend Endpoints
-export { adminApi, getAdminSettings } from "./new/admin.api";
+export { adminApi, getAdminSettings, getAdminExamsSchedule, deleteAdminCourse } from "./new/admin.api";
 export { chatApi, askAI, generateChatPdf } from "./existing/chat.api";
 export { voiceApi, streamTTS, uploadAudio, deleteAudio, createSTTWebSocket } from "./existing/voice.api";
 export { userApi, getUserFiles, uploadPhoto } from "./existing/user.api";
@@ -24,7 +24,7 @@ export { chatHistoryApi, getChatHistory, saveChatMessage, saveConversationTurn, 
 export { authApi, getCurrentUserProfile, login, logout, updateProfile, getLoginDirectory } from "./new/auth.api";
 export { examsApi, getTeacherExams, saveGeneratedQuiz, submitQuizAnswers, getQuizResults } from "./new/exams.api";
 export { navigationApi, getLessonTabs, getAvailableCourses, requestJoinCourse } from "./new/navigation.api";
-export { biometricsApi, enrollStudentFace, verifyStudentFace, calibrateGaze, calibrateNeutralBaseline, sendBiometricTelemetry, getStudentBiometricProfile, logExamDistraction } from "./new/biometrics.api";
+export { biometricsApi, enrollStudentFace, verifyStudentFace, calibrateGaze, calibrateNeutralBaseline, sendBiometricTelemetry, getStudentBiometricProfile, logExamDistraction, reportExamIncident, getExamIncidents } from "./new/biometrics.api";
 
 // Unified API Object
 import { adminApi } from "./new/admin.api";

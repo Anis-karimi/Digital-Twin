@@ -62,6 +62,15 @@ export async function createAdminCourse(payload) {
 }
 
 /**
+ * Deletes a course from the system.
+ */
+export async function deleteAdminCourse(courseId) {
+  return await requestWithFallback(`/admin/courses/${courseId}`, {
+    method: "DELETE",
+  });
+}
+
+/**
  * Fetches users directory with role and query filters.
  */
 export async function getAdminUsers({ role = "ALL", q = "", limit = 100 } = {}) {
@@ -84,7 +93,20 @@ export async function getAdminTeachers() {
   return await requestWithFallback(
     "/admin/teachers",
     { method: "GET" },
-    () => []
+    () => [
+      {
+        teacher_id: "t0000000-0000-4000-8000-000000000001",
+        username: "mohammad_allahbakhsh",
+        name: "دکتر محمد اله بخش",
+        email: "mohammad_allahbakhsh@iau.ac.ir",
+      },
+      {
+        teacher_id: "t0000000-0000-4000-8000-000000000002",
+        username: "ali_ahmadi",
+        name: "دکتر علی احمدی",
+        email: "ali_ahmadi@iau.ac.ir",
+      },
+    ]
   );
 }
 
@@ -139,11 +161,23 @@ export async function removeCourseMember(courseId, userId) {
   });
 }
 
+/**
+ * Fetches real exam schedules and server load telemetry for administration.
+ */
+export async function getAdminExamsSchedule() {
+  return await requestWithFallback(
+    "/admin/exams/schedule",
+    { method: "GET" },
+    () => null
+  );
+}
+
 export const adminApi = {
   getSettings: getAdminSettings,
   getOverview: getAdminOverview,
   getCourses: getAdminCourses,
   createCourse: createAdminCourse,
+  deleteCourse: deleteAdminCourse,
   getUsers: getAdminUsers,
   getTeachers: getAdminTeachers,
   getCourseMembers,
@@ -151,6 +185,7 @@ export const adminApi = {
   assignCourseTeacher,
   addCourseMember,
   removeCourseMember,
+  getExamsSchedule: getAdminExamsSchedule,
 };
 
 export default adminApi;

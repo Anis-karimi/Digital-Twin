@@ -10,6 +10,7 @@ import {
   GraduationCap,
   ShieldAlert,
   Search,
+  ChevronDown,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -266,17 +267,20 @@ export const AdminCourseManagementModal = ({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <select
-                    value={selectedTeacherId}
-                    onChange={(e) => setSelectedTeacherId(e.target.value)}
-                    className="w-full bg-white dark:bg-neutral-scale1100 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-lg px-2.5 py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 cursor-pointer"
-                  >
-                    {teachers.map((t) => (
-                      <option key={t.teacher_id} value={t.teacher_id}>
-                        {t.name} ({t.username})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative w-full">
+                    <select
+                      value={selectedTeacherId}
+                      onChange={(e) => setSelectedTeacherId(e.target.value)}
+                      className="w-full !border !border-neutral-scale300 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1100 rounded-lg px-2.5 py-2 pe-8 text-xs text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:!border-primery-600 cursor-pointer appearance-none"
+                    >
+                      {teachers.map((t) => (
+                        <option key={t.teacher_id} value={t.teacher_id} className="bg-white dark:bg-neutral-scale1100 text-neutral-scale1800 dark:text-neutral-scale70">
+                          {t.name} ({t.username})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-scale500 pointer-events-none absolute top-1/2 -translate-y-1/2 end-2.5" />
+                  </div>
 
                   <button
                     type="button"
@@ -311,17 +315,20 @@ export const AdminCourseManagementModal = ({
                   </p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
-                    <select
-                      value={selectedStudentId}
-                      onChange={(e) => setSelectedStudentId(e.target.value)}
-                      className="w-full bg-white dark:bg-neutral-scale1100 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-lg px-2.5 py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-600 cursor-pointer"
-                    >
-                      {availableStudents.map((s) => (
-                        <option key={s.user_id} value={s.user_id}>
-                          {s.full_name} (@{s.username})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative w-full">
+                      <select
+                        value={selectedStudentId}
+                        onChange={(e) => setSelectedStudentId(e.target.value)}
+                        className="w-full !border !border-neutral-scale300 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1100 rounded-lg px-2.5 py-2 pe-8 text-xs text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:!border-primery-600 cursor-pointer appearance-none"
+                      >
+                        {availableStudents.map((s) => (
+                          <option key={s.user_id} value={s.user_id} className="bg-white dark:bg-neutral-scale1100 text-neutral-scale1800 dark:text-neutral-scale70">
+                            {s.full_name} (@{s.username})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-neutral-scale500 pointer-events-none absolute top-1/2 -translate-y-1/2 end-2.5" />
+                    </div>
 
                     <button
                       type="button"
