@@ -10,6 +10,8 @@ import {
   Server,
   Database,
   Cpu,
+  FileText,
+  ChevronLeft,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
@@ -78,7 +80,7 @@ export const AdminSettingsPage = () => {
                 <span>{isRTL ? "مدیر سامانه" : "Admin"}</span>
               </span>
             </div>
-            <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400 font-mono mt-0.5">
+            <p className="text-xs text-start text-neutral-scale700 dark:text-neutral-scale400 font-mono mt-0.5">
               @{currentUser?.username || "admin"}
             </p>
           </div>
@@ -86,7 +88,7 @@ export const AdminSettingsPage = () => {
 
         {/* Display & Language Settings */}
         <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
-          <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1">
+          <h3 className="text-xs text-start font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1">
             {isRTL ? "تنظیمات کاربری و ظاهر" : "Appearance & Language"}
           </h3>
 
@@ -189,6 +191,42 @@ export const AdminSettingsPage = () => {
               </span>
             </div>
           </div>
+        </section>
+
+        {/* System Prompts Navigation */}
+        <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
+          <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1 flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-neutral-scale500" />
+            <span>{isRTL ? "مدیریت پرامپت‌های سیستم" : "System Prompts"}</span>
+          </h3>
+
+          <button
+            type="button"
+            onClick={() => navigate("/admin/system-prompts")}
+            className="w-full p-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 hover:border-primery-300 dark:hover:border-neutral-scale900 flex items-center gap-3 text-start transition-all cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-primery-50 dark:bg-neutral-scale1100 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-primery-700 dark:text-neutral-scale200" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
+                {isRTL ? "پرامپت‌های سیستم" : "System Prompts"}
+              </span>
+
+              <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 block mt-1">
+                {isRTL
+                  ? "مشاهده و ویرایش پرامپت‌های سامانه"
+                  : "View and edit system prompts"}
+              </span>
+            </div>
+
+            <ChevronLeft
+              className={`w-4 h-4 text-neutral-scale500 group-hover:text-primery-700 dark:group-hover:text-white transition-all shrink-0 ${
+                isRTL ? "" : "rotate-180"
+              }`}
+            />
+          </button>
         </section>
 
         {/* Logout Action */}
