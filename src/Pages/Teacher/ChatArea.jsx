@@ -515,38 +515,188 @@ export const ChatArea = () => {
 
 
     // DownloadPDF
-    const handleDownloadPDF = async () => {
-        if (messages.length === 0) {
-            alert("No messages!");
-            return;
-        }
+    const handleDownloadPDF = () => {
+      if (!messages || messages.length === 0) {
+        alert("No messages!");
+        return;
+      }
 
-        const pdfMessages = messages.map((message) => ({
-            role: message.sender === "me" ? "user" : "assistant",
-            content: message.text,
-        }));
+      const escapeHTML = (text) =>
+        String(text ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
 
-        try {
-            const blob = await chatApi.generatePdf(pdfMessages);
+      const removeMarkdown = (text) => {
+        return (
+          String(text ?? "")
+            // حذف علامت‌های بولد و ایتالیک
+            .replace(/\*\*(.*?)\*\*/gs, "$1")
+            .replace(/\*(.*?)\*/gs, "$1")
+            .replace(/__(.*?)__/gs, "$1")
+            .replace(/_(.*?)_/gs, "$1")
 
-            const url = window.URL.createObjectURL(blob);
+            // حذف علامت‌های کد
+            .replace(/```[\s\S]*?```/g, (match) =>
+              match.replace(/```[\w-]*\n?/g, "").replace(/```/g, ""),
+            )
+            .replace(/`([^`]+)`/g, "$1")
 
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "chat_history.pdf";
+            // حذف علامت‌های تیتر Markdown
+            .replace(/^\s{0,3}#{1,6}\s+/gm, "")
 
-            document.body.appendChild(a);
-            a.click();
+            // تبدیل لینک Markdown به متن ساده
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
 
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            // حذف خط‌های جداکننده Markdown
+            .replace(/^\s*([-*_]){3,}\s*$/gm, "")
+        );
+      };
 
-            setIsMenuOpen(false);
-        } catch (err) {
-            console.error("Download PDF Error:", err);
-            alert("Failed to download PDF");
-        }
+      const getTextDirection = (text) => {
+        const firstLetter = String(text ?? "").match(
+          /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]|[a-zA-Z]/,
+        );
+
+        if (!firstLetter) return "ltr";
+
+        return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(firstLetter[0])
+          ? "rtl"
+          : "ltr";
+      };
+
+      const isPersian = isRTL;
+
+      const pdfContent = messages
+        .map((message) => {
+          const isUser = message.sender === "me";
+
+          const roleName = isPersian
+            ? isUser
+              ? "شما"
+              : "دستیار دانای"
+            : isUser
+              ? "You"
+              : "Danai";
+
+          const direction = getTextDirection(message.text);
+
+          return `
+              <div class="message">
+                  <div class="role">
+                      ${roleName}
+                  </div>
+
+                  <div
+                      class="text"
+                      dir="${direction}"
+                      style="direction: ${direction}; text-align: ${direction === "rtl" ? "right" : "left"};"
+                  >${escapeHTML(removeMarkdown(message.text))}</div>
+              </div>
+          `;
+        })
+        .join("");
+
+      const printWindow = window.open("", "_blank");
+
+      if (!printWindow) {
+        alert("Please allow pop-ups to export the PDF.");
+        return;
+      }
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="${isPersian ? "fa" : "en"}" dir="${isPersian ? "rtl" : "ltr"}">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Chat History</title>
+
+            <style>
+                
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+                    direction: ${isPersian ? "rtl" : "ltr"};
+                    text-align: ${isPersian ? "right" : "left"};
+                    color: #263244;
+                    background: #fff;
+                    margin: 0;
+                    padding: 24px;
+                    line-height: 1.9;
+                    font-size: 13px;
+                }
+
+                .message {
+                    margin-bottom: 16px;
+                    padding: 12px 16px;
+                    border: 1px solid #E2E8F0;
+                    border-radius: 10px;
+                    background: #FFFFFF;
+                    break-inside: auto;
+                    page-break-inside: auto;
+                }
+
+                .role {
+                    font-weight: 700;
+                    font-size: 12px;
+                    color: #475569;
+                    margin-bottom: 6px;
+                    padding-bottom: 5px;
+                    border-bottom: 1px solid #F1F5F9;
+                    text-align: ${isPersian ? "right" : "left"};
+                }
+
+
+                .text {
+                    white-space: pre-wrap;
+                    overflow-wrap: anywhere;
+                    unicode-bidi: plaintext;
+                }
+
+
+                @page {
+                    size: A4;
+                    margin: 16mm;
+                }
+
+                @media print {
+                    body {
+                        padding: 0;
+                    }
+
+                    .message {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                }
+
+            </style>
+        </head>
+
+        <body>
+            ${pdfContent}
+
+            <script>
+                window.onload = () => {
+                    window.print();
+                };
+            </script>
+        </body>
+        </html>
+    `);
+
+      printWindow.document.close();
+
+      setIsMenuOpen(false);
     };
+   
+
 
     const startRecording = async (selectedLang) => {
         if (isStudentBlockedFromChatting) return;
