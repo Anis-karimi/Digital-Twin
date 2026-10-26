@@ -1,9 +1,8 @@
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import {
   CalendarClock,
   Sun,
   Moon,
-  CheckCircle2,
   Globe,
 } from "lucide-react";
 import "@/styles/Allpages.css";
@@ -15,19 +14,6 @@ import { ExamSchedulingVisualizer } from "@/Components/ExamSchedulingVisualizer"
 export const AdminExamsSchedulePage = () => {
   const { isRTL, language, toggleLanguage } = useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
-  const [scheduleSuccessMsg, setScheduleSuccessMsg] = useState("");
-
-  const handleConfirmSchedule = (scheduleData) => {
-    setScheduleSuccessMsg(
-      isRTL
-        ? `زمان آزمون با موفقیت برای روز ${scheduleData.day.dayName} ساعت ${scheduleData.startTimeString} تا ${scheduleData.endTimeString} نهایی شد.`
-        : `Exam schedule confirmed for ${scheduleData.day.gregorianDayFull || scheduleData.day.dayName} from ${scheduleData.startTimeString} to ${scheduleData.endTimeString}.`
-    );
-
-    setTimeout(() => {
-      setScheduleSuccessMsg("");
-    }, 5000);
-  };
 
   return (
     <main
@@ -46,10 +32,10 @@ export const AdminExamsSchedulePage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "پایش زمان‌بندی و بار سرور" : "Exam Schedule & Server Load"}
+              {isRTL ? "پایش زمان‌بندی آزمون‌ها" : "Exam Schedule Monitoring"}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? "مدیریت همپوشانی و ظرفیت اساتید" : "Master Capacity & Conflict View"}
+              {isRTL ? "مدیریت تداخل زمانی و پایش اساتید" : "Master Schedule & Professor Tracking"}
             </p>
           </div>
         </div>
@@ -79,21 +65,9 @@ export const AdminExamsSchedulePage = () => {
         </div>
       </header>
 
-      {/* Success Banner if scheduled */}
-      {scheduleSuccessMsg && (
-        <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-3 py-2 text-xs font-vazir flex items-center gap-2 animate-in slide-in-from-top duration-200 shrink-0 shadow-xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span className="leading-tight">{scheduleSuccessMsg}</span>
-        </div>
-      )}
-
       {/* Visualizer Component (Offset by bottom nav height) */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-[75px]">
-        <ExamSchedulingVisualizer
-          onConfirmSchedule={handleConfirmSchedule}
-          defaultDurationMinutes={90}
-          initialStartHour={10.0}
-        />
+        <ExamSchedulingVisualizer />
       </div>
     </main>
   );
