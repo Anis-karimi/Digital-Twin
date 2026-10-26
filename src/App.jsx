@@ -43,6 +43,7 @@ import { AdminUsersPage } from "@/Pages/Admin/AdminUsersPage";
 import { AdminCreateCoursePage } from "@/Pages/Admin/AdminCreateCoursePage";
 import { AdminSettingsPage } from "@/Pages/Admin/AdminSettingsPage";
 import { AdminExamsSchedulePage } from "@/Pages/Admin/AdminExamsSchedulePage";
+import AdminSystemPromptsPage from "@/Pages/Admin/AdminSystemPromptsPage";
 import { Login } from "@/Pages/Login";
 import { ErrorBoundary } from "@/Components/ErrorBoundary";
 
@@ -235,6 +236,11 @@ function App() {
                 <Route
                   path="/adminexamsschedule"
                   element={<AdminExamsSchedulePage />}
+                />
+
+                <Route
+                  path="/admin/system-prompts"
+                  element={<AdminSystemPromptsPage />}
                 />
               </Route>
 
