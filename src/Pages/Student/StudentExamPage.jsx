@@ -225,6 +225,15 @@ export const StudentExamPage = () => {
   const [sessionId, setSessionId] = useState("");
   const [examMeta, setExamMeta] = useState(null);
 
+  const assignmentId =
+    id ||
+    passedExam?.assignment_id ||
+    passedExam?.id ||
+    passedExam?.quiz_id ||
+    examMeta?.id ||
+    examMeta?.assignment_id ||
+    null;
+
   // Turn states
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentTurnIndex, setCurrentTurnIndex] = useState(1);
