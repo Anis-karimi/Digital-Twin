@@ -55,12 +55,29 @@ export const AdminNavigationBar = () => {
 
   const getActiveId = () => {
     const p = location.pathname.toLowerCase();
-    if (p === "/admin" || p === "/admincourses") return "courses";
-    if (p === "/adminusers") return "users";
-    if (p === "/adminexamsschedule") return "schedule";
-    if (p === "/admincreatecourse") return "create";
-    if (p === "/adminsettings") return "settings";
-    return null;
+    if (
+      p === "/admin" ||
+      p === "/admin/" ||
+      p.startsWith("/admincourses") ||
+      p.startsWith("/admin/courses") ||
+      p.startsWith("/admin/system-prompts") ||
+      p.startsWith("/admin/prompts")
+    ) {
+      return "courses";
+    }
+    if (p.startsWith("/adminusers") || p.startsWith("/admin/users")) {
+      return "users";
+    }
+    if (p.startsWith("/adminexamsschedule") || p.startsWith("/admin/schedule")) {
+      return "schedule";
+    }
+    if (p.startsWith("/admincreatecourse") || p.startsWith("/admin/create")) {
+      return "create";
+    }
+    if (p.startsWith("/adminsettings") || p.startsWith("/admin/settings")) {
+      return "settings";
+    }
+    return "courses";
   };
 
   const activeId = getActiveId();
@@ -82,7 +99,7 @@ export const AdminNavigationBar = () => {
   return (
     <nav
       dir="ltr"
-      className="fixed left-1/2 -translate-x-1/2 z-50
+      className="fixed bottom-2.5 left-1/2 -translate-x-1/2 z-50
         w-[350px] max-w-[95vw] h-[55px] flex
         bg-[#f8fcfd] dark:bg-neutral-scale1300
         border border-neutral-scale100 dark:border-neutral-scale1100

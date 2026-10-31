@@ -110,8 +110,8 @@ export const getExamTimingState = (exam, isRTL = true) => {
       const [sh, sm] = startTimeStr.split(":").map(Number);
       const [eh, em] = endTimeStr.split(":").map(Number);
 
-      if (rawDateStr.includes("/Teacher")) {
-        const [jy, jm, jd] = rawDateStr.split("/Teacher").map(Number);
+      if (rawDateStr.includes("/")) {
+        const [jy, jm, jd] = rawDateStr.split("/").map(Number);
         const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
         examStartDateTime = new Date(gy, gm - 1, gd, sh || 0, sm || 0, 0);
         examEndDateTime = new Date(gy, gm - 1, gd, eh || 0, em || 0, 0);
@@ -144,7 +144,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
         iconClass: "text-primery-1000 dark:text-primery-90",
         dividerClass: "bg-primery-500 dark:bg-primery-800",
         canEdit: true,
-        canViewResults: false,
+        canViewResults: true,
       };
     } else if (now >= examStartDateTime && now <= examEndDateTime) {
       return {
@@ -192,7 +192,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
     iconClass: "text-primery-1000 dark:text-primery-90",
     dividerClass: "bg-primery-500 dark:bg-primery-800",
     canEdit: true,
-    canViewResults: false,
+    canViewResults: true,
   };
 };
 
@@ -1042,8 +1042,8 @@ export const TeacherExams = () => {
                           </button>
                         )}
 
-                        {/* Results Button: Hidden for upcoming exams */}
-                        {timing.canViewResults && (
+                        {/* Results Button */}
+                        {timing.canViewResults !== false && (
                           <button
                             type="button"
                             onClick={() => handleViewResults(exam)}

@@ -9,7 +9,20 @@ export { API_CONFIG } from "./config";
 export { httpRequest, requestWithFallback, handleApiError, ApiError } from "./client";
 
 // Existing Backend Endpoints
-export { adminApi, getAdminSettings, getAdminExamsSchedule, deleteAdminCourse } from "./new/admin.api";
+export {
+  adminApi,
+  getAdminSettings,
+  getAdminExamsSchedule,
+  deleteAdminCourse,
+  getAdminPrompts,
+  updateAdminPrompt,
+  resetAdminPrompt,
+  createAdminUser,
+  toggleAdminUserStatus,
+  getAdminPromptHistory,
+  rollbackAdminPrompt,
+} from "./new/admin.api";
+
 export { chatApi, askAI, generateChatPdf } from "./existing/chat.api";
 export { voiceApi, streamTTS, uploadAudio, deleteAudio, createSTTWebSocket } from "./existing/voice.api";
 export { userApi, getUserFiles, uploadPhoto } from "./existing/user.api";

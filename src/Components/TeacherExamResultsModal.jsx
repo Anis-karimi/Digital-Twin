@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { biometricsApi } from "@/api/new/biometrics.api";
+import { studentsApi } from "@/api/new/students.api";
 import {
   X,
   Users,
@@ -18,14 +19,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Calendar,
-  BookOpen,
   ShieldAlert,
   Camera,
   ZoomIn,
   EyeOff,
   UserX,
   AlertTriangle,
+  RotateCw,
 } from "lucide-react";
 import "@/styles/fonts.css";
 import { getTodayJalaliDate } from "@/utils/dateUtils";
@@ -34,6 +34,87 @@ const toPersianDigits = (num) => {
   if (num === null || num === undefined) return "";
   const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
   return String(num).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
+};
+
+const buildFallbackResults = (exam, isRTL, courseStudents = []) => {
+  const durMins = Number(exam?.duration_minutes) || 10;
+  const gapMins = Number(exam?.gap_minutes) || 5;
+  const timeStr = exam?.time || "10:00 - 11:30";
+  let startTime = "10:00";
+  let endTime = "11:30";
+  if (typeof timeStr === "string" && timeStr.includes("-")) {
+    const parts = timeStr.split("-").map((p) => p.trim());
+    if (parts[0]) startTime = parts[0];
+    if (parts[1]) endTime = parts[1];
+  }
+
+  const rawStudentIds = Array.isArray(exam?.student_ids) ? exam.student_ids : [];
+
+  const studentList =
+    rawStudentIds.length > 0
+      ? rawStudentIds
+      : courseStudents.length > 0
+      ? courseStudents.map((s) => s.id)
+      : [];
+
+  const [sH, sM] = startTime.split(":").map(Number);
+  let curMinute = (sH || 10) * 60 + (sM || 0);
+
+  const fallbackStudents = studentList.map((sid) => {
+    const sIdStr = String(sid);
+    const matchedProfile = courseStudents.find((cs) => String(cs.id) === sIdStr);
+    const slotStartMin = curMinute;
+    const slotEndMin = curMinute + durMins;
+    curMinute = slotEndMin + gapMins;
+
+    const formatTime = (totalMin) => {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    };
+
+    const studentName =
+      matchedProfile?.name ||
+      matchedProfile?.student_name ||
+      (isRTL ? `دانشجو ${sIdStr.slice(-4)}` : `Student ${sIdStr.slice(-4)}`);
+
+    return {
+      student_id: sIdStr,
+      student_name: studentName,
+      username: matchedProfile?.username || sIdStr,
+      profile_url: matchedProfile?.avatar || matchedProfile?.profile_url || null,
+      status: "assigned",
+      score: null,
+      passed: null,
+      slot_start: formatTime(slotStartMin),
+      slot_end: formatTime(slotEndMin),
+      session_id: null,
+      turns_count: 0,
+      strikes: 0,
+    };
+  });
+
+  return {
+    assignment_id:
+      exam?.id ||
+      exam?.quiz_id ||
+      exam?.assignment_id ||
+      exam?.quizId ||
+      exam?.assignmentId ||
+      "assignment",
+    title: exam?.title || (isRTL ? "نتایج آزمون" : "Exam Results"),
+    course: exam?.course || "سیستم عامل",
+    date: exam?.date || exam?.exam_date || getTodayJalaliDate(),
+    window_start: startTime,
+    window_end: endTime,
+    duration_minutes: durMins,
+    gap_minutes: gapMins,
+    total_students: fallbackStudents.length,
+    completed_students: 0,
+    average_score: null,
+    pass_rate: null,
+    students: fallbackStudents,
+  };
 };
 
 export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
@@ -50,43 +131,100 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
   const [loadingSession, setLoadingSession] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
 
-  const assignmentId = exam?.id || exam?.quiz_id || exam?.assignment_id;
+  const assignmentId =
+    exam?.id ||
+    exam?.quiz_id ||
+    exam?.assignment_id ||
+    exam?.quizId ||
+    exam?.assignmentId ||
+    exam?.raw?.quiz_id ||
+    exam?.raw?.id;
 
-  useEffect(() => {
-    if (!isOpen || !assignmentId) return;
+  const loadResults = useCallback(async () => {
+    if (!isOpen) return;
 
-    let isMounted = true;
     setLoading(true);
     setError(null);
     setSelectedSessionStudent(null);
     setSessionDetail(null);
     setPreviewImage(null);
 
-    examsApi
-      .getExamResults(assignmentId)
-      .then((data) => {
-        if (isMounted) {
-          setResultsData(data);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load teacher exam results:", err);
-        if (isMounted) {
-          setError(
-            isRTL
-              ? "دریافت نتایج آزمون با خطا مواجه شد."
-              : "Failed to load exam results."
-          );
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+    // Fetch course students in parallel for name and profile resolution
+    let courseStudents = [];
+    try {
+      const courseId =
+        exam?.course_id ||
+        exam?.lesson_id ||
+        "c0000000-0000-4000-8000-000000000001";
+      courseStudents = await studentsApi.getStudentsByCourse(courseId);
+    } catch (e) {
+      console.warn("Could not load course students for results resolution:", e);
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen, assignmentId, isRTL]);
+    if (!assignmentId) {
+      if (exam) {
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+      } else {
+        setError(isRTL ? "شناسه آزمون معتبر نمی‌باشد." : "Exam ID is missing.");
+      }
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await examsApi.getExamResults(assignmentId);
+      if (data && (Array.isArray(data.students) || data.title || data.assignment_id)) {
+        const enrichedStudents = (data.students || []).map((s) => {
+          const match = courseStudents.find(
+            (cs) => String(cs.id) === String(s.student_id)
+          );
+          return {
+            ...s,
+            student_name:
+              s.student_name &&
+              !s.student_name.startsWith("دانشجو ") &&
+              !s.student_name.startsWith("Student ")
+                ? s.student_name
+                : match?.name ||
+                  match?.student_name ||
+                  s.student_name ||
+                  (isRTL
+                    ? `دانشجو ${String(s.student_id).slice(-4)}`
+                    : `Student ${String(s.student_id).slice(-4)}`),
+            profile_url:
+              s.profile_url || match?.avatar || match?.profile_url || null,
+          };
+        });
+        setResultsData({ ...data, students: enrichedStudents });
+      } else {
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+      }
+    } catch (err) {
+      console.warn(
+        "Backend getExamResults failed, falling back to local exam data:",
+        err
+      );
+      if (exam) {
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+      } else {
+        setError(
+          isRTL
+            ? "دریافت نتایج آزمون با خطا مواجه شد."
+            : "Failed to load exam results."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [isOpen, assignmentId, exam, isRTL]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      loadResults();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isOpen, loadResults]);
 
   const handleOpenStudentDetail = async (student) => {
     if (!student.session_id) return;
@@ -144,7 +282,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
       dir={isRTL ? "rtl" : "ltr"}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs select-text animate-in fade-in duration-200"
     >
-      <div className="bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 w-full max-w-lg max-h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 w-full max-w-xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <header className="p-4 bg-primery-700 dark:bg-neutral-scale1200 text-white flex items-center justify-between border-b dark:border-neutral-scale1000 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -180,10 +318,18 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 {isRTL ? "در حال دریافت نتایج و آمار آزمون..." : "Loading results..."}
               </p>
             </div>
-          ) : error ? (
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center text-xs font-vazir text-red-600 dark:text-red-400 flex flex-col items-center gap-2">
+          ) : error && !resultsData ? (
+            <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl text-center text-xs font-vazir text-red-600 dark:text-red-400 flex flex-col items-center gap-3">
               <AlertCircle className="w-6 h-6 text-red-500" />
               <span>{error}</span>
+              <button
+                type="button"
+                onClick={loadResults}
+                className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold text-xs hover:bg-red-700 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>{isRTL ? "تلاش مجدد" : "Try Again"}</span>
+              </button>
             </div>
           ) : selectedSessionStudent ? (
             /* ================= Student Session Transcript View ================= */
@@ -422,7 +568,16 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                     )}
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-center text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale400">
+                  <AlertCircle className="w-6 h-6 text-neutral-scale800 dark:text-neutral-scale500" />
+                  <span>
+                    {isRTL
+                      ? "اطلاعات جلسه این دانشجو در دسترس نیست یا دانشجو هنوز وارد آزمون نشده است."
+                      : "Student session details are not available or student has not entered the exam yet."}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             /* ================= Overall Stats & Students Roster View ================= */

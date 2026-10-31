@@ -215,6 +215,8 @@ function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/Admin" element={<AdminCoursesPage />} />
                 <Route path="/admin" element={<AdminCoursesPage />} />
+                <Route path="/admin/courses" element={<AdminCoursesPage />} />
+                <Route path="/Admin/courses" element={<AdminCoursesPage />} />
                 <Route path="/AdminCourses" element={<AdminCoursesPage />} />
                 <Route path="/admincourses" element={<AdminCoursesPage />} />
                 <Route path="/AdminUsers" element={<AdminUsersPage />} />
@@ -240,6 +242,18 @@ function App() {
 
                 <Route
                   path="/admin/system-prompts"
+                  element={<AdminSystemPromptsPage />}
+                />
+                <Route
+                  path="/Admin/system-prompts"
+                  element={<AdminSystemPromptsPage />}
+                />
+                <Route
+                  path="/admin/prompts"
+                  element={<AdminSystemPromptsPage />}
+                />
+                <Route
+                  path="/Admin/prompts"
                   element={<AdminSystemPromptsPage />}
                 />
               </Route>

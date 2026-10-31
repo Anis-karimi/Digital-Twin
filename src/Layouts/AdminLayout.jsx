@@ -16,7 +16,9 @@ export const AdminLayout = () => {
       dir={isRTL ? "rtl" : "ltr"}
       lang={language}
     >
-      <Outlet />
+      <div className="flex-1 min-h-0 w-full overflow-hidden relative">
+        <Outlet />
+      </div>
 
       <FooterGlass>
         <AdminNavigationBar />
