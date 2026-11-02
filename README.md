@@ -134,4 +134,7 @@ LEGACY_BACKEND_PROXY_URL=http://172.20.13.39:8506
 # Media and streaming services
 VITE_DGTW_URL=https://dgtw.um.ac.ir
 VITE_STT_WS_URL=wss://172.20.13.39:8881/ws
+VITE_STT_WS_URL_FA=wss://172.20.13.39:8881/ws
+VITE_STT_WS_URL_EN=wss://172.20.13.39:8882/ws
+VITE_STT_WS_URL_AR=wss://172.20.13.39:8883/ws
 ```

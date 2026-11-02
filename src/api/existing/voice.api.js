@@ -307,11 +307,11 @@ export class STTTranscriptTracker {
 
 /**
  * Creates and opens a WebSocket connection for real-time speech-to-text.
- * Supports Persian (fa, port 8881) and English (en, port 8882).
+ * Supports Persian (fa, port 8881), English (en, port 8882), and Arabic (ar, port 8883).
  * 
- * @endpoint WSS /ws (on STT_WS_URL_FA or STT_WS_URL_EN)
+ * @endpoint WSS /ws (on STT_WS_URL_FA, STT_WS_URL_EN, or STT_WS_URL_AR)
  * @param {Object} callbacks
- * @param {'fa'|'en'} [callbacks.lang='fa'] Language for STT ('fa' = Port 8881, 'en' = Port 8882)
+ * @param {'fa'|'en'|'ar'} [callbacks.lang='fa'] Language for STT ('fa' = Port 8881, 'en' = Port 8882, 'ar' = Port 8883)
  * @param {Function} [callbacks.onOpen] WebSocket opened handler
  * @param {Function} [callbacks.onTranscript] Emits received transcription text (data.text || data.result)
  * @param {Function} [callbacks.onError] WebSocket error handler
@@ -319,12 +319,19 @@ export class STTTranscriptTracker {
  * @returns {WebSocket} Active WebSocket instance
  */
 export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError, onClose } = {}) {
-  const isEn = String(lang || "").toLowerCase() === "en";
-  const wsUrl = isEn
-    ? (API_CONFIG.STT_WS_URL_EN || "wss://172.20.13.39:8882/ws")
-    : (API_CONFIG.STT_WS_URL_FA || "wss://172.20.13.39:8881/ws");
+  const normLang = String(lang || "").toLowerCase();
+  let wsUrl = API_CONFIG.STT_WS_URL_FA || "wss://172.20.13.39:8881/ws";
+  let langLabel = "Persian :8881";
 
-  console.log(`[STT WebSocket] Connecting (${isEn ? "English :8882" : "Persian :8881"}) to:`, wsUrl);
+  if (normLang === "en") {
+    wsUrl = API_CONFIG.STT_WS_URL_EN || "wss://172.20.13.39:8882/ws";
+    langLabel = "English :8882";
+  } else if (normLang === "ar") {
+    wsUrl = API_CONFIG.STT_WS_URL_AR || "wss://172.20.13.39:8883/ws";
+    langLabel = "Arabic :8883";
+  }
+
+  console.log(`[STT WebSocket] Connecting (${langLabel}) to:`, wsUrl);
   const ws = new WebSocket(wsUrl);
 
   const tracker = new STTTranscriptTracker();
@@ -332,7 +339,7 @@ export function createSTTWebSocket({ lang = "fa", onOpen, onTranscript, onError,
   const PAUSE_THRESHOLD_MS = 1200; // 1.2s silence finalizes the active segment
 
   ws.onopen = (event) => {
-    console.log(`[STT WebSocket] Connected (${isEn ? "en" : "fa"}) to:`, wsUrl);
+    console.log(`[STT WebSocket] Connected (${normLang}) to:`, wsUrl);
     if (onOpen) onOpen(event);
   };
 

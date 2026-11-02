@@ -21,31 +21,45 @@ const defaultNewBackendUrl = (() => {
   return "/api/v1";
 })();
 
-const defaultBackendUrl =
-  isBrowser && window.location.port === "5173"
-    ? ""
-    : DEFAULT_BACKEND_URL || "http://172.20.13.39:8506";
+const defaultBackendUrl = (() => {
+  // Always use relative "" in browser so requests go through the host proxy (Vite in dev, Traefik in prod).
+  // This avoids Mixed Content (HTTPS -> HTTP), CORS, and unreachable private LAN issues.
+  if (isBrowser) return "";
+  return DEFAULT_BACKEND_URL || "http://172.20.13.39:8506";
+})();
 
 export const API_CONFIG = {
   /** Main Backend URL (LLM, Quiz, Admin, Documents) */
-  BACKEND_URL:
-    import.meta.env.VITE_BACKEND_URL !== undefined && import.meta.env.VITE_BACKEND_URL !== ""
-      ? import.meta.env.VITE_BACKEND_URL
-      : defaultBackendUrl,
+  BACKEND_URL: (() => {
+    const envUrl = import.meta.env.VITE_BACKEND_URL;
+    if (envUrl && !envUrl.includes("localhost:8000") && !envUrl.includes("127.0.0.1:8000")) {
+      return envUrl;
+    }
+    return defaultBackendUrl;
+  })(),
 
   /** Digital Twin Service URL (Audio TTS streaming and user static media) */
-  DGTW_URL: import.meta.env.VITE_DGTW_URL || DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir",
+  DGTW_URL: (() => {
+    const envUrl = import.meta.env.VITE_DGTW_URL;
+    if (envUrl && !envUrl.includes("localhost:5000") && !envUrl.includes("127.0.0.1:5000")) {
+      return envUrl;
+    }
+    return DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir";
+  })(),
 
   /** Digital Twin TTS stream endpoint URL */
   TTS_STREAM_URL:
     import.meta.env.VITE_TTS_STREAM_URL ||
-    `${import.meta.env.VITE_DGTW_URL || DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir"}/tts_router_stream`,
+    `${DEFAULT_DGTW_URL || "https://dgtw.um.ac.ir"}/tts_router_stream`,
 
   /** Real-time STT WebSocket server for Persian (fa - Port 8881) */
   STT_WS_URL_FA: import.meta.env.VITE_STT_WS_URL_FA || "wss://172.20.13.39:8881/ws",
 
   /** Real-time STT WebSocket server for English (en - Port 8882) */
   STT_WS_URL_EN: import.meta.env.VITE_STT_WS_URL_EN || "wss://172.20.13.39:8882/ws",
+
+  /** Real-time STT WebSocket server for Arabic (ar - Port 8883) */
+  STT_WS_URL_AR: import.meta.env.VITE_STT_WS_URL_AR || "wss://172.20.13.39:8883/ws",
 
   /** Real-time STT WebSocket server (default fallback) */
   STT_WS_URL: import.meta.env.VITE_STT_WS_URL || "wss://172.20.13.39:8881/ws",

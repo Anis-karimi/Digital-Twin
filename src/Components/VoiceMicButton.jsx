@@ -7,7 +7,7 @@ import { ThinkingOrb } from "thinking-orbs";
  * 
  * Behavior:
  * - Simple Click (anywhere on button or badge): Start / Stop voice recording using current language.
- * - Press & Hold (held for >= 400ms): Opens floating language selector menu (Fa: 8881, En: 8882).
+ * - Press & Hold (held for >= 400ms): Opens floating language selector menu (Fa: 8881, En: 8882, Ar: 8883).
  * - Language selection persisted to localStorage ("voice_lang") and synchronized across tabs.
  * - Flat, clean menu design matching original reference without inset/sunken boxes.
  */
@@ -48,7 +48,7 @@ export const VoiceMicButton = ({
   // Sync language with custom event across components
   useEffect(() => {
     const handleSync = (e) => {
-      if (e?.detail && (e.detail === "fa" || e.detail === "en")) {
+      if (e?.detail && (e.detail === "fa" || e.detail === "en" || e.detail === "ar")) {
         setInternalLang(e.detail);
       }
     };
@@ -129,12 +129,14 @@ export const VoiceMicButton = ({
     }
   };
 
-  const badgeText = currentLang === "en" ? "En" : "Fa";
+  const badgeText = currentLang === "en" ? "En" : currentLang === "ar" ? "Ar" : "Fa";
 
   const defaultTitle = recording
     ? isRTL ? "توقف ضبط صدا" : "Stop recording"
     : currentLang === "en"
     ? isRTL ? "ضبط صدا" : "Voice input"
+    : currentLang === "ar"
+    ? isRTL ? "تسجيل الصوت" : "Voice input"
     : isRTL ? "ضبط صدا" : "Voice input";
 
   const isAbsolute = className.includes("absolute");
@@ -201,6 +203,29 @@ export const VoiceMicButton = ({
                 }`}
               >
                 English
+              </span>
+            </button>
+
+            {/* Arabic Option */}
+            <button
+              type="button"
+              onClick={() => selectLanguage("ar")}
+              className="w-full flex items-center text-xs py-2 px-2.5 rounded-xl transition-colors cursor-pointer select-none text-white hover:bg-white/10"
+            >
+              <span
+                className={`w-6 text-center tracking-wider shrink-0 font-inter text-xs ${
+                  currentLang === "ar" ? "font-bold text-white" : "font-normal text-neutral-300"
+                }`}
+              >
+                Ar
+              </span>
+              <span className="w-4 shrink-0" />
+              <span
+                className={`flex-1 text-left font-inter text-xs ${
+                  currentLang === "ar" ? "font-bold text-white" : "font-normal text-neutral-300"
+                }`}
+              >
+                Arabic
               </span>
             </button>
           </div>

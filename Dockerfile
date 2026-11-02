@@ -4,8 +4,8 @@ FROM digital-twin-dev:latest AS build
 WORKDIR /app
 
 # Accept build arguments for environment variables
-ARG VITE_BACKEND_URL=http://localhost:8000
-ARG VITE_DGTW_URL=http://localhost:5000
+ARG VITE_BACKEND_URL=""
+ARG VITE_DGTW_URL="https://dgtw.um.ac.ir"
 
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 ENV VITE_DGTW_URL=$VITE_DGTW_URL
