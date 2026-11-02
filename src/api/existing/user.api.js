@@ -24,7 +24,12 @@ export async function getUserFiles() {
       raw: data,
     };
   } catch (error) {
-    handleApiError("UserApi", "getUserFiles", error);
+    console.warn("[UserApi:getUserFiles] Microservice unreachable, using fallback:", error?.message || error);
+    return {
+      photo_url: null,
+      audio_url: null,
+      raw: null,
+    };
   }
 }
 

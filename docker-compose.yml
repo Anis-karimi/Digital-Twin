@@ -6,14 +6,13 @@ services:
       dockerfile: Dockerfile.dev
     image: digital-twin-dev:latest
     container_name: digital-twin-dev
-    ports:
-      - "5173:5173"
+    network_mode: host
     environment:
       - NODE_ENV=development
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-}
       - VITE_DGTW_URL=${VITE_DGTW_URL:-https://dgtw.um.ac.ir}
       - VITE_NEW_BACKEND_URL=${VITE_NEW_BACKEND_URL:-}
-      - BACKEND_PROXY_URL=${BACKEND_PROXY_URL:-http://host.docker.internal:7000}
+      - BACKEND_PROXY_URL=${BACKEND_PROXY_URL:-http://localhost:7000}
       - LEGACY_BACKEND_PROXY_URL=${LEGACY_BACKEND_PROXY_URL:-http://172.20.13.39:8506}
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -22,10 +22,7 @@ const defaultNewBackendUrl = (() => {
 })();
 
 const defaultBackendUrl =
-  isBrowser &&
-  (window.location.port === "5173" ||
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1")
+  isBrowser && window.location.port === "5173"
     ? ""
     : DEFAULT_BACKEND_URL || "http://172.20.13.39:8506";
 
