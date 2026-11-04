@@ -6,19 +6,23 @@
  * Strict face-in-frame validation prevents recording frames without a verified face.
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "@/translations/useTranslation";
 import { biometricsApi } from "@/api/new/biometrics.api";
 
 // 5 Key Calibration Targets: Center, Left ('نه'), Right ('نه'), Top, Center Final
-export const CALIBRATION_TARGETS = [
-  { id: "center_init", label: "مرکز تصویر", norm: [0.50, 0.50], x: 50, y: 50, hint: "مستقیماً به نقطه قرمز مرکز صفحه نگاه کنید" },
-  { id: "turn_left", label: "سمت چپ", norm: [0.18, 0.50], x: 18, y: 50, hint: "سر و چشمان خود را به سمت چپ (نقطه قرمز) حرکت دهید" },
-  { id: "turn_right", label: "سمت راست", norm: [0.82, 0.50], x: 82, y: 50, hint: "سر و چشمان خود را به سمت راست (نقطه قرمز) حرکت دهید" },
-  { id: "look_top", label: "بالای صفحه", norm: [0.50, 0.20], x: 50, y: 20, hint: "سر و چشمان خود را به نقطه بالای صفحه متوجه کنید" },
-  { id: "center_final", label: "مرکز نهایی", norm: [0.50, 0.50], x: 50, y: 50, hint: "مجدداً به نقطه مرکز صفحه خیره شوید و ثابت بمانید" },
+export const getCalibrationTargets = (t = (k) => k) => [
+  { id: "center_init", label: t("gazeCenterInit"), norm: [0.50, 0.50], x: 50, y: 50, hint: t("gazeHintCenterInit") },
+  { id: "turn_left", label: t("gazeTurnLeft"), norm: [0.18, 0.50], x: 18, y: 50, hint: t("gazeHintTurnLeft") },
+  { id: "turn_right", label: t("gazeTurnRight"), norm: [0.82, 0.50], x: 82, y: 50, hint: t("gazeHintTurnRight") },
+  { id: "look_top", label: t("gazeLookTop"), norm: [0.50, 0.20], x: 50, y: 20, hint: t("gazeHintLookTop") },
+  { id: "center_final", label: t("gazeCenterFinal"), norm: [0.50, 0.50], x: 50, y: 50, hint: t("gazeHintCenterFinal") },
 ];
+export const CALIBRATION_TARGETS = getCalibrationTargets();
 
 export function useGazeCalibration(options = {}) {
+  const { t } = useTranslation();
+  const CALIBRATION_TARGETS = useMemo(() => getCalibrationTargets(t), [t]);
   const {
     userId = "default",
     captureFrameBlob,
@@ -33,7 +37,7 @@ export function useGazeCalibration(options = {}) {
   const [progress, setProgress] = useState(0); // 0 - 100 overall
   const [isFaceMissing, setIsFaceMissing] = useState(false);
   const [isCalibrated, setIsCalibrated] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("تخمین هندسی اولیه");
+  const [statusMessage, setStatusMessage] = useState(() => t("initialGeometricEstimation"));
 
   const collectedSamplesRef = useRef([]);
   const timerRef = useRef(null);
@@ -66,7 +70,7 @@ export function useGazeCalibration(options = {}) {
     try {
       const data = await biometricsApi.getGazeCalibrationStatus(userId);
       setIsCalibrated(data?.is_calibrated || false);
-      setStatusMessage(data?.is_calibrated ? "کالیبره‌شده با دقت بالا" : "نیاز به کالیبراسیون");
+      setStatusMessage(data?.is_calibrated ? t("calibratedHighPrecision") : t("calibrationNeeded"));
       if (data?.is_calibrated) {
         setProgress(100);
       }
@@ -78,14 +82,14 @@ export function useGazeCalibration(options = {}) {
   // Finalize calibration by sending verified samples to backend
   const finalizeCalibration = useCallback(async () => {
     clearTimers();
-    setStatusMessage("در حال برازش مدل رگرسیون چندجمله‌ای...");
+    setStatusMessage(t("fittingPolynomialRegression"));
     setProgress(95);
 
     try {
       const { userId: uid, onCalibrationComplete } = optionsRef.current;
       const samples = collectedSamplesRef.current;
       if (samples.length < 5) {
-        setStatusMessage("تعداد نمونه‌های معتبر برای کالیبراسیون کافی نیست");
+        setStatusMessage(t("insufficientSamplesForCalibration"));
         setIsCalibrating(false);
         return;
       }
@@ -94,16 +98,16 @@ export function useGazeCalibration(options = {}) {
       if (res?.is_calibrated || res?.status === "success") {
         setIsCalibrated(true);
         setProgress(100);
-        setStatusMessage("کالیبراسیون زاویه سر و نگاه با موفقیت انجام شد");
+        setStatusMessage(t("gazeCalibrationCompleteSuccess"));
         if (onCalibrationComplete) {
           onCalibrationComplete();
         }
       } else {
-        setStatusMessage("خطا در برازش کالیبراسیون");
+        setStatusMessage(t("errorFittingCalibration"));
       }
     } catch (err) {
       console.warn("Gaze calibration final submission error:", err);
-      setStatusMessage("خطای ارتباط با سرور در کالیبراسیون نگاه");
+      setStatusMessage(t("serverErrorGazeCalibration"));
     } finally {
       setIsCalibrating(false);
       setCurrentTarget(null);
@@ -145,7 +149,7 @@ export function useGazeCalibration(options = {}) {
 
         if (!isPresent) {
           setIsFaceMissing(true);
-          setStatusMessage("صورت در کادر نیست - لطفاً روبه‌روی دوربین قرار گیرید");
+          setStatusMessage(t("faceOutOfFrameCenterSelf"));
           // PAUSE! Do not increment dwell time when face is out of frame
           return;
         }
@@ -202,7 +206,7 @@ export function useGazeCalibration(options = {}) {
             }, 350);
           } else {
             // Frame lacked clear face landmarks; prompt user and retry smoothly
-            setStatusMessage("در حال تثبیت نگاه... به نقطه خیره بمانید");
+            setStatusMessage(t("holdingGazeHoldSteady"));
             accumulatedDwellMs = 500;
           }
         }
@@ -229,7 +233,7 @@ export function useGazeCalibration(options = {}) {
     setProgress(0);
     setPointProgress(0);
     setCurrentTarget(null);
-    setStatusMessage("کالیبراسیون بازنشانی شد");
+    setStatusMessage(t("calibrationResetSuccess"));
     collectedSamplesRef.current = [];
   }, [clearTimers]);
 

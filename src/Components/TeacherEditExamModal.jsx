@@ -25,7 +25,7 @@ const toPersianDigits = (num) => {
 };
 
 export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -94,15 +94,15 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
     if (Array.isArray(exam.goals) && exam.goals.length > 0) {
       initialGoals = exam.goals.map((g) => (typeof g === "object" && g !== null ? (g.title || g.name || "") : String(g))).filter(Boolean);
     } else if (exam.topic) {
-      initialGoals = exam.topic.split("،").map((t) => t.trim()).filter(Boolean);
+      initialGoals = exam.topic.split(/[،,]/).map((item) => item.trim()).filter(Boolean);
     }
     if (initialGoals.length === 0) {
-      initialGoals = ["مباحث کلی آزمون"];
+      initialGoals = [t("examTopicsDefault")];
     }
     setGoals(initialGoals);
     setIsActive(exam.active ?? exam.is_active ?? true);
     setError(null);
-  }, [exam, isOpen]);
+  }, [exam, isOpen, t]);
 
   const handleAddGoal = () => {
     const trimmed = newGoalInput.trim();
@@ -120,12 +120,12 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError(isRTL ? "لطفاً عنوان آزمون را وارد کنید." : "Exam title is required.");
+      setError(t("examTitleRequired"));
       return;
     }
 
     if (!assignmentId) {
-      setError(isRTL ? "شناسه آزمون نامعتبر است." : "Invalid exam ID.");
+      setError(t("invalidExamId"));
       return;
     }
 
@@ -153,9 +153,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
     } catch (err) {
       console.error("Failed to update exam:", err);
       setError(
-        isRTL
-          ? "خطا در به‌روزرسانی آزمون. لطفاً دوباره تلاش کنید."
-          : "Failed to update exam. Please try again."
+        t("examUpdateError")
       );
     } finally {
       setLoading(false);
@@ -176,14 +174,14 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-neutral-scale70" />
               <h2 className="font-vazir font-bold text-sm text-neutral-scale70">
-                {isRTL ? "ویرایش مشخصات آزمون" : "Edit Exam"}
+                {t("editExamSpecs")}
               </h2>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              aria-label={isRTL ? "بستن" : "Close"}
+              aria-label={t("close")}
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/15 text-neutral-scale70 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -202,13 +200,13 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
             {/* Exam Title */}
             <div className="space-y-1">
               <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                {isRTL ? "عنوان آزمون" : "Exam Title"} *
+                {t("examTitle")} *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={isRTL ? "مثال: آزمون میان‌ترم سیستم عامل" : "e.g. Midterm Operating Systems"}
+                placeholder={t("examTitlePlaceholder")}
                 className="w-full h-10 px-3 text-xs font-vazir bg-neutral-scale50 dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl text-neutral-scale1800 dark:text-neutral-scale80 focus:outline-none focus:border-primery-700"
                 required
               />
@@ -219,7 +217,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
               {/* Exam Date Picker Button */}
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "تاریخ برگزاری" : "Exam Date"}
+                  {t("examDate")}
                 </label>
                 <button
                   type="button"
@@ -234,7 +232,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
               {/* Status Toggle */}
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "وضعیت آزمون" : "Exam Status"}
+                  {t("examStatus")}
                 </label>
                 <button
                   type="button"
@@ -245,7 +243,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                       : "bg-neutral-scale100 dark:bg-neutral-scale1200 border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale1000 dark:text-neutral-scale400"
                   }`}
                 >
-                  <span>{isActive ? (isRTL ? "فعال و باز" : "Active") : (isRTL ? "غیرفعال (بسته)" : "Closed")}</span>
+                  <span>{isActive ? (t("activeAndOpen")) : (t("inactiveClosed"))}</span>
                   <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-neutral-scale500"}`} />
                 </button>
               </div>
@@ -255,7 +253,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "ساعت شروع بازه" : "Start Time"}
+                  {t("startTime")}
                 </label>
                 <button
                   type="button"
@@ -269,7 +267,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
 
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "ساعت پایان بازه" : "End Time"}
+                  {t("endTime")}
                 </label>
                 <button
                   type="button"
@@ -286,7 +284,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "مدت هر دانشجو (دقیقه)" : "Duration/Student (min)"}
+                  {t("slotDurationMinutes")}
                 </label>
                 <input
                   type="number"
@@ -300,7 +298,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
 
               <div className="space-y-1">
                 <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "فاصله بین نوبت‌ها (دقیقه)" : "Gap (min)"}
+                  {t("intervalBetweenSlotsMinutes")}
                 </label>
                 <input
                   type="number"
@@ -317,7 +315,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
             <div className="space-y-1.5 pt-1">
               <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-primery-700 dark:text-primery-300" />
-                <span>{isRTL ? "مباحث و اهداف آموزشی آزمون" : "Exam Goals & Topics"}</span>
+                <span>{t("examTopics")}</span>
               </label>
 
               <div className="flex gap-2">
@@ -331,7 +329,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                       handleAddGoal();
                     }
                   }}
-                  placeholder={isRTL ? "افزودن مبحث جدید (مثال: مدیریت حافظه)..." : "Add new topic..."}
+                  placeholder={t("examTopicsPlaceholder")}
                   className="flex-1 h-9 px-3 text-xs font-vazir bg-neutral-scale50 dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl text-neutral-scale1800 dark:text-neutral-scale80 focus:outline-none focus:border-primery-700"
                 />
                 <button
@@ -340,7 +338,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                   className="h-9 px-3 bg-primery-700 text-white rounded-xl text-xs font-vazir flex items-center gap-1 hover:bg-primery-800 transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{isRTL ? "افزودن" : "Add"}</span>
+                  <span>{t("add")}</span>
                 </button>
               </div>
 
@@ -371,7 +369,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                 disabled={loading}
                 className="px-4 h-10 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 bg-white dark:bg-neutral-scale1200 text-neutral-scale1800 dark:text-neutral-scale70 text-xs font-vazir hover:bg-neutral-scale50 cursor-pointer disabled:opacity-50"
               >
-                {isRTL ? "انصراف" : "Cancel"}
+                {t("cancelComment")}
               </button>
 
               <button
@@ -380,7 +378,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                 className="px-5 h-10 rounded-xl bg-primery-700 hover:bg-primery-800 text-white text-xs font-vazir font-semibold flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50 transition-all active:scale-98"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>{isRTL ? "ذخیره تغییرات" : "Save Changes"}</span>
+                <span>{t("saveChanges")}</span>
               </button>
             </div>
           </form>

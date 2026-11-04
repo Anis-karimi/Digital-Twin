@@ -54,9 +54,13 @@ const settingsItems = [
 ];
 
 export const TeacherSettings = () => {
-  const { isRTL, logoutUser, t } = useContext(AppContext);
+  const { isRTL, logoutUser, t, currentUser } = useContext(AppContext);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+
+  const teacherFirstName = currentUser?.first_name || t("defaultTeacherFirstName");
+  const teacherLastName = currentUser?.last_name || t("defaultTeacherLastName");
+  const teacherFullName = `${teacherFirstName} ${teacherLastName}`.trim();
 
   const [photoPreview, setPhotoPreview] = useState("");
   const [voiceState, setVoiceState] = useState("idle");
@@ -572,8 +576,8 @@ export const TeacherSettings = () => {
             hidden
             onChange={handleImageChange}
           />
-          <h1 className="relative self-stretch fa-title-2 text-center text-neutral-scale1800 dark:text-neutral-scale70">
-            محمد اله‌بخش
+          <h1 className={`relative self-stretch text-center text-neutral-scale1800 dark:text-neutral-scale70 ${isRTL ? "fa-title-2 font-vazir" : "en-title-2 font-inter"}`}>
+            {teacherFullName}
           </h1>
         </div>
 
@@ -592,19 +596,19 @@ export const TeacherSettings = () => {
               {t("yourName")}
             </div>
             <div
-              className={`fa-caption-1 whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
-                isRTL ? "text-right" : "text-left"
+              className={`whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
+                isRTL ? "fa-caption-1 font-vazir text-right" : "en-caption-1 font-inter text-left"
               }`}
             >
-              محمد
+              {teacherFirstName}
             </div>
             <div className="w-full border-t border-neutral-scale300 dark:border-neutral-scale1000 my-0.5" />
             <div
-              className={`fa-caption-1 whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
-                isRTL ? "text-right" : "text-left"
+              className={`whitespace-nowrap text-neutral-scale1800 dark:text-neutral-scale70 ${
+                isRTL ? "fa-caption-1 font-vazir text-right" : "en-caption-1 font-inter text-left"
               }`}
             >
-              اله‌بخش
+              {teacherLastName}
             </div>
           </section>
 

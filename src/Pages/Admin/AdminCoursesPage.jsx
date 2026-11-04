@@ -22,7 +22,7 @@ import { toPersianDigits } from "@/utils/dateUtils";
 
 export const AdminCoursesPage = () => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
 
   const [courses, setCourses] = useState([]);
@@ -76,7 +76,7 @@ export const AdminCoursesPage = () => {
           <button
             type="button"
             onClick={handleBack}
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white shrink-0 transition-colors cursor-pointer"
           >
             <BackIcon className="w-4 h-4" />
@@ -90,12 +90,10 @@ export const AdminCoursesPage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "دروس سامانه" : "Courses Directory"}
+              {t("coursesDirectory")}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL
-                ? `${toPersianDigits(courses.length)} درس ثبت شده`
-                : `${courses.length} courses registered`}
+              {t("registeredCoursesCount", "", { count: isRTL ? toPersianDigits(courses.length) : courses.length })}
             </p>
           </div>
         </div>
@@ -105,11 +103,11 @@ export const AdminCoursesPage = () => {
           <button
             type="button"
             onClick={() => navigate("/admin/system-prompts")}
-            title={isRTL ? "پرامپت‌های سراسری سامانه" : "Global Prompts"}
+            title={t("globalPrompts")}
             className="h-7 px-2 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center gap-1 text-white transition-all cursor-pointer text-[10px] font-bold"
           >
             <Sliders className="w-3.5 h-3.5 text-amber-300" />
-            <span>{isRTL ? "پرامپت عمومی" : "Global"}</span>
+            <span>{t("global")}</span>
           </button>
 
           <button
@@ -137,12 +135,10 @@ export const AdminCoursesPage = () => {
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                {isRTL ? "پرامپت‌های پیش‌فرض سراسری" : "System Global Prompts"}
+                {t("systemGlobalPrompts")}
               </h2>
               <p className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 truncate">
-                {isRTL
-                  ? "تنظیم دستورالعمل‌های پایه هوش مصنوعی"
-                  : "Base prompts template for all courses"}
+                {t("basePromptsTemplateForAllCourses")}
               </p>
             </div>
           </div>
@@ -151,7 +147,7 @@ export const AdminCoursesPage = () => {
             onClick={() => navigate("/admin/system-prompts")}
             className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold shrink-0 transition-colors cursor-pointer shadow-xs flex items-center gap-1"
           >
-            <span>{isRTL ? "تنظیم" : "Edit"}</span>
+            <span>{t("edit")}</span>
             <ChevronLeft
               className={`w-3 h-3 ${isRTL ? "" : "rotate-180"}`}
             />
@@ -170,7 +166,7 @@ export const AdminCoursesPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={isRTL ? "جستجوی نام درس..." : "Search course name..."}
+              placeholder={t("searchCourseName")}
               className={`w-full bg-white dark:bg-neutral-scale1200 rounded-lg py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale500 focus:outline-none focus:border-primery-600 transition-colors ${
                 isRTL ? "pr-8 pl-2.5 text-right" : "pl-8 pr-2.5 text-left"
               }`}
@@ -182,10 +178,10 @@ export const AdminCoursesPage = () => {
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200">
-              {isRTL ? "لیست دروس سامانه" : "Registered Courses"}
+              {t("adminCourses")}
             </h2>
             <span className="text-[10px] text-neutral-scale500 font-medium">
-              {toPersianDigits(filteredCourses.length)} {isRTL ? "درس" : "courses"}
+              {toPersianDigits(filteredCourses.length)} {t("courses")}
             </span>
           </div>
 
@@ -193,14 +189,14 @@ export const AdminCoursesPage = () => {
             <div className="w-full py-12 flex flex-col items-center justify-center gap-2">
               <div className="w-7 h-7 border-2 border-primery-600 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400">
-                {isRTL ? "در حال دریافت اسامی دروس..." : "Loading courses..."}
+                {t("loginCoursesLoading")}
               </p>
             </div>
           ) : filteredCourses.length === 0 ? (
             <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-6 text-center flex flex-col items-center justify-center gap-2">
               <BookOpen className="w-8 h-8 text-neutral-scale400" />
               <p className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale100">
-                {isRTL ? "درسی با این نام یافت نشد" : "No courses found"}
+                {t("noCoursesFound")}
               </p>
             </div>
           ) : (
@@ -226,7 +222,7 @@ export const AdminCoursesPage = () => {
                         <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 flex items-center gap-1">
                           <Sparkles className="w-2.5 h-2.5 text-amber-500 shrink-0" />
                           <span>
-                            {isRTL ? "تنظیم پرامپت‌های درس" : "Configure Prompts"}
+                            {t("configurePrompts")}
                           </span>
                         </span>
                         {course.teacher_name && (
@@ -248,7 +244,7 @@ export const AdminCoursesPage = () => {
                       className="px-2 py-1 rounded-lg bg-primery-50 hover:bg-primery-100 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 text-primery-700 dark:text-primery-300 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-primery-200 dark:border-neutral-scale1000"
                     >
                       <FileCode className="w-3 h-3" />
-                      <span>{isRTL ? "پرامپت‌ها" : "Prompts"}</span>
+                      <span>{t("prompts")}</span>
                     </button>
                     <ChevronLeft
                       className={`w-4 h-4 text-neutral-scale400 group-hover:text-primery-700 dark:group-hover:text-white transition-all shrink-0 ${

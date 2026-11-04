@@ -13,27 +13,24 @@ export const ChatDropdownMenu = ({
   isCourseChat = false,
   className = "",
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const items = [];
 
   if (isCourseChat && onCourseSettings) {
     items.push({
       id: "course-settings",
-      label: "Course Details",
-      labelFa: "مشخصات و اسناد درس",
+      label: t("courseDetailsAndDocuments"),
       Icon: FileText,
       handler: onCourseSettings,
       danger: false,
     });
   }
 
-  
   if (onSearch) {
     items.push({
       id: "search",
-      label: "Search",
-      labelFa: "جستجو",
+      label: t("search"),
       Icon: Search,
       handler: onSearch,
       danger: false,
@@ -43,8 +40,7 @@ export const ChatDropdownMenu = ({
   if (onDownloadPdf) {
     items.push({
       id: "download-pdf",
-      label: "Download PDF",
-      labelFa: "دانلود PDF",
+      label: t("downloadPdf"),
       Icon: Download,
       handler: onDownloadPdf,
       danger: false,
@@ -54,8 +50,7 @@ export const ChatDropdownMenu = ({
   if (onClearHistory) {
     items.push({
       id: "clear-history",
-      label: "Clear History",
-      labelFa: "پاک کردن تاریخچه",
+      label: t("clearHistory"),
       Icon: ClearHistory,
       handler: onClearHistory,
       danger: true,
@@ -71,7 +66,7 @@ export const ChatDropdownMenu = ({
         <div className="flex w-full flex-col items-start gap-[18px]">
           {items.map((item) => {
             const Icon = item.Icon;
-            const displayLabel = isRTL ? item.labelFa : item.label;
+            const displayLabel = item.label;
 
             return (
               <button

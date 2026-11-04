@@ -41,7 +41,7 @@ export const CourseInformation = () => {
   const { id } = useParams();
   const location = useLocation();
   const stateCourse = location.state?.course;
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const titleClass = isRTL ? "fa-title-1 font-vazir" : "en-title-1 font-inter";
   const bodyClass = isRTL ? "fa-body-medium font-vazir" : "en-body-medium font-inter";
@@ -59,11 +59,11 @@ export const CourseInformation = () => {
       DEFAULT_COURSE.description,
     accessLevel: stateCourse?.accessLevel || DEFAULT_COURSE.accessLevel,
     photo_url: stateCourse?.photo_url || null,
-    degree: stateCourse?.degree || "کارشناسی",
+    degree: stateCourse?.degree || t("bachelorDegree"),
     units: stateCourse?.units || 3,
     course_code: stateCourse?.course_code || stateCourse?.courseCode || null,
-    department: stateCourse?.department || stateCourse?.field || "مهندسی کامپیوتر",
-    term: stateCourse?.term || "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
+    department: stateCourse?.department || stateCourse?.field || t("computerEngineering"),
+    term: stateCourse?.term || t("secondTerm14041405"),
     instructor_name:
       stateCourse?.instructorName ||
       stateCourse?.instructor_name ||
@@ -151,11 +151,11 @@ export const CourseInformation = () => {
           ).toLowerCase(),
           isActive: activeStatus,
           photo_url: data.photo_url || stateCourse?.photo_url || null,
-          degree: data.degree || stateCourse?.degree || "کارشناسی",
+          degree: data.degree || stateCourse?.degree || t("bachelorDegree"),
           units: data.units || stateCourse?.units || 3,
           course_code: data.course_code || data.courseCode || stateCourse?.course_code || null,
-          department: data.department || data.field || stateCourse?.department || "مهندسی کامپیوتر",
-          term: data.term || stateCourse?.term || "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
+          department: data.department || data.field || stateCourse?.department || t("computerEngineering"),
+          term: data.term || stateCourse?.term || t("secondTerm14041405"),
           instructor_name:
             data.instructor_name ||
             data.teacher_name ||
@@ -220,7 +220,7 @@ export const CourseInformation = () => {
             <button
               onClick={() => navigate(-1)}
               type="button"
-              aria-label={isRTL ? "بازگشت" : "Go back"}
+              aria-label={t("back")}
               className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
             >
               <ArrowLeft
@@ -233,7 +233,7 @@ export const CourseInformation = () => {
             <h1
               className={`flex-1 mx-2 text-neutral-scale70 whitespace-nowrap truncate ${titleClass} ${textAlign}`}
             >
-              {isRTL ? "اطلاعات درس" : "Course Details"}
+              {t("courseInfo")}
             </h1>
           </div>
         </header>
@@ -249,9 +249,7 @@ export const CourseInformation = () => {
     courseDetails.description ||
     courseDetails.descriptionFa ||
     courseDetails.preview ||
-    (isRTL
-      ? "توضیحات تکمیلی و سرفصل‌های آموزشی این درس توسط استاد ارائه خواهد شد."
-      : "Course description and educational materials will be provided by the instructor.");
+    (t("courseDescriptionPlaceholder"));
 
   return (
     <main
@@ -266,7 +264,7 @@ export const CourseInformation = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0 active:scale-95 transition-transform"
           >
             <ArrowLeft
@@ -292,7 +290,7 @@ export const CourseInformation = () => {
       --------------------------------------- */}
       <section
         className="w-full flex-1 min-h-0 px-3.5 pt-2.5 pb-20 overflow-y-auto overflow-x-hidden"
-        aria-label={isRTL ? "اطلاعات درس" : "Course information"}
+        aria-label={t("courseInfo")}
       >
         <div className="w-full flex flex-col gap-3">
           {/* ---------------------------------------
@@ -320,7 +318,7 @@ export const CourseInformation = () => {
               <span
                 className={`${captionClass} text-[11px] mt-1 text-neutral-scale700 dark:text-neutral-scale400 font-vazir`}
               >
-                {courseDetails.department || (isRTL ? "اطلاعات و محتوای درس" : "Course Information")}
+                {courseDetails.department || (t("courseInformation"))}
               </span>
             </div>
           </section>
@@ -348,7 +346,7 @@ export const CourseInformation = () => {
                   id="student-course-status"
                   className={`${bodyClass} text-neutral-scale1800 dark:text-neutral-scale70 text-xs font-semibold leading-tight`}
                 >
-                  {isRTL ? "وضعیت درس" : "Course Status"}
+                  {t("courseStatus")}
                 </h2>
 
                 <span
@@ -359,12 +357,8 @@ export const CourseInformation = () => {
                   }`}
                 >
                   {courseDetails.isActive
-                    ? isRTL
-                      ? "فعال و در حال برگزاری"
-                      : "Active"
-                    : isRTL
-                      ? "غیرفعال"
-                      : "Inactive"}
+                    ? t("activeAndOngoing")
+                    : t("inactiveAccount")}
                 </span>
               </div>
             </div>
@@ -383,7 +377,7 @@ export const CourseInformation = () => {
                 id="student-course-description"
                 className={`${bodyClass} text-primery-800 dark:text-primery-300 text-xs font-bold font-vazir`}
               >
-                {isRTL ? "توضیحات درس" : "Course Description"}
+                {t("courseDescription")}
               </h3>
             </div>
 
@@ -402,7 +396,7 @@ export const CourseInformation = () => {
             <h2
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-bold font-vazir`}
             >
-              {isRTL ? "مشخصات آموزشی درس" : "Course Details"}
+              {t("courseEducationalSpecs")}
             </h2>
           </div>
 
@@ -411,51 +405,47 @@ export const CourseInformation = () => {
             {/* Instructor */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "استاد درس" : "Instructor"}
+                {t("courseInstructorInput")}
               </span>
               <span className="text-xs font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
-                {courseDetails.instructor_name || (isRTL ? "دکتر محمد اله بخش" : "Dr. Mohammad Allahbakhsh")}
+                {courseDetails.instructor_name || (t("drAllahbakhsh"))}
               </span>
             </div>
 
             {/* Academic Level */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "مقطع تحصیلی" : "Academic Level"}
+                {t("courseDegree")}
               </span>
               <span className="text-xs font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
-                {courseDetails.degree || (isRTL ? "کارشناسی" : "Bachelor")}
+                {courseDetails.degree || (t("bachelorDegree"))}
               </span>
             </div>
 
             {/* Department */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "رشته تحصیلی" : "Department"}
+                {t("departmentGroup")}
               </span>
               <span className="text-xs font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
-                {courseDetails.department || (isRTL ? "مهندسی کامپیوتر" : "Computer Engineering")}
+                {courseDetails.department || (t("computerEngineering"))}
               </span>
             </div>
 
             {/* Units & Code with Persian Digits */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "تعداد واحد" : "Course Units"}
+                {t("courseUnits")}
               </span>
               <span className="text-xs font-vazir font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                {isRTL
-                  ? courseDetails.units
-                    ? `${toPersianDigits(courseDetails.units)} واحد`
-                    : "۳ واحد"
-                  : `${courseDetails.units || 3} Credits`}
+                {t("unitsCountText", "", { count: isRTL ? toPersianDigits(courseDetails.units || 3) : (courseDetails.units || 3) })}
               </span>
             </div>
 
             {courseDetails.course_code && (
               <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
                 <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                  {isRTL ? "کد درس" : "Course Code"}
+                  {t("courseCode")}
                 </span>
                 <span className="text-xs font-vazir font-bold text-neutral-scale1800 dark:text-neutral-scale70">
                   {isRTL ? toPersianDigits(courseDetails.course_code) : courseDetails.course_code}
@@ -467,7 +457,7 @@ export const CourseInformation = () => {
             {courseDetails.term && (
               <div className="flex items-center justify-between">
                 <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                  {isRTL ? "نیم‌سال تحصیلی" : "Term"}
+                  {t("courseTerm")}
                 </span>
                 <span className="text-xs font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
                   {courseDetails.term}
@@ -483,7 +473,7 @@ export const CourseInformation = () => {
             <h2
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-bold font-vazir`}
             >
-              {isRTL ? "زمان‌بندی و دسترسی" : "Schedule & Access"}
+              {t("scheduleAccess")}
             </h2>
           </div>
 
@@ -491,7 +481,7 @@ export const CourseInformation = () => {
             {/* Start Date */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "تاریخ شروع درس" : "Start Date"}
+                {t("courseStartDate")}
               </span>
               <div className="flex items-center gap-1.5 font-vazir text-xs font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
                 <span>{formatDisplayDate(courseDetails.startDate, isRTL)}</span>
@@ -506,7 +496,7 @@ export const CourseInformation = () => {
             {/* End Date */}
             <div className="flex items-center justify-between pb-2.5 border-b border-neutral-scale100 dark:border-neutral-scale1200">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "تاریخ پایان درس" : "End Date"}
+                {t("courseEndDate")}
               </span>
               <div className="flex items-center gap-1.5 font-vazir text-xs font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
                 <span>{formatDisplayDate(courseDetails.endDate, isRTL)}</span>
@@ -521,18 +511,18 @@ export const CourseInformation = () => {
             {/* Access Level */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-vazir text-neutral-scale900 dark:text-neutral-scale400 font-medium">
-                {isRTL ? "نوع دسترسی" : "Access Level"}
+                {t("accessLevel")}
               </span>
               <span className="inline-flex items-center gap-1 text-xs font-vazir font-semibold text-neutral-scale1800 dark:text-neutral-scale70">
                 {courseDetails.accessLevel === "private" ? (
                   <>
                     <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    <span>{isRTL ? "خصوصی (نیاز به عضویت)" : "Private"}</span>
+                    <span>{t("privateAccessEnrollRequired")}</span>
                   </>
                 ) : (
                   <>
                     <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>{isRTL ? "عمومی" : "Public"}</span>
+                    <span>{t("publicAccess")}</span>
                   </>
                 )}
               </span>
@@ -550,12 +540,12 @@ export const CourseInformation = () => {
                 className="w-full h-11 flex items-center justify-center gap-2 rounded-2xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-bold transition-all shadow-xs active:scale-98 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>{isRTL ? "ورود به گفتگوی درس" : "Enter Course Chat"}</span>
+                <span>{t("enterCourseChat")}</span>
               </button>
             ) : isPending ? (
               <div className="w-full h-11 flex items-center justify-center gap-2 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-vazir text-xs font-bold">
                 <Clock className="w-4 h-4 animate-pulse" />
-                <span>{isRTL ? "درخواست عضویت ارسال شده و در انتظار تأیید است" : "Join Request Pending"}</span>
+                <span>{t("enrollmentRequestedPending")}</span>
               </div>
             ) : (
               <button
@@ -565,7 +555,7 @@ export const CourseInformation = () => {
                 className="w-full h-11 flex items-center justify-center gap-2 rounded-2xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-bold transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>{isRTL ? "درخواست عضویت در درس" : "Request to Join"}</span>
+                <span>{t("requestToJoin")}</span>
               </button>
             )}
           </div>

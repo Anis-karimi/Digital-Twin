@@ -27,20 +27,20 @@ import { resolveMediaUrl } from "@/utils/mediaUrl";
 import AI from "@/assets/images/AI.png";
 import courseImage from "@/assets/images/course.jpg";
 
-const DEFAULT_COURSE = {
-  name: "سیستم عامل",
+const getDefaultCourse = (t = (k, f) => f || k) => ({
+  name: t("operatingSystems"),
   startDate: "2026-03-01",
   endDate: "2026-07-01",
-  description:
-    "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی",
+  description: t("operatingSystemsDescription"),
   accessLevel: "private",
   photo_url: null,
-  degree: "کارشناسی",
+  degree: t("bachelorDegree"),
   units: 3,
-  course_code: "۲۱۱۰۰۱۲",
-  department: "مهندسی کامپیوتر",
-  term: "نیم‌سال دوم ۱۴۰۴-۱۴۰۵",
-};
+  course_code: "2110012",
+  department: t("computerEngineering"),
+  term: t("secondTerm14041405"),
+});
+const DEFAULT_COURSE = getDefaultCourse();
 
 const isPersianText = (text) => {
   if (!text || typeof text !== "string") return false;
@@ -52,7 +52,7 @@ export const TeacherCourseDoc = () => {
   const photoInputRef = useRef(null);
   const navigate = useNavigate();
   const { id } = useParams();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   // Typography font helper classes based on active language/direction
   const titleClass = isRTL ? "fa-title-1 font-vazir" : "en-title-1 font-inter";
@@ -241,9 +241,7 @@ export const TeacherCourseDoc = () => {
         setEditForm((prev) => ({ ...prev, photo_url: res.photo_url }));
         setFeedback({
           type: "success",
-          message: isRTL
-            ? "تصویر نمایشی درس با موفقیت به‌روزرسانی شد."
-            : "Course display photo updated successfully.",
+          message: t("courseCoverUpdated"),
         });
         setTimeout(() => setFeedback({ type: "", message: "" }), 3500);
       }
@@ -251,9 +249,7 @@ export const TeacherCourseDoc = () => {
       console.error("Photo upload failed:", error);
       setFeedback({
         type: "error",
-        message: isRTL
-          ? "خطا در بارگذاری تصویر درس. لطفاً فایل معتبر تصویری انتخاب کنید."
-          : "Failed to upload course photo.",
+        message: t("validImageError"),
       });
     } finally {
       setIsUploadingPhoto(false);
@@ -271,18 +267,14 @@ export const TeacherCourseDoc = () => {
       setEditForm((prev) => ({ ...prev, photo_url: null }));
       setFeedback({
         type: "success",
-        message: isRTL
-          ? "تصویر نمایشی درس با موفقیت حذف شد."
-          : "Course display photo removed successfully.",
+        message: t("courseCoverDeleted"),
       });
       setTimeout(() => setFeedback({ type: "", message: "" }), 3500);
     } catch (error) {
       console.error("Photo delete failed:", error);
       setFeedback({
         type: "error",
-        message: isRTL
-          ? "خطا در حذف تصویر درس از سرور."
-          : "Failed to remove course photo.",
+        message: t("failedToRemoveCoursePhoto"),
       });
     } finally {
       setIsUploadingPhoto(false);
@@ -309,13 +301,9 @@ export const TeacherCourseDoc = () => {
       await coursesApi.updateCourseStatus(id, nextStatus);
       setFeedback({
         type: "success",
-        message: isRTL
-          ? nextStatus
-            ? "وضعیت درس با موفقیت به «فعال» تغییر یافت"
-            : "وضعیت درس با موفقیت به «غیرفعال» تغییر یافت"
-          : nextStatus
-          ? "Course status changed to active"
-          : "Course status changed to inactive",
+        message: nextStatus
+          ? t("courseStatusActiveSuccess")
+          : t("courseStatusInactiveSuccess"),
       });
       setTimeout(() => setFeedback({ type: "", message: "" }), 3000);
     } catch (error) {
@@ -326,9 +314,7 @@ export const TeacherCourseDoc = () => {
       setEditForm((prev) => ({ ...prev, isActive: !nextStatus }));
       setFeedback({
         type: "error",
-        message: isRTL
-          ? "خطا در به‌روزرسانی وضعیت درس در سرور"
-          : "Failed to update course status on server",
+        message: t("courseStatusUpdateError"),
       });
     } finally {
       setIsTogglingStatus(false);
@@ -366,9 +352,7 @@ export const TeacherCourseDoc = () => {
       setIsEditing(false);
       setFeedback({
         type: "success",
-        message: isRTL
-          ? "اطلاعات درس با موفقیت ذخیره شد"
-          : "Course details saved successfully",
+        message: t("courseDataSaveSuccess"),
       });
 
       setTimeout(() => {
@@ -378,9 +362,7 @@ export const TeacherCourseDoc = () => {
       console.error("Error saving course details:", error);
       setFeedback({
         type: "error",
-        message: isRTL
-          ? "خطا در ذخیره‌سازی اطلاعات در سرور جدید"
-          : "Failed to save details on the new server",
+        message: t("courseDataSaveError"),
       });
     } finally {
       setIsSaving(false);
@@ -394,12 +376,8 @@ export const TeacherCourseDoc = () => {
       isOpen: true,
       field,
       title: isStart
-        ? isRTL
-          ? "انتخاب تاریخ شروع درس"
-          : "Select Start Date"
-        : isRTL
-        ? "انتخاب تاریخ پایان درس"
-        : "Select End Date",
+        ? t("selectStartDate")
+        : t("selectEndDate"),
       currentValue: editForm[field] || courseDetails[field],
     });
   };
@@ -428,7 +406,7 @@ export const TeacherCourseDoc = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
             <ArrowLeft
@@ -445,7 +423,7 @@ export const TeacherCourseDoc = () => {
               isRTL ? "fa-title-1 text-right" : "en-title-1 text-left"
             }`}
           >
-            {courseTitle || courseDetails.name || "سیستم عامل"}
+            {courseTitle || courseDetails.name || t("operatingSystemsCourse")}
           </h1>
         </div>
       </header>
@@ -453,7 +431,7 @@ export const TeacherCourseDoc = () => {
       {/* Main Scrollable Content */}
       <section
         className="w-full flex-1 min-h-0 px-3.5 pt-2.5 pb-20 overflow-y-auto overflow-x-hidden"
-        aria-label={isRTL ? "محتوای درس" : "Course content"}
+        aria-label={t("courseContent")}
       >
         <div className="w-full flex flex-col gap-3">
           {/* Feedback Banner */}
@@ -493,7 +471,7 @@ export const TeacherCourseDoc = () => {
                   id="course-status-heading"
                   className={`${bodyClass} text-neutral-scale1800 dark:text-neutral-scale70 text-[14px] font-semibold leading-tight`}
                 >
-                  {isRTL ? "وضعیت درس" : "Course Status"}
+                  {t("courseStatus")}
                 </h2>
                 <span
                   className={`${captionClass} text-[12px] mt-1 leading-none transition-colors ${
@@ -503,12 +481,8 @@ export const TeacherCourseDoc = () => {
                   }`}
                 >
                   {isCourseActive
-                    ? isRTL
-                      ? "فعال"
-                      : "Active"
-                    : isRTL
-                      ? "غیرفعال"
-                      : "Off"}
+                    ? t("activeAccount")
+                    : t("inactiveAccount")}
                 </span>
               </div>
             </div>
@@ -524,9 +498,7 @@ export const TeacherCourseDoc = () => {
               className="tg-switch shrink-0"
               dir="ltr"
               aria-label={
-                isRTL
-                  ? "تغییر وضعیت فعال بودن درس"
-                  : "Toggle course active status"
+                t("courseActiveStatus")
               }
             >
               <input
@@ -543,7 +515,7 @@ export const TeacherCourseDoc = () => {
           {/* Section: Course Documents / Upload (Old Server) */}
           <section
             className="w-full shrink-0"
-            aria-label={isRTL ? "اسناد درس" : "Course documents"}
+            aria-label={t("courseDocuments")}
           >
             <div className="relative w-full bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] py-4 px-4">
               {/* Upload Button */}
@@ -553,13 +525,13 @@ export const TeacherCourseDoc = () => {
                   onClick={handleUploadClick}
                   disabled={uploadingFile}
                   className="inline-flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                  aria-label={isRTL ? "بارگذاری فایل جدید" : "Upload New File"}
+                  aria-label={t("uploadNewFile")}
                 >
                   <FileUp className="w-5 h-5 text-primery-700 dark:text-neutral-scale70" />
                   <span
                     className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 whitespace-nowrap`}
                   >
-                    {isRTL ? "بارگذاری فایل جدید" : "Upload New File"}
+                    {t("uploadNewFile")}
                   </span>
                 </button>
 
@@ -570,9 +542,7 @@ export const TeacherCourseDoc = () => {
                   className="hidden"
                   onChange={handleFileChange}
                   aria-label={
-                    isRTL
-                      ? "انتخاب فایل‌ها برای بارگذاری"
-                      : "Choose files to upload"
+                    t("uploadCourseFiles")
                   }
                 />
               </div>
@@ -581,7 +551,7 @@ export const TeacherCourseDoc = () => {
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className={captionClass}>
-                      {isRTL ? "در حال بارگذاری..." : "Uploading..."}
+                      {t("uploadingEllipsis")}
                     </span>
 
                     <span className={`text-[11px] ${captionClass}`}>
@@ -602,17 +572,13 @@ export const TeacherCourseDoc = () => {
 
               {uploadError && !uploadingFile && (
                 <p className="mt-2 text-[12px] text-red-500 text-start">
-                  {isRTL
-                    ? "خطا در آپلود فایل! لطفا دوباره تلاش کنید"
-                    : "File upload failed! please try again"}
+                  {t("fileUploadError")}
                 </p>
               )}
 
               {uploadSuccess && !uploadingFile && (
                 <p className="mt-2 text-[12px] text-green-500 text-start">
-                  {isRTL
-                    ? "فایل با موفقیت آپلود شد"
-                    : "File uploaded successfully"}
+                  {t("fileUploadSuccess")}
                 </p>
               )}
 
@@ -626,9 +592,7 @@ export const TeacherCourseDoc = () => {
                     <p
                       className={`text-xs font-medium text-neutral-scale1000 dark:text-neutral-scale300 ${captionClass}`}
                     >
-                      {isRTL
-                        ? "می‌توانید جزوات، اسلایدها و فایل‌های آموزشی خود را در این بخش قرار دهید."
-                        : "You can place your course pamphlets, slides, and educational files here."}
+                      {t("handoutSectionDesc")}
                     </p>
                     <button
                       type="button"
@@ -638,9 +602,7 @@ export const TeacherCourseDoc = () => {
                     >
                       <FileUp className="w-3.5 h-3.5" />
                       <span>
-                        {isRTL
-                          ? "انتخاب و بارگذاری جزوه جدید"
-                          : "Upload new document"}
+                        {t("uploadNewHandout")}
                       </span>
                     </button>
                   </div>
@@ -667,7 +629,7 @@ export const TeacherCourseDoc = () => {
                         <button
                           type="button"
                           onClick={() => handleDelete(file)}
-                          aria-label={`${isRTL ? "حذف" : "Delete"} ${file.name}`}
+                          aria-label={`${t("delete")} ${file.name}`}
                           className="shrink-0 w-7 h-7 rounded-[7px] flex items-center justify-center bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale200 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -685,7 +647,7 @@ export const TeacherCourseDoc = () => {
             <h2
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 font-semibold`}
             >
-              {isRTL ? "مشخصات درس" : "Course Details"}
+              {t("courseSpecs")}
             </h2>
 
             {!isEditing ? (
@@ -696,7 +658,7 @@ export const TeacherCourseDoc = () => {
               >
                 <Pencil className="w-3.5 h-3.5" />
                 <span className={captionClass}>
-                  {isRTL ? "ویرایش" : "Edit"}
+                  {t("edit")}
                 </span>
               </button>
             ) : (
@@ -708,7 +670,7 @@ export const TeacherCourseDoc = () => {
                   className="px-2.5 py-1 rounded-lg text-xs font-medium text-neutral-scale1000 dark:text-neutral-scale300 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1200 transition-colors cursor-pointer"
                 >
                   <span className={captionClass}>
-                    {isRTL ? "انصراف" : "Cancel"}
+                    {t("cancelComment")}
                   </span>
                 </button>
 
@@ -725,12 +687,8 @@ export const TeacherCourseDoc = () => {
                   )}
                   <span className={captionClass}>
                     {isSaving
-                      ? isRTL
-                        ? "در حال ذخیره..."
-                        : "Saving..."
-                      : isRTL
-                        ? "ذخیره"
-                        : "Save"}
+                      ? t("saving")
+                      : t("save")}
                   </span>
                 </button>
               </div>
@@ -755,7 +713,7 @@ export const TeacherCourseDoc = () => {
               <div
                 onClick={handlePhotoUploadClick}
                 className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-neutral-scale200 dark:border-neutral-scale1000 shadow-sm bg-neutral-scale100 dark:bg-neutral-scale1200 cursor-pointer group"
-                title={isRTL ? "کلیک برای تغییر عکس" : "Click to change photo"}
+                title={t("clickToChangePhoto")}
               >
                 <img
                   src={resolveMediaUrl(courseDetails.photo_url) || AI}
@@ -781,18 +739,16 @@ export const TeacherCourseDoc = () => {
                     id="course-photo-label"
                     className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
                   >
-                    {isRTL ? "تصویر نمایشی درس" : "Course Display Image"}
+                    {t("courseCoverImage")}
                   </h3>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primery-50 dark:bg-neutral-scale1200 text-primery-700 dark:text-neutral-scale300">
-                    {isRTL ? "در گفت‌وگو" : "In Chat"}
+                    {t("inConversation")}
                   </span>
                 </div>
                 <p
                   className={`text-[11px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5 leading-tight ${captionClass}`}
                 >
-                  {isRTL
-                    ? "تصویر آواتار درس که در صفحه گفتگو و فهرست دروس نمایش داده می‌شود"
-                    : "The avatar picture shown in student chats and course lists"}
+                  {t("courseAvatarHint")}
                 </p>
               </div>
             </div>
@@ -806,11 +762,9 @@ export const TeacherCourseDoc = () => {
                 onClick={handlePhotoDelete}
                 disabled={isUploadingPhoto}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/50 transition-colors disabled:opacity-50 cursor-pointer"
-                aria-label={isRTL ? "حذف عکس درس" : "Remove course photo"}
+                aria-label={t("deletePhotoConfirm")}
                 title={
-                  isRTL
-                    ? "حذف عکس درس و بازگشت به آواتار پیش‌فرض"
-                    : "Remove course photo and restore default"
+                  t("deletePhotoDefaultAvatar")
                 }
               >
                 {isUploadingPhoto ? (
@@ -819,7 +773,7 @@ export const TeacherCourseDoc = () => {
                   <Trash2 className="w-3.5 h-3.5" />
                 )}
                 <span className={captionClass}>
-                  {isRTL ? "حذف عکس" : "Remove Photo"}
+                  {t("deletePhoto")}
                 </span>
               </button>
 
@@ -829,9 +783,7 @@ export const TeacherCourseDoc = () => {
                 disabled={isUploadingPhoto}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primery-50 hover:bg-primery-100 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 text-primery-700 dark:text-neutral-scale100 transition-colors disabled:opacity-50 cursor-pointer"
                 aria-label={
-                  isRTL
-                    ? "تغییر یا بارگذاری تصویر درس"
-                    : "Change or upload course image"
+                  t("changeOrUploadCourseImage")
                 }
               >
                 {isUploadingPhoto ? (
@@ -841,12 +793,8 @@ export const TeacherCourseDoc = () => {
                 )}
                 <span className={captionClass}>
                   {courseDetails.photo_url
-                    ? isRTL
-                      ? "تغییر عکس"
-                      : "Change Photo"
-                    : isRTL
-                      ? "انتخاب عکس"
-                      : "Upload Photo"}
+                    ? t("changePhoto")
+                    : t("uploadPhoto")}
                 </span>
               </button>
             </div>
@@ -861,7 +809,7 @@ export const TeacherCourseDoc = () => {
               id="course-name-label"
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
             >
-              {isRTL ? "نام درس" : "Course Name"}
+              {t("courseTitleInput")}
             </h3>
 
             <p
@@ -870,7 +818,7 @@ export const TeacherCourseDoc = () => {
                 isRTL ? "text-right" : "text-left"
               }`}
             >
-              {courseDetails.name || "سیستم عامل"}
+              {courseDetails.name || t("operatingSystemsCourse")}
             </p>
           </section>
 
@@ -883,7 +831,7 @@ export const TeacherCourseDoc = () => {
               id="course-department-label"
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
             >
-              {isRTL ? "رشته تحصیلی / دانشکده" : "Field of Study / Department"}
+              {t("fieldOfStudyDepartment")}
             </h3>
 
             <p
@@ -893,7 +841,7 @@ export const TeacherCourseDoc = () => {
               }`}
             >
               {courseDetails.department ||
-                (isRTL ? "مهندسی کامپیوتر" : "Computer Engineering")}
+                (t("computerEngineering"))}
             </p>
           </section>
 
@@ -906,7 +854,7 @@ export const TeacherCourseDoc = () => {
               id="course-degree-label"
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
             >
-              {isRTL ? "مقطع تحصیلی" : "Academic Level"}
+              {t("courseDegree")}
             </h3>
 
             <p
@@ -915,7 +863,7 @@ export const TeacherCourseDoc = () => {
                 isRTL ? "font-vazir text-right" : "font-inter text-left"
               }`}
             >
-              {courseDetails.degree || (isRTL ? "کارشناسی" : "Bachelor's")}
+              {courseDetails.degree || (t("bachelorDegree"))}
             </p>
           </section>
 
@@ -929,14 +877,10 @@ export const TeacherCourseDoc = () => {
                 id="course-units-code-label"
                 className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
               >
-                {isRTL ? "تعداد واحد" : "Course Units"}
+                {t("courseUnits")}
               </h3>
               <p className="text-xs text-neutral-scale1800 dark:text-neutral-scale70 font-medium font-vazir">
-                {isRTL
-                  ? courseDetails.units
-                    ? `${toPersianDigits(courseDetails.units)} واحد`
-                    : "۳ واحد"
-                  : `${courseDetails.units || 3} Credits`}
+                {t("unitsCountText", "", { count: isRTL ? toPersianDigits(courseDetails.units || 3) : (courseDetails.units || 3) })}
               </p>
             </div>
 
@@ -945,7 +889,7 @@ export const TeacherCourseDoc = () => {
                 <span
                   className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
                 >
-                  {isRTL ? "کد درس" : "Course Code"}
+                  {t("courseCode")}
                 </span>
                 <span className="text-xs font-mono text-neutral-scale1800 dark:text-neutral-scale70 font-bold">
                   {isRTL
@@ -965,7 +909,7 @@ export const TeacherCourseDoc = () => {
               id="course-term-label"
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
             >
-              {isRTL ? "نیم‌سال تحصیلی" : "Semester / Term"}
+              {t("courseTerm")}
             </h3>
 
             <p
@@ -975,7 +919,7 @@ export const TeacherCourseDoc = () => {
               }`}
             >
               {courseDetails.term ||
-                (isRTL ? "نیم‌سال دوم ۱۴۰۴-۱۴۰۵" : "Second Semester 2025-2026")}
+                (t("secondSemester20252026"))}
             </p>
           </section>
 
@@ -989,12 +933,12 @@ export const TeacherCourseDoc = () => {
                 id="course-start-date-label"
                 className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
               >
-                {isRTL ? "تاریخ شروع درس" : "Course Start Date"}
+                {t("courseStartDate")}
               </h3>
               <button
                 type="button"
                 onClick={() => openDatePicker("startDate")}
-                aria-label={isRTL ? "انتخاب تاریخ شروع" : "Select start date"}
+                aria-label={t("selectStartDate")}
                 className="text-primery-700 dark:text-neutral-scale70 hover:opacity-80 transition-opacity cursor-pointer"
               >
                 <Calendar className="w-4 h-4" />
@@ -1035,12 +979,12 @@ export const TeacherCourseDoc = () => {
                 id="course-end-date-label"
                 className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
               >
-                {isRTL ? "تاریخ پایان درس" : "Course End Date"}
+                {t("courseEndDate")}
               </h3>
               <button
                 type="button"
                 onClick={() => openDatePicker("endDate")}
-                aria-label={isRTL ? "انتخاب تاریخ پایان" : "Select end date"}
+                aria-label={t("selectEndDate")}
                 className="text-primery-700 dark:text-neutral-scale70 hover:opacity-80 transition-opacity cursor-pointer"
               >
                 <Calendar className="w-4 h-4" />
@@ -1080,12 +1024,12 @@ export const TeacherCourseDoc = () => {
               id="course-access-level-label"
               className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
             >
-              {isRTL ? "سطح دسترسی درس" : "Course Access Level"}
+              {t("accessLevel")}
             </h3>
 
             <fieldset className="flex items-center gap-6 border-0 p-0 m-0">
               <legend className="sr-only">
-                {isRTL ? "انتخاب سطح دسترسی" : "Select course access level"}
+                {t("selectCourseAccessLevel")}
               </legend>
 
               {/* Private Option */}
@@ -1122,7 +1066,7 @@ export const TeacherCourseDoc = () => {
                   className={`inline-flex items-center gap-1 text-xs text-neutral-scale1800 dark:text-neutral-scale70 ${captionClass}`}
                 >
                   <Lock className="w-3 h-3 text-neutral-scale700 dark:text-neutral-scale400" />
-                  <span>{isRTL ? "خصوصی" : "Private"}</span>
+                  <span>{t("coursePrivate")}</span>
                 </span>
               </label>
 
@@ -1160,7 +1104,7 @@ export const TeacherCourseDoc = () => {
                   className={`inline-flex items-center gap-1 text-xs text-neutral-scale1800 dark:text-neutral-scale70 ${captionClass}`}
                 >
                   <Globe className="w-3 h-3 text-neutral-scale700 dark:text-neutral-scale400" />
-                  <span>{isRTL ? "عمومی" : "Public"}</span>
+                  <span>{t("publicAccess")}</span>
                 </span>
               </label>
             </fieldset>
@@ -1176,13 +1120,13 @@ export const TeacherCourseDoc = () => {
                 id="course-description-label"
                 className={`${bodyClass} text-primery-800 dark:text-neutral-scale70 text-xs font-semibold`}
               >
-                {isRTL ? "توضیحات درس" : "Description"}
+                {t("courseDescription")}
               </h3>
               {!isEditing && (
                 <button
                   type="button"
                   onClick={handleStartEdit}
-                  aria-label={isRTL ? "ویرایش توضیحات" : "Edit description"}
+                  aria-label={t("editDescription")}
                   className="text-neutral-scale700 dark:text-neutral-scale400 hover:text-primery-700 transition-colors cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -1208,9 +1152,7 @@ export const TeacherCourseDoc = () => {
                   }))
                 }
                 placeholder={
-                  isRTL
-                    ? "توضیحات درس را وارد نمایید..."
-                    : "Enter course description..."
+                  t("enterCourseDescription")
                 }
                 className={`w-full py-1.5 px-2 rounded-lg border border-primery-400 dark:border-neutral-scale900 bg-neutral-scale80 dark:bg-neutral-scale1400 text-neutral-scale1800 dark:text-neutral-scale70 text-xs outline-none focus:ring-1 focus:ring-primery-600 resize-none ${
                   isPersianText(editForm.description)
@@ -1234,9 +1176,7 @@ export const TeacherCourseDoc = () => {
                 }`}
               >
                 {courseDetails.description ||
-                  (isRTL
-                    ? "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی"
-                    : "No description provided yet.")}
+                  (t("noDescriptionProvidedYet"))}
               </p>
             )}
           </section>
@@ -1257,12 +1197,8 @@ export const TeacherCourseDoc = () => {
                 )}
                 <span className={bodyClass}>
                   {isSaving
-                    ? isRTL
-                      ? "در حال ثبت تغییرات..."
-                      : "Saving Changes..."
-                    : isRTL
-                      ? "ذخیره تغییرات"
-                      : "Save Changes"}
+                    ? t("savingChanges")
+                    : t("saveChanges")}
                 </span>
               </button>
 
@@ -1272,7 +1208,7 @@ export const TeacherCourseDoc = () => {
                 disabled={isSaving}
                 className="px-4 py-2.5 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale900 dark:text-neutral-scale300 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 text-xs font-medium transition-colors cursor-pointer"
               >
-                <span className={bodyClass}>{isRTL ? "انصراف" : "Cancel"}</span>
+                <span className={bodyClass}>{t("cancelComment")}</span>
               </button>
             </div>
           )}

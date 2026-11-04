@@ -20,7 +20,7 @@ const SWIPE_THRESHOLD = 60;
 const SWIPE_ANIMATION_DURATION = 220;
 
 export const TeacherSwipeLayout = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,9 +85,9 @@ export const TeacherSwipeLayout = () => {
 
   const homeItem = {
     id: "lessons",
-    label: "درس‌ها",
-    labelFa: "درس‌ها",
-    labelEn: "Lessons",
+    label: t("lessons"),
+    labelFa: t("lessons"),
+    labelEn: t("lessons"),
   };
 
   // ==================================================
@@ -148,14 +148,12 @@ export const TeacherSwipeLayout = () => {
   const homeHeaderActions = [
     {
       id: "notifications",
-      label: "Notifications",
-      labelFa: "اعلان‌ها",
+      label: t("notifications"),
       icon: Bell,
     },
     {
       id: "more",
-      label: "More options",
-      labelFa: "گزینه‌های بیشتر",
+      label: t("moreOptions"),
       icon: menu,
     },
   ];
@@ -163,20 +161,17 @@ export const TeacherSwipeLayout = () => {
   const lessonHeaderActions = [
     {
       id: "students",
-      label: "Students",
-      labelFa: "دانشجویان",
+      label: t("students"),
       icon: user,
     },
     {
       id: "notifications",
-      label: "Notifications",
-      labelFa: "اعلان‌ها",
+      label: t("notifications"),
       icon: Bell,
     },
     {
       id: "more",
-      label: "More options",
-      labelFa: "گزینه‌های بیشتر",
+      label: t("moreOptions"),
       icon: menu,
     },
   ];
@@ -373,9 +368,7 @@ export const TeacherSwipeLayout = () => {
 
       <header
         className="absolute top-0 left-0 w-full h-[65px] flex z-20"
-        aria-label={
-          isRTL ? (isHome ? "سربرگ صفحه" : "سربرگ درس") : "Page header"
-        }
+        aria-label={isHome ? t("pageHeader") : t("courseHeader")}
       >
         <div
           className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000"
@@ -384,15 +377,15 @@ export const TeacherSwipeLayout = () => {
           <h1
             className={`${isRTL ? "fa-title-1" : "en-title-1"} text-[#f7f7f7] text-center whitespace-nowrap`}
           >
-            {isRTL ? "دانای" : "DANAI"}
+            {t("digitalTwinName")}
           </h1>
 
           <div className="flex items-center gap-3">
-            {headerActions.map(({ id, label, labelFa, icon: Icon }) => (
+            {headerActions.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
-                aria-label={isRTL ? labelFa : label}
+                aria-label={label}
                 onClick={() => handleHeaderAction(id)}
                 className="relative flex h-6 w-6 items-center justify-center cursor-pointer"
               >
@@ -408,7 +401,7 @@ export const TeacherSwipeLayout = () => {
       ================================================== */}
 
       <section
-        aria-label={isRTL ? "نوار درس‌ها" : "Lessons Nav Bar"}
+        aria-label={t("lessonsNavBarAria")}
         className="absolute top-[60px] left-0 w-full z-20"
       >
         <LessonsNavBar />

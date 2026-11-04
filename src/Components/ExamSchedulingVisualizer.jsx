@@ -19,7 +19,7 @@ import { getAdminExamsSchedule } from "@/api";
 const HOUR_ROW_HEIGHT = 180; // Extended timeline scale (180px/hr) for generous spacing and clear time boundaries
 
 export const ExamSchedulingVisualizer = ({ embedded = false }) => {
-  const { isRTL, language } = useContext(AppContext);
+  const { isRTL, language, t } = useContext(AppContext);
 
   // Font family selector: Vazirmatn for Persian, Inter for English
   const fontClass = isRTL ? "font-vazir" : "font-inter";
@@ -89,9 +89,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
       console.error("Failed to load admin exams schedule:", err);
       setError(
         err?.message ||
-          (isRTL
-            ? "خطا در دریافت زمان‌بندی آزمون‌ها از سرور"
-            : "Failed to load schedule from server")
+          (t("errorFetchingSchedules"))
       );
     } finally {
       setLoading(false);
@@ -192,10 +190,10 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
       >
         <div className="w-9 h-9 border-3 border-primery-700/20 border-t-primery-700 rounded-full animate-spin mb-3" />
         <p className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-          {isRTL ? "در حال دریافت زمان‌بندی آزمون‌ها..." : "Loading exam schedules..."}
+          {t("fetchingSchedules")}
         </p>
         <p className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 mt-1">
-          {isRTL ? "دریافت اطلاعات آزمون‌های ثبت‌شده از پایگاه داده" : "Fetching scheduled exams from database"}
+          {t("fetchFromDatabase")}
         </p>
       </div>
     );
@@ -220,7 +218,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
           className="mt-3 px-4 py-2 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>{isRTL ? "تلاش مجدد" : "Retry"}</span>
+          <span>{t("retry")}</span>
         </button>
       </div>
     );
@@ -252,11 +250,11 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5 leading-tight truncate">
-                <span>{isRTL ? "پایش زمان‌بندی آزمون‌ها" : "Exam Schedule Overview"}</span>
+                <span>{t("adminExamScheduleMonitor")}</span>
               </h2>
               <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 block truncate">
                 {selectedDaySubtitle} • {formatDigits(selectedDay?.exams?.length || 0)}{" "}
-                {isRTL ? "آزمون ثبت‌شده" : "scheduled exams"}
+                {t("scheduledExams")}
               </span>
             </div>
           </div>
@@ -267,7 +265,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
               type="button"
               onClick={() => fetchScheduleData(true)}
               disabled={refreshing}
-              title={isRTL ? "بروزرسانی داده‌ها" : "Refresh data"}
+              title={t("refreshData")}
               className="w-7 h-7 rounded-lg bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 flex items-center justify-center text-neutral-scale1000 dark:text-neutral-scale400 hover:text-primery-700 dark:hover:text-primery-300 cursor-pointer shadow-2xs transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-primery-700" : ""}`} />
@@ -277,7 +275,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
             <div className="flex items-center gap-1 bg-white dark:bg-neutral-scale1200 px-2 py-1 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1000 shadow-2xs">
               <Users className="w-3 h-3 text-primery-700 dark:text-primery-400" />
               <span className={`text-[10px] font-bold text-neutral-scale1800 dark:text-neutral-scale70 ${fontClass}`}>
-                {formatDigits(totalStudentsToday)} {isRTL ? "دانشجو" : "std"}
+                {formatDigits(totalStudentsToday)} {t("roleStudent")}
               </span>
             </div>
           </div>
@@ -320,7 +318,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                 {day.isToday && (
                   <div
                     className="absolute -top-[3px] inset-x-2 h-1 bg-blue-500 dark:bg-blue-400 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.9)] z-10"
-                    title={isRTL ? "امروز" : "Today"}
+                    title={t("today")}
                   />
                 )}
 
@@ -346,7 +344,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                           : "bg-primery-50 dark:bg-neutral-scale1100 text-primery-700 dark:text-primery-300"
                       }`}
                     >
-                      {formatDigits(examCount)} {isRTL ? "آزمون" : "ex"}
+                      {formatDigits(examCount)} {t("ex")}
                     </span>
                   ) : day.isToday ? (
                     <span
@@ -354,7 +352,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                         isSelected ? "text-blue-100" : ""
                       }`}
                     >
-                      {isRTL ? "امروز" : "Today"}
+                      {t("today")}
                     </span>
                   ) : (
                     <span className="text-[8px] text-neutral-scale400 dark:text-neutral-scale800 leading-none">
@@ -375,12 +373,10 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
             <CalendarX2 className="w-8 h-8" />
           </div>
           <h3 className="text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-            {isRTL ? "هیچ آزمونی در این تاریخ زمان‌بندی نشده است" : "No exams scheduled on this date"}
+            {t("noExamsScheduledThisDate")}
           </h3>
           <p className="text-xs text-neutral-scale800 dark:text-neutral-scale400 mt-1.5 max-w-xs leading-relaxed">
-            {isRTL
-              ? "می‌توانید روزهای دارای آزمون را از نوار تقویم بالای صفحه انتخاب فرمایید."
-              : "Please select other dates from the top bar to inspect scheduled exams."}
+            {t("selectDateFromCalendarHint")}
           </p>
         </div>
       ) : (
@@ -453,7 +449,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                         <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0 flex items-center gap-1 bg-neutral-scale100 dark:bg-neutral-scale1200 text-neutral-scale1000 dark:text-neutral-scale400 border border-neutral-scale200 dark:border-neutral-scale1000">
                           <BookOpen className="w-2.5 h-2.5 text-primery-700 dark:text-primery-400" />
                           <span className="truncate max-w-[60px] sm:max-w-[80px]">
-                            {singleExam?.department || (isRTL ? "تک‌آزمون" : "Single")}
+                            {singleExam?.department || (t("singleExam"))}
                           </span>
                         </span>
                       </div>
@@ -473,7 +469,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                           <div
                             className={`w-5 h-5 rounded-full ${singleExam?.avatarBg || "bg-primery-700"} text-white font-bold text-[9px] flex items-center justify-center border border-white dark:border-neutral-scale1300 shadow-xs shrink-0 ${fontClass}`}
                           >
-                            {singleExam?.avatarText || "است"}
+                            {singleExam?.avatarText || t("profShort")}
                           </div>
                           <span className="text-[10px] sm:text-[11px] font-medium text-neutral-scale1400 dark:text-neutral-scale300 truncate max-w-[140px]">
                             {singleExam?.professorName}
@@ -483,7 +479,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                         <div className="flex items-center gap-1 text-[10px] font-bold shrink-0 text-neutral-scale1400 dark:text-neutral-scale300">
                           <Users className="w-3 h-3 text-primery-700 dark:text-primery-400" />
                           <span className={fontClass}>
-                            {formatDigits(singleExam?.studentCount || group.totalStudents)} {isRTL ? "دانشجو" : "stud."}
+                            {formatDigits(singleExam?.studentCount || group.totalStudents)} {t("roleStudent")}
                           </span>
                         </div>
                       </div>
@@ -511,7 +507,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                           <span>{displayTimeLabel}</span>
                         </span>
                         <span className="text-[11px] font-bold truncate">
-                          {formatDigits(group.exams.length)} {isRTL ? "آزمون همپوشان" : "Overlapping Exams"}
+                          {formatDigits(group.exams.length)} {t("overlappingExam")}
                         </span>
                       </div>
 
@@ -519,7 +515,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                         <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                         <span className={fontClass}>
-                          {isRTL ? "تداخل زمانی" : "Overlap"}
+                          {t("overlapDetected")}
                         </span>
                       </span>
                     </div>
@@ -534,7 +530,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                             className={`w-5 h-5 rounded-full ${ex.avatarBg || "bg-primery-700"} text-white font-bold text-[9px] flex items-center justify-center border border-white dark:border-neutral-scale1300 shadow-xs shrink-0 ${fontClass}`}
                             title={`${ex.professorName} (${ex.course})`}
                           >
-                            {ex.avatarText || "است"}
+                            {ex.avatarText || t("profShort")}
                           </div>
                         ))}
                         {group.exams.length > 3 && (
@@ -546,7 +542,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                           {group.exams
                             .map((e) => e.professorName)
                             .filter((v, i, a) => a.indexOf(v) === i)
-                            .join("، ")}
+                            .join(isRTL ? "، " : ", ")}
                         </span>
                       </div>
 
@@ -554,7 +550,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                       <div className="flex items-center gap-1 text-[10px] font-bold shrink-0 text-neutral-scale1400 dark:text-neutral-scale300">
                         <Users className="w-3 h-3 text-primery-700 dark:text-primery-400" />
                         <span className={fontClass}>
-                          {formatDigits(group.totalStudents)} {isRTL ? "دانشجو" : "stud."}
+                          {formatDigits(group.totalStudents)} {t("roleStudent")}
                         </span>
                       </div>
                     </div>
@@ -582,7 +578,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
             <div
               onClick={() => setActiveDrawerGroup(null)}
               className="w-12 h-1.5 bg-neutral-scale300 dark:bg-neutral-scale1000 rounded-full mx-auto my-2.5 shrink-0 cursor-pointer"
-              title={isRTL ? "بستن پنل" : "Close drawer"}
+              title={t("closeDrawer")}
             />
 
             {/* Sheet Header */}
@@ -599,7 +595,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-2">
-                    <span>{isRTL ? "جزئیات آزمون‌های این بازه" : "Exam Schedule Details"}</span>
+                    <span>{t("examScheduleDetails")}</span>
                   </h3>
                   <span className={`text-[11px] text-neutral-scale800 dark:text-neutral-scale400 block ${fontClass}`}>
                     {isRTL
@@ -626,20 +622,20 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                 <div className="bg-white dark:bg-neutral-scale1400 border border-neutral-scale200 dark:border-neutral-scale1100 rounded-xl p-3 flex flex-col justify-between shadow-2xs">
                   <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 font-medium flex items-center gap-1">
                     <BookOpen className="w-3 h-3 text-primery-700 dark:text-primery-400" />
-                    {isRTL ? "تعداد آزمون‌ها:" : "Total Exams:"}
+                    {t("examsCount")}
                   </span>
                   <span className={`text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70 mt-1 ${fontClass}`}>
-                    {formatDigits(activeDrawerGroup.exams.length)} {isRTL ? "آزمون" : "exams"}
+                    {formatDigits(activeDrawerGroup.exams.length)} {t("ex")}
                   </span>
                 </div>
 
                 <div className="bg-white dark:bg-neutral-scale1400 border border-neutral-scale200 dark:border-neutral-scale1100 rounded-xl p-3 flex flex-col justify-between shadow-2xs">
                   <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 font-medium flex items-center gap-1">
                     <Users className="w-3 h-3 text-primery-700 dark:text-primery-400" />
-                    {isRTL ? "مجموع دانشجویان:" : "Total Students:"}
+                    {t("totalStudentsCount")}
                   </span>
                   <span className={`text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70 mt-1 ${fontClass}`}>
-                    {formatDigits(activeDrawerGroup.totalStudents)} {isRTL ? "نفر" : "students"}
+                    {formatDigits(activeDrawerGroup.totalStudents)} {t("studentCountSuffix")}
                   </span>
                 </div>
               </div>
@@ -649,7 +645,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-neutral-scale1800 dark:text-neutral-scale70 text-[11px] flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                    {isRTL ? "اساتید و آزمون‌ها:" : "Professors & Exams:"}
+                    {t("instructorsAndExams")}
                   </span>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -659,12 +655,8 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                     } ${fontClass}`}
                   >
                     {activeDrawerGroup.exams.length > 1
-                      ? isRTL
-                        ? "همپوشانی زمانی دارند"
-                        : "Concurrent overlap"
-                      : isRTL
-                      ? "بدون تداخل"
-                      : "No overlap"}
+                      ? t("overlapTimelineNotice")
+                      : t("noOverlap")}
                   </span>
                 </div>
 
@@ -679,7 +671,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                           <div
                             className={`w-8 h-8 rounded-full ${ex.avatarBg || "bg-primery-700"} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs mt-0.5 ${fontClass}`}
                           >
-                            {ex.avatarText || "است"}
+                            {ex.avatarText || t("profShort")}
                           </div>
                           <div>
                             <h4 className="font-bold text-neutral-scale1800 dark:text-neutral-scale70 text-xs leading-snug">
@@ -714,7 +706,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
 
                         <div className="text-left rtl:text-left ltr:text-right shrink-0">
                           <span className={`font-bold text-primery-700 dark:text-primery-400 block ${fontClass}`}>
-                            {formatDigits(ex.studentCount)} {isRTL ? "نفر" : "std"}
+                            {formatDigits(ex.studentCount)} {t("studentCountSuffix")}
                           </span>
                           {ex.impact && (
                             <span className="text-[9px] text-neutral-scale800 dark:text-neutral-scale400">
@@ -734,7 +726,7 @@ export const ExamSchedulingVisualizer = ({ embedded = false }) => {
                 onClick={() => setActiveDrawerGroup(null)}
                 className="w-full py-2.5 rounded-xl bg-neutral-scale200 hover:bg-neutral-scale300 dark:bg-neutral-scale1100 dark:hover:bg-neutral-scale1000 text-neutral-scale1800 dark:text-neutral-scale70 font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer"
               >
-                <span>{isRTL ? "بستن پنل جزئیات" : "Close Panel"}</span>
+                <span>{t("closeDetailsPanel")}</span>
               </button>
             </div>
           </div>

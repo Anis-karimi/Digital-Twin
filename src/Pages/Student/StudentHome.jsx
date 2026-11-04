@@ -12,14 +12,12 @@ import { notificationsApi } from "@/api";
 const headerActions = [
   {
     id: "notifications",
-    label: "Notifications",
-    labelFa: "اعلان‌ها",
+    labelKey: "notifications",
     icon: Bell,
   },
   {
     id: "more",
-    label: "More options",
-    labelFa: "گزینه‌های بیشتر",
+    labelKey: "moreOptions",
     icon: menu,
   },
 ];
@@ -28,7 +26,7 @@ export const StudentHome = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,7 +50,7 @@ export const StudentHome = () => {
     >
       <header
         className="absolute top-0 left-0 w-full h-[65px] flex z-10"
-        aria-label={isRTL ? "سربرگ صفحه" : "Page header"}
+        aria-label={t("pageHeader")}
       >
         <div
           className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000"
@@ -63,15 +61,15 @@ export const StudentHome = () => {
               isRTL ? "fa-display" : "en-display"
             } text-[#f7f7f7] text-center whitespace-nowrap mr-[5px]`}
           >
-            {isRTL ? "دانای" : "DANAI"}
+            {t("digitalTwinName")}
           </h1>
 
           <div className="flex items-center gap-3">
-            {headerActions.map(({ id, label, labelFa, icon: Icon }) => (
+            {headerActions.map(({ id, labelKey, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
-                aria-label={isRTL ? labelFa : label}
+                aria-label={t(labelKey)}
                 onClick={() => {
                   if (id === "more") {
                     setIsMenuOpen(true);

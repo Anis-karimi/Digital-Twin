@@ -9,35 +9,38 @@
  */
 
 import React from "react";
+import { useTranslation } from "@/translations/useTranslation";
 
 const QUADRANT_COLORS = {
-  Q1: "#22c55e", // سبز: تمرکز و جریان
-  Q2: "#ef4444", // قرمز: اضطراب و استرس
-  Q3: "#f59e0b", // کهربایی: خستگی
-  Q4: "#38bdf8", // آبی فیروزه‌ای: آرامش
-};
-
-const QUADRANT_PERSIAN_TITLES = {
-  Q1: "تمرکز و انگیزش (Flow)",
-  Q2: "اضطراب و استرس (Distress)",
-  Q3: "خستگی ذهنی (Fatigue)",
-  Q4: "آرامش و تعادل (Calm)",
+  Q1: "#22c55e",
+  Q2: "#ef4444",
+  Q3: "#f59e0b",
+  Q4: "#38bdf8",
 };
 
 export function CircumplexGrid({
   valence = 0.0,
   arousal = 0.0,
   quadrant = "Q1",
-  quadrantTitle = "تمرکز و جریان ذهنی",
+  quadrantTitle,
   calibratedMood = "Neutral",
   size = 240,
 }) {
+  const { t } = useTranslation();
+
+  const quadrantTitles = {
+    Q1: t("flowQuadrant"),
+    Q2: t("distressQuadrant"),
+    Q3: t("fatigueQuadrant"),
+    Q4: t("calmQuadrant"),
+  };
+
   // Normalize [-1, 1] to [6%, 94%]
   const dotX = Math.max(6, Math.min(94, ((valence + 1.0) / 2.0) * 100));
   const dotY = Math.max(6, Math.min(94, ((1.0 - arousal) / 2.0) * 100));
 
   const activeColor = QUADRANT_COLORS[quadrant] || "#38bdf8";
-  const displayTitle = QUADRANT_PERSIAN_TITLES[quadrant] || quadrantTitle;
+  const displayTitle = quadrantTitles[quadrant] || quadrantTitle || t("circumplexFlowTitle");
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -54,16 +57,16 @@ export function CircumplexGrid({
 
         {/* Quadrant Watermarks */}
         <span className="absolute top-2 right-2 text-[10px] font-semibold text-emerald-400/40 select-none">
-          Q1: تمرکز
+          Q1: {t("focus")}
         </span>
         <span className="absolute top-2 left-2 text-[10px] font-semibold text-rose-400/40 select-none">
-          Q2: اضطراب
+          Q2: {t("distress")}
         </span>
         <span className="absolute bottom-2 left-2 text-[10px] font-semibold text-amber-400/40 select-none">
-          Q3: خستگی
+          Q3: {t("fatigue")}
         </span>
         <span className="absolute bottom-2 right-2 text-[10px] font-semibold text-sky-400/40 select-none">
-          Q4: آرامش
+          Q4: {t("calm")}
         </span>
 
         {/* Axis Labels */}

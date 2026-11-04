@@ -42,7 +42,7 @@ export const AnalogClockDialView = ({
   showActions = false,
   title = "",
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const dialRef = useRef(null);
 
   const parsedInitial = useMemo(() => parseTimeString(value), [value]);
@@ -97,9 +97,7 @@ export const AnalogClockDialView = ({
       if (num >= 0 && num <= 23) {
         if (parsedMin && num < parsedMin.hours) {
           setErrorMessage(
-            isRTL
-              ? `ساعت نمی‌تواند کمتر از ${parsedMin.hours} باشد.`
-              : `Hour cannot be less than ${parsedMin.hours}.`
+            t("hourCannotBeLessThan", "", { hours: isRTL ? toPersianDigits(parsedMin.hours) : parsedMin.hours })
           );
           num = parsedMin.hours;
         } else {
@@ -123,9 +121,7 @@ export const AnalogClockDialView = ({
       if (num >= 0 && num <= 59) {
         if (parsedMin && hour === parsedMin.hours && num < parsedMin.minutes) {
           setErrorMessage(
-            isRTL
-              ? `دقیقه نمی‌تواند کمتر از ${parsedMin.minutes} باشد.`
-              : `Minute cannot be less than ${parsedMin.minutes}.`
+            t("minuteCannotBeLessThan", "", { minutes: isRTL ? toPersianDigits(parsedMin.minutes) : parsedMin.minutes })
           );
           num = parsedMin.minutes;
         } else {
@@ -150,9 +146,7 @@ export const AnalogClockDialView = ({
       setMinute(parsedMin.minutes);
       setIsPM(parsedMin.hours >= 12);
       setErrorMessage(
-        isRTL
-          ? `ساعت نمی‌تواند کمتر از ${minTime} باشد.`
-          : `Time cannot be earlier than ${minTime}.`
+        t("timeCannotBeEarlierThan", "", { time: isRTL ? toPersianDigits(minTime) : minTime })
       );
     } else {
       setErrorMessage("");
@@ -203,9 +197,7 @@ export const AnalogClockDialView = ({
           }
           setIsPM(parsedMin.hours >= 12);
           setErrorMessage(
-            isRTL
-              ? `عقربه نمی‌تواند کمتر از ساعت ${minTime} عقب برود.`
-              : `Hand cannot move earlier than ${minTime}.`
+            t("handCannotMoveEarlierThan", "", { time: isRTL ? toPersianDigits(minTime) : minTime })
           );
         } else {
           setErrorMessage("");
@@ -222,9 +214,7 @@ export const AnalogClockDialView = ({
         if (candidateTotal < parsedMin.total) {
           rawM = parsedMin.minutes;
           setErrorMessage(
-            isRTL
-              ? `عقربه نمی‌تواند کمتر از ${minTime} عقب برود.`
-              : `Hand cannot move earlier than ${minTime}.`
+            t("handCannotMoveEarlierThan", "", { time: isRTL ? toPersianDigits(minTime) : minTime })
           );
         } else {
           setErrorMessage("");
@@ -371,7 +361,7 @@ export const AnalogClockDialView = ({
                   : "bg-neutral-100 dark:bg-[#1c2733] text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200/60"
               }`}
             >
-              {isRTL ? "صبح" : "AM"}
+              {t("am")}
             </button>
             <button
               type="button"
@@ -382,7 +372,7 @@ export const AnalogClockDialView = ({
                   : "bg-neutral-100 dark:bg-[#1c2733] text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200/60"
               }`}
             >
-              {isRTL ? "عصر" : "PM"}
+              {t("pm")}
             </button>
           </div>
         </div>
@@ -398,7 +388,7 @@ export const AnalogClockDialView = ({
                 : "bg-neutral-100 dark:bg-[#1c2733] text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/60"
             }`}
           >
-            {isRTL ? "تنظیم ساعت" : "Set Hour"}
+            {t("setHour")}
           </button>
           <button
             type="button"
@@ -409,14 +399,14 @@ export const AnalogClockDialView = ({
                 : "bg-neutral-100 dark:bg-[#1c2733] text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/60"
             }`}
           >
-            {isRTL ? "تنظیم دقیقه" : "Set Minute"}
+            {t("setMinute")}
           </button>
         </div>
 
         {/* Min Time Alert or Info */}
         {minTime && (
           <div className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-0.5 mt-1 rounded-full border border-amber-500/25 flex items-center gap-1 font-vazir">
-            <span>{isRTL ? `حداقل مجاز پایان: ${minTime}` : `Minimum allowed: ${minTime}`}</span>
+            <span>{t("minimumAllowedEndTime", "", { time: isRTL ? toPersianDigits(minTime) : minTime })}</span>
           </div>
         )}
 
@@ -502,7 +492,7 @@ export const AnalogClockDialView = ({
               onClick={onClose}
               className="flex-1 py-2 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-600 dark:text-neutral-300 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-center font-vazir"
             >
-              {isRTL ? "انصراف" : "Cancel"}
+              {t("cancelComment")}
             </button>
           )}
 
@@ -521,7 +511,7 @@ export const AnalogClockDialView = ({
               className="flex-1 py-2 rounded-xl bg-primery-700 hover:bg-primery-800 text-white text-xs font-bold transition-all shadow-md shadow-primery-700/25 flex items-center justify-center gap-1 cursor-pointer font-vazir active:scale-[0.98]"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{isRTL ? "تایید ساعت" : "Confirm"}</span>
+              <span>{t("confirm")}</span>
             </button>
           )}
         </div>
@@ -542,7 +532,7 @@ export const ClockPickerModal = ({
   onConfirm,
   title,
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const [currentTime, setCurrentTime] = useState(initialTime);
 
   useEffect(() => {
@@ -587,7 +577,7 @@ export const ClockPickerModal = ({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={title || (isRTL ? "تنظیم ساعت" : "Select Time")}
+        aria-label={title || (t("setHour"))}
         onClick={(e) => e.stopPropagation()}
         className={`w-full max-w-[340px] bg-white dark:bg-neutral-scale1300 rounded-[20px] shadow-2xl border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden flex flex-col font-vazir animate-in fade-in zoom-in-95 duration-200`}
       >
@@ -596,7 +586,7 @@ export const ClockPickerModal = ({
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-neutral-scale70" />
             <h3 className={`text-base font-semibold text-neutral-scale70 ${isRTL ? "fa-title-3" : "en-title-3"}`}>
-              {title || (isRTL ? "تنظیم ساعت با عقربه" : "Select Time")}
+              {title || (t("selectTime"))}
             </h3>
           </div>
           <button
@@ -626,7 +616,7 @@ export const ClockPickerModal = ({
             onClick={onClose}
             className="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-scale700 dark:text-neutral-scale400 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 transition-colors cursor-pointer"
           >
-            {isRTL ? "انصراف" : "Cancel"}
+            {t("cancelComment")}
           </button>
 
           <button
@@ -635,7 +625,7 @@ export const ClockPickerModal = ({
             className="inline-flex items-center gap-1 px-4 py-1.5 rounded-lg text-xs font-semibold bg-primery-700 hover:bg-primery-800 text-white shadow-sm transition-colors cursor-pointer active:scale-[0.98]"
           >
             <Check className="w-3.5 h-3.5" />
-            <span>{isRTL ? "تایید ساعت" : "Confirm"}</span>
+            <span>{t("confirm")}</span>
           </button>
         </div>
       </div>

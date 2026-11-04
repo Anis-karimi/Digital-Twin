@@ -3,14 +3,17 @@ import { X, ArrowRight, ArrowLeft } from "lucide-react";
 import QuoteSvg from "@/assets/icons/quote-svgrepo-com.svg?react";
 import { playTelegramNotificationSound } from "@/utils/telegramSound";
 import { formatChatTime } from "@/utils/dateFormatter";
+import { useTranslation } from "@/translations/useTranslation";
 
 export const TelegramCommentNotification = ({
   comment,
   onView,
   onClose,
-  isRTL = true,
+  isRTL: controlledIsRTL,
   autoDismissMs = 7000,
 }) => {
+  const { t, isRTL: contextIsRTL } = useTranslation();
+  const isRTL = controlledIsRTL !== undefined ? controlledIsRTL : contextIsRTL;
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -44,11 +47,11 @@ export const TelegramCommentNotification = ({
 
   const rawTeacherName = (comment.teacher_name || "").trim();
   const cleanedTeacherName = (!rawTeacherName || rawTeacherName === "استاد دیجیتال" || rawTeacherName.includes("دیجیتال") || rawTeacherName === "استاد" || rawTeacherName.toLowerCase() === "teacher")
-    ? "دکتر محمد اله بخش"
+    ? t("drAllahbakhsh")
     : rawTeacherName;
-  const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر")
+  const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر") || cleanedTeacherName.startsWith("Dr.")
     ? cleanedTeacherName
-    : `استاد ${cleanedTeacherName}`;
+    : `${t("professor")} ${cleanedTeacherName}`;
 
   const commentSnippet = comment.comment || comment.text || "";
 
@@ -88,14 +91,14 @@ export const TelegramCommentNotification = ({
                 {teacherDisplayName}
               </span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#2481cc]/10 dark:bg-[#52a2f6]/20 text-[#2481cc] dark:text-[#52a2f6] font-vazir shrink-0">
-                {isRTL ? "نظر جدید" : "New Comment"}
+                {t("newComment")}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-vazir">
-              {formatChatTime(comment.created_at || comment.time, isRTL) || (isRTL ? "اکنون" : "Just now")}
+              {formatChatTime(comment.created_at || comment.time, isRTL) || t("justNow")}
             </span>
             <button
               type="button"
@@ -104,7 +107,7 @@ export const TelegramCommentNotification = ({
                 handleDismiss();
               }}
               className="w-5 h-5 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-              aria-label="بستن اعلان"
+              aria-label={t("closeNotification")}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -119,7 +122,7 @@ export const TelegramCommentNotification = ({
         {/* Action Link Footer */}
         <div className="flex items-center justify-between pt-1 border-t border-neutral-100 dark:border-neutral-800/60 mt-0.5">
           <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] flex items-center gap-1 group-hover:underline">
-            <span>{isRTL ? "مشاهده و رفتن به پیام" : "View message"}</span>
+            <span>{t("viewMessage")}</span>
             {isRTL ? (
               <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
             ) : (
@@ -127,7 +130,7 @@ export const TelegramCommentNotification = ({
             )}
           </span>
           <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
-            {isRTL ? "دانای" : "DANAI"}
+            {t("digitalTwinName")}
           </span>
         </div>
       </div>

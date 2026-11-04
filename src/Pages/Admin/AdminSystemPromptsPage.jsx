@@ -39,7 +39,7 @@ import { toPersianDigits, isoToJalaliDate } from "@/utils/dateUtils";
 export default function AdminSystemPromptsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isRTL, currentUser } = useContext(AppContext);
+  const { isRTL, currentUser, t } = useContext(AppContext);
 
   // URL Query Param for Course
   const courseIdParam = searchParams.get("courseId");
@@ -113,9 +113,7 @@ export default function AdminSystemPromptsPage() {
       console.error("Failed to fetch prompts:", err);
       setStatusMessage({
         type: "error",
-        text: isRTL
-          ? "خطا در دریافت پرامپت‌ها از سرور"
-          : "Failed to load prompts from server",
+        text: t("failedToLoadPromptsFromServer"),
       });
     } finally {
       setLoading(false);
@@ -221,9 +219,7 @@ export default function AdminSystemPromptsPage() {
           content: draft,
           change_summary:
             changeSummary.trim() ||
-            (isRTL
-              ? "ویرایش و ذخیره دستورالعمل"
-              : "Updated prompt instructions"),
+            (t("updatedPromptInstructions")),
           changed_by: userName,
         },
         selectedCourseId
@@ -247,9 +243,7 @@ export default function AdminSystemPromptsPage() {
       setChangeSummary("");
       setStatusMessage({
         type: "success",
-        text: isRTL
-          ? `نسخه جدید (v${res.version || ""}) با موفقیت در سوابق ذخیره شد.`
-          : "New prompt revision saved successfully.",
+        text: t("promptNewVersionSavedSuccess", "", { version: res.version || "" }),
       });
 
       // Refresh history list
@@ -260,7 +254,7 @@ export default function AdminSystemPromptsPage() {
         type: "error",
         text:
           err.message ||
-          (isRTL ? "خطا در ذخیره پرامپت" : "Failed to save prompt"),
+          (t("promptSaveError")),
       });
     } finally {
       setSaving(false);
@@ -271,9 +265,7 @@ export default function AdminSystemPromptsPage() {
     if (!selectedPrompt) return;
     if (
       !window.confirm(
-        isRTL
-          ? "آیا از بازنشانی این پرامپت به پیش‌فرض سراسری اطمینان دارید؟"
-          : "Are you sure you want to reset this prompt to system default?"
+        t("resetPromptConfirm")
       )
     ) {
       return;
@@ -306,9 +298,7 @@ export default function AdminSystemPromptsPage() {
 
       setStatusMessage({
         type: "success",
-        text: isRTL
-          ? "پرامپت با موفقیت به پیش‌فرض سراسری بازنشانی شد."
-          : "Prompt successfully reset to system default.",
+        text: t("promptResetSuccess"),
       });
 
       fetchHistory(selectedPrompt.prompt_type, selectedCourseId);
@@ -318,7 +308,7 @@ export default function AdminSystemPromptsPage() {
         type: "error",
         text:
           err.message ||
-          (isRTL ? "خطا در بازنشانی پرامپت" : "Failed to reset prompt"),
+          (t("promptResetError")),
       });
     } finally {
       setResetting(false);
@@ -329,9 +319,7 @@ export default function AdminSystemPromptsPage() {
     if (!selectedPrompt) return;
     if (
       !window.confirm(
-        isRTL
-          ? `آیا از بازگردانی پرامپت به نسخه ${toPersianDigits(targetVersion)} اطمینان دارید؟`
-          : `Are you sure you want to rollback to revision v${targetVersion}?`
+        t("rollbackPromptConfirm", "", { version: isRTL ? toPersianDigits(targetVersion) : targetVersion })
       )
     ) {
       return;
@@ -366,9 +354,7 @@ export default function AdminSystemPromptsPage() {
       setActiveTab("editor");
       setStatusMessage({
         type: "success",
-        text: isRTL
-          ? `پرامپت با موفقیت به نسخه ${toPersianDigits(targetVersion)} بازگردانده شد.`
-          : `Prompt successfully restored to version v${targetVersion}.`,
+        text: t("promptRollbackSuccess", "", { version: isRTL ? toPersianDigits(targetVersion) : targetVersion }),
       });
 
       fetchHistory(selectedPrompt.prompt_type, selectedCourseId);
@@ -378,7 +364,7 @@ export default function AdminSystemPromptsPage() {
         type: "error",
         text:
           err.message ||
-          (isRTL ? "خطا در بازگردانی نسخه" : "Failed to rollback revision"),
+          (t("promptRestoreError")),
       });
     } finally {
       setRollingBack(false);
@@ -426,7 +412,7 @@ export default function AdminSystemPromptsPage() {
         <button
           type="button"
           onClick={handleBack}
-          aria-label={isRTL ? "بازگشت" : "Go back"}
+          aria-label={t("back")}
           className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white shrink-0 transition-colors cursor-pointer"
         >
           <BackIcon className="w-4 h-4" />
@@ -442,19 +428,13 @@ export default function AdminSystemPromptsPage() {
               ? isRTL
                 ? selectedPrompt.name_fa
                 : selectedPrompt.name
-              : isRTL
-              ? "مدیریت پرامپت‌ها"
-              : "Prompt Management"}
+              : t("adminPromptsManagement")}
           </h1>
 
           <p className="text-white/80 text-start text-[10px] leading-tight mt-1 truncate">
             {selectedCourse
-              ? isRTL
-                ? `درس: ${selectedCourse.title}`
-                : `Course: ${selectedCourse.title}`
-              : isRTL
-              ? "تنظیمات پیش‌فرض سراسری سامانه"
-              : "Global System Defaults"}
+              ? t("courseWithTitle", "", { title: selectedCourse.title })
+              : t("globalSystemDefaults")}
           </p>
         </div>
       </header>
@@ -468,7 +448,7 @@ export default function AdminSystemPromptsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-neutral-scale900 dark:text-neutral-scale200 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                  {isRTL ? "حوزه پیکربندی پرامپت:" : "Configuration Scope:"}
+                  {t("promptScope")}
                 </span>
 
                 <span
@@ -479,12 +459,8 @@ export default function AdminSystemPromptsPage() {
                   }`}
                 >
                   {selectedCourseId
-                    ? isRTL
-                      ? "اختصاصی درس"
-                      : "Course Level"
-                    : isRTL
-                    ? "سراسری سیستم"
-                    : "Global System"}
+                    ? t("courseSpecific")
+                    : t("globalSystem")}
                 </span>
               </div>
 
@@ -504,9 +480,7 @@ export default function AdminSystemPromptsPage() {
                     <span className="truncate">
                       {selectedCourse
                         ? selectedCourse.title
-                        : isRTL
-                        ? "🌐 پیش‌فرض سراسری سامانه (Global)"
-                        : "🌐 System Global Defaults"}
+                        : t("systemGlobalDefaults")}
                     </span>
                   </div>
                   <ChevronDown
@@ -530,16 +504,14 @@ export default function AdminSystemPromptsPage() {
                     >
                       <Globe className="w-3.5 h-3.5 text-purple-600" />
                       <span>
-                        {isRTL
-                          ? "پیش‌فرض سراسری سامانه (Global)"
-                          : "System Global Defaults"}
+                        {t("systemGlobalDefault")}
                       </span>
                     </button>
 
                     <div className="h-px bg-neutral-scale100 dark:bg-neutral-scale1000 my-1" />
 
                     <div className="px-2 py-0.5 text-[9px] font-bold text-neutral-scale500">
-                      {isRTL ? "انتخاب بر اساس درس:" : "Choose by Course:"}
+                      {t("chooseByCourse")}
                     </div>
 
                     {courses.map((c) => {
@@ -584,9 +556,7 @@ export default function AdminSystemPromptsPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={
-                  isRTL
-                    ? "جست‌وجوی عنوان یا کاربرد پرامپت..."
-                    : "Search prompts..."
+                  t("searchPromptsPlaceholder")
                 }
                 className={`w-full h-10 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder:text-neutral-scale500 focus:outline-none focus:border-primery-500 transition-colors ${
                   isRTL ? "pr-9 pl-3" : "pl-9 pr-3"
@@ -598,16 +568,12 @@ export default function AdminSystemPromptsPage() {
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200">
                 {selectedCourse
-                  ? isRTL
-                    ? `پرامپت‌های درس: ${selectedCourse.title}`
-                    : `Prompts for ${selectedCourse.title}`
-                  : isRTL
-                  ? "پرامپت‌های فعال سامانه"
-                  : "Active System Prompts"}
+                  ? t("coursePromptsTitle", "", { title: selectedCourse.title })
+                  : t("activePrompts")}
               </h2>
 
               <span className="text-[10px] text-neutral-scale500 font-medium">
-                {toPersianDigits(filteredPrompts.length)} {isRTL ? "پرامپت" : "prompts"}
+                {toPersianDigits(filteredPrompts.length)} {t("prompts")}
               </span>
             </div>
 
@@ -616,9 +582,7 @@ export default function AdminSystemPromptsPage() {
               <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-8 text-center flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-6 h-6 text-primery-600 animate-spin" />
                 <p className="text-xs text-neutral-scale600 dark:text-neutral-scale400">
-                  {isRTL
-                    ? "در حال بارگذاری پرامپت‌های سامانه..."
-                    : "Loading prompts..."}
+                  {t("fetchingPrompts")}
                 </p>
               </div>
             ) : (
@@ -661,7 +625,7 @@ export default function AdminSystemPromptsPage() {
 
                         {prompt.parameters && prompt.parameters.length > 0 && (
                           <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[9px] font-mono">
-                            {toPersianDigits(prompt.parameters.length)} {isRTL ? "پارامتر" : "params"}
+                            {toPersianDigits(prompt.parameters.length)} {t("params")}
                           </span>
                         )}
 
@@ -669,18 +633,16 @@ export default function AdminSystemPromptsPage() {
                           prompt.is_overridden ? (
                             <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-[9px] font-bold flex items-center gap-1">
                               <Sparkles className="w-2.5 h-2.5" />
-                              {isRTL ? "سفارشی درس" : "Course Custom"}
+                              {t("courseCustom")}
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-md bg-neutral-scale100 dark:bg-neutral-scale1100 text-neutral-scale600 dark:text-neutral-scale400 text-[9px]">
-                              {isRTL
-                                ? "پیش‌فرض سراسری"
-                                : "Global Default"}
+                              {t("globalDefault")}
                             </span>
                           )
                         ) : prompt.is_overridden ? (
                           <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 text-[9px] font-bold">
-                            {isRTL ? "سفارشی سامانه" : "Global Custom"}
+                            {t("globalCustom")}
                           </span>
                         ) : null}
                       </div>
@@ -698,7 +660,7 @@ export default function AdminSystemPromptsPage() {
                   <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-6 text-center">
                     <Search className="w-6 h-6 text-neutral-scale400 mx-auto mb-2" />
                     <p className="text-xs text-neutral-scale600 dark:text-neutral-scale400">
-                      {isRTL ? "پرامپتی با این مشخصات یافت نشد." : "No prompts found."}
+                      {t("noPromptsFound")}
                     </p>
                   </div>
                 )}
@@ -731,12 +693,8 @@ export default function AdminSystemPromptsPage() {
                   </div>
                   <p className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
                     {selectedCourse
-                      ? isRTL
-                        ? `پیکربندی اختصاصی درس: ${selectedCourse.title}`
-                        : `Course: ${selectedCourse.title}`
-                      : isRTL
-                      ? "پیکربندی پیش‌فرض سراسری سامانه"
-                      : "Global System Configuration"}
+                      ? t("courseCustomConfiguration", "", { title: selectedCourse.title })
+                      : t("globalSystemConfiguration")}
                   </p>
                 </div>
 
@@ -748,12 +706,8 @@ export default function AdminSystemPromptsPage() {
                   }`}
                 >
                   {selectedPrompt.is_overridden
-                    ? isRTL
-                      ? "سفارشی"
-                      : "Custom"
-                    : isRTL
-                    ? "پیش‌فرض"
-                    : "Default"}
+                    ? t("custom")
+                    : t("default")}
                 </span>
               </div>
 
@@ -762,7 +716,7 @@ export default function AdminSystemPromptsPage() {
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-neutral-scale100 dark:bg-neutral-scale1200 text-[10px] text-neutral-scale600 dark:text-neutral-scale400 font-mono overflow-x-auto">
                   <Code className="w-3 h-3 text-neutral-scale500 shrink-0" />
                   <span className="text-neutral-scale500 text-[9px] font-sans">
-                    {isRTL ? "منبع در پروژه:" : "Source file:"}
+                    {t("sourceFile")}
                   </span>
                   <span className="text-neutral-scale800 dark:text-neutral-scale200 font-bold truncate">
                     {selectedPrompt.source_file}
@@ -783,7 +737,7 @@ export default function AdminSystemPromptsPage() {
                 }`}
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>{isRTL ? "نمایش و ویرایش" : "View & Edit"}</span>
+                <span>{t("viewEdit")}</span>
               </button>
 
               <button
@@ -796,7 +750,7 @@ export default function AdminSystemPromptsPage() {
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>{isRTL ? "تاریخچه و لاگ نسخه‌ها" : "Version History"}</span>
+                <span>{t("historyAndLogs")}</span>
                 {historyItems.length > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-primery-100 dark:bg-primery-900/60 text-primery-800 dark:text-primery-200">
                     {toPersianDigits(historyItems.length)}
@@ -832,7 +786,7 @@ export default function AdminSystemPromptsPage() {
                     <div className="flex items-center gap-1.5">
                       <Eye className="w-4 h-4 text-primery-700 dark:text-primery-400" />
                       <h2 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200">
-                        {isRTL ? "دستورالعمل و پارامترهای فعال" : "Active Prompt & Parameters"}
+                        {t("activeInstructionParams")}
                       </h2>
                     </div>
 
@@ -845,13 +799,13 @@ export default function AdminSystemPromptsPage() {
                         <>
                           <CheckCheck className="w-3 h-3 text-emerald-600" />
                           <span className="text-emerald-600 font-bold">
-                            {isRTL ? "کپی شد" : "Copied"}
+                            {t("promptCopied")}
                           </span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3 h-3" />
-                          <span>{isRTL ? "کپی دستورالعمل" : "Copy"}</span>
+                          <span>{t("copyPrompt")}</span>
                         </>
                       )}
                     </button>
@@ -863,10 +817,10 @@ export default function AdminSystemPromptsPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-neutral-scale800 dark:text-neutral-scale200 flex items-center gap-1">
                           <Tag className="w-3 h-3 text-amber-500" />
-                          <span>{isRTL ? "پارامترهای ورودی این مرحله:" : "Input Parameters:"}</span>
+                          <span>{t("promptParameters")}</span>
                         </span>
                         <span className="text-[9px] text-neutral-scale500">
-                          {isRTL ? "(کلیک برای درج در ویرایشگر)" : "(Click to insert)"}
+                          {t("clickToInsert")}
                         </span>
                       </div>
 
@@ -876,7 +830,7 @@ export default function AdminSystemPromptsPage() {
                             key={param.name}
                             type="button"
                             onClick={() => insertVariable(param.name)}
-                            title={isRTL ? "افزودن این متغیر به متن" : "Insert variable"}
+                            title={t("insertVariable")}
                             className="w-full text-start p-2 rounded-lg bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 hover:border-primery-400 dark:hover:border-neutral-scale900 flex items-start gap-2 transition-colors cursor-pointer group"
                           >
                             <span className="px-1.5 py-0.5 rounded bg-primery-50 dark:bg-neutral-scale1100 text-primery-700 dark:text-primery-300 font-mono text-[9px] font-bold shrink-0 group-hover:bg-primery-600 group-hover:text-white transition-colors">
@@ -901,7 +855,7 @@ export default function AdminSystemPromptsPage() {
                   {/* Read-Only Active Prompt Text Display */}
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-neutral-scale800 dark:text-neutral-scale200">
-                      {isRTL ? "متن پرامپت فعال کنونی:" : "Current Active Prompt Text:"}
+                      {t("currentActivePromptText")}
                     </span>
                     <div className="p-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 text-xs leading-relaxed text-neutral-scale1800 dark:text-neutral-scale70 max-h-56 overflow-y-auto whitespace-pre-wrap font-sans">
                       {selectedPrompt.content}
@@ -919,19 +873,15 @@ export default function AdminSystemPromptsPage() {
                         <Info className="w-3 h-3" />
                         <span>
                           {showDefaultRef
-                            ? isRTL
-                              ? "بستن متن پیش‌فرض پایه سامانه"
-                              : "Hide default prompt"
-                            : isRTL
-                            ? "مشاهده متن پیش‌فرض پایه سامانه"
-                            : "Compare with default prompt"}
+                            ? t("closeDefaultCodeText")
+                            : t("viewDefaultCodeText")}
                         </span>
                       </button>
 
                       {showDefaultRef && (
                         <div className="mt-2 p-2.5 rounded-xl bg-neutral-scale100 dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 text-[10px] leading-relaxed text-neutral-scale600 dark:text-neutral-scale400">
                           <div className="font-bold text-neutral-scale800 dark:text-neutral-scale200 mb-1">
-                            {isRTL ? "متن پیش‌فرض پایه در کدهای سامانه:" : "System Default Content:"}
+                            {t("defaultCodePromptText")}
                           </div>
                           <pre className="whitespace-pre-wrap font-sans text-[10px]">
                             {selectedPrompt.default_content}
@@ -947,12 +897,10 @@ export default function AdminSystemPromptsPage() {
                   <div>
                     <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 flex items-center gap-1.5">
                       <Edit3 className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                      <span>{isRTL ? "ویرایش و ذخیره نسخه جدید" : "Edit & Save New Version"}</span>
+                      <span>{t("saveNewVersion")}</span>
                     </h3>
                     <p className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5">
-                      {isRTL
-                        ? "متن زیر را تغییر دهید؛ تغییرات در سابقه با شماره نسخه جدید ثبت خواهد شد:"
-                        : "Modify instructions below. Changes will be audited in version history:"}
+                      {t("modifyInstructionsBelowChangesWillBe")}
                     </p>
                   </div>
 
@@ -960,7 +908,7 @@ export default function AdminSystemPromptsPage() {
                   {selectedPrompt.parameters && selectedPrompt.parameters.length > 0 && (
                     <div className="flex flex-col gap-1">
                       <span className="text-[9px] text-neutral-scale500 font-medium">
-                        {isRTL ? "افزودن سریع متغیر به ویرایشگر:" : "Quick Insert Variables:"}
+                        {t("quickInsertVariable")}
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {selectedPrompt.parameters.map((param) => (
@@ -986,7 +934,7 @@ export default function AdminSystemPromptsPage() {
                     rows={10}
                     className="w-full min-h-[220px] resize-y rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 p-3 text-xs leading-relaxed text-neutral-scale1800 dark:text-neutral-scale70 focus:outline-none focus:border-primery-500 transition-colors"
                     placeholder={
-                      isRTL ? "متن پرامپت را وارد کنید..." : "Enter prompt instructions..."
+                      t("enterPromptInstructions")
                     }
                   />
 
@@ -994,16 +942,14 @@ export default function AdminSystemPromptsPage() {
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-neutral-scale800 dark:text-neutral-scale200 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-primery-600" />
-                      <span>{isRTL ? "شرح تغییرات (جهت پیگیری در سوابق):" : "Change Summary (for Audit Log):"}</span>
+                      <span>{t("changeDescPlaceholder")}</span>
                     </label>
                     <input
                       type="text"
                       value={changeSummary}
                       onChange={(e) => setChangeSummary(e.target.value)}
                       placeholder={
-                        isRTL
-                          ? "مثلاً: تغییر لحن به رسمی‌تر، افزایش سخت‌گیری در مصاحبه..."
-                          : "e.g., Adjusted tone, increased Bloom rigor..."
+                        t("changeDescExample")
                       }
                       className="w-full h-9 px-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder:text-neutral-scale500 focus:outline-none focus:border-primery-500 transition-colors"
                     />
@@ -1023,9 +969,11 @@ export default function AdminSystemPromptsPage() {
                         <Save className="w-4 h-4" />
                       )}
                       <span>
-                        {isRTL
-                          ? `ذخیره و ثبت نسخه جدید (v${(selectedPrompt.version || 1) + 1})`
-                          : "Save & Commit New Version"}
+                        {t("saveAndCommitVersion", "", {
+                          version: isRTL
+                            ? toPersianDigits((selectedPrompt.version || 1) + 1)
+                            : (selectedPrompt.version || 1) + 1,
+                        })}
                       </span>
                     </button>
 
@@ -1042,7 +990,7 @@ export default function AdminSystemPromptsPage() {
                           ) : (
                             <RotateCcw className="w-3.5 h-3.5" />
                           )}
-                          {isRTL ? "بازنشانی به پیش‌فرض" : "Reset to Default"}
+                          {t("resetToDefault")}
                         </button>
                       )}
 
@@ -1052,7 +1000,7 @@ export default function AdminSystemPromptsPage() {
                         className="flex-1 min-h-9 px-3 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 text-neutral-scale700 dark:text-neutral-scale200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
-                        {isRTL ? "بستن ویرایشگر" : "Close"}
+                        {t("close")}
                       </button>
                     </div>
                   </div>
@@ -1067,12 +1015,10 @@ export default function AdminSystemPromptsPage() {
                   <div>
                     <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 flex items-center gap-1.5">
                       <History className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                      <span>{isRTL ? "سوابق تغییرات و نسخه‌ها" : "Version Audit Log"}</span>
+                      <span>{t("versionAuditLog")}</span>
                     </h3>
                     <p className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5">
-                      {isRTL
-                        ? "تمام تغییرات به همراه زمان، کاربر و شرح ذخیره می‌شوند و قابلیت بازگردانی دارند:"
-                        : "Full history of changes with rollback capabilities:"}
+                      {t("versionHistoryDesc")}
                     </p>
                   </div>
 
@@ -1082,7 +1028,7 @@ export default function AdminSystemPromptsPage() {
                       fetchHistory(selectedPrompt.prompt_type, selectedCourseId)
                     }
                     className="p-1.5 rounded-lg bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1100 text-neutral-scale600 dark:text-neutral-400 hover:text-primery-700 cursor-pointer"
-                    title={isRTL ? "به‌روزرسانی تاریخچه" : "Refresh"}
+                    title={t("refresh")}
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
@@ -1092,19 +1038,17 @@ export default function AdminSystemPromptsPage() {
                   <div className="py-8 flex flex-col items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 text-primery-600 animate-spin" />
                     <p className="text-xs text-neutral-scale600 dark:text-neutral-scale400">
-                      {isRTL ? "در حال دریافت سوابق..." : "Loading audit log..."}
+                      {t("loadingAuditLog")}
                     </p>
                   </div>
                 ) : historyItems.length === 0 ? (
                   <div className="py-8 px-4 text-center flex flex-col items-center justify-center gap-2">
                     <Clock className="w-7 h-7 text-neutral-scale400" />
                     <p className="text-xs font-bold text-neutral-scale800 dark:text-neutral-scale200">
-                      {isRTL ? "هنوز سابقه‌ای ثبت نشده است" : "No revision history yet"}
+                      {t("noHistoryYet")}
                     </p>
                     <p className="text-[10px] text-neutral-scale500">
-                      {isRTL
-                        ? "به محض اولین ذخیره در ویرایشگر، نسخه اول در این بخش ثبت خواهد شد."
-                        : "Revisions will appear here once saved."}
+                      {t("firstVersionNotice")}
                     </p>
                   </div>
                 ) : (
@@ -1130,7 +1074,7 @@ export default function AdminSystemPromptsPage() {
                               </span>
                               {isCurrentVersion && (
                                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                                  {isRTL ? "نسخه فعال فعلی" : "Current Active"}
+                                  {t("currentActive")}
                                 </span>
                               )}
                             </div>
@@ -1142,9 +1086,9 @@ export default function AdminSystemPromptsPage() {
 
                           <div className="text-[10px] text-neutral-scale700 dark:text-neutral-scale300">
                             <span className="font-bold text-neutral-scale900 dark:text-neutral-scale100">
-                              {isRTL ? "شرح تغییر:" : "Summary:"}{" "}
+                              {t("changeDescription")}{" "}
                             </span>
-                            <span>{item.change_summary || (isRTL ? "بدون توضیح" : "No summary")}</span>
+                            <span>{item.change_summary || (t("noSummary"))}</span>
                           </div>
 
                           <div className="flex items-center justify-between text-[9px] text-neutral-scale500 pt-1 border-t border-neutral-scale100 dark:border-neutral-scale1100">
@@ -1166,12 +1110,8 @@ export default function AdminSystemPromptsPage() {
                                 <Eye className="w-3 h-3" />
                                 <span>
                                   {isExpanded
-                                    ? isRTL
-                                      ? "بستن متن"
-                                      : "Hide"
-                                    : isRTL
-                                    ? "مشاهده متن"
-                                    : "View Text"}
+                                    ? t("hide")
+                                    : t("viewText")}
                                 </span>
                               </button>
 
@@ -1185,7 +1125,7 @@ export default function AdminSystemPromptsPage() {
                                   className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40 flex items-center gap-1 cursor-pointer font-bold transition-colors"
                                 >
                                   <Undo2 className="w-3 h-3" />
-                                  <span>{isRTL ? "بازگردانی" : "Rollback"}</span>
+                                  <span>{t("restoreVersion")}</span>
                                 </button>
                               )}
                             </div>

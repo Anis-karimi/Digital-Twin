@@ -128,7 +128,7 @@ export const StudentsChatFeedSection = ({ lessonId }) => {
                         className={`absolute bottom-0 ${
                           isRTL ? "left-0" : "right-0"
                         } w-3 h-3 bg-emerald-500 border-2 border-white dark:border-neutral-scale1400 rounded-full shadow-sm`}
-                        title={isRTL ? "آنلاین" : "Online"}
+                        title={t("online")}
                       />
                     )}
                   </div>

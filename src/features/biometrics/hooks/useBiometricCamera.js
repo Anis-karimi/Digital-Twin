@@ -3,9 +3,11 @@
  * @description React Hook for Managing Webcam Hardware, Video Feed, and Frame Capture.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 
 export function useBiometricCamera(options = {}) {
+  const { t } = useContext(AppContext) || {};
   const {
     width = 640,
     height = 480,
@@ -112,8 +114,8 @@ export function useBiometricCamera(options = {}) {
         console.warn("Camera start failed:", err);
         const msg =
           err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
-            ? "دسترسی به دوربین توسط مرورگر مسدود شده است. لطفاً اجازه دسترسی را در مرورگر تایید فرمایید."
-            : `خطای دسترسی به دوربین: ${err.message || err}`;
+            ? (t ? t("cameraPermissionBlocked") : "Camera access was blocked by the browser. Please allow camera permissions.")
+            : (t ? t("cameraAccessErrorWithDetail", "", { detail: err.message || err }) : `Camera access error: ${err.message || err}`);
         setError(msg);
         setIsActive(false);
       }

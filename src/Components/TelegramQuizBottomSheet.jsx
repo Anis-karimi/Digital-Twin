@@ -30,9 +30,15 @@ export const TelegramQuizBottomSheet = ({
   const [resultData, setResultData] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  // Compute clean quiz title (defaults to "کوییز سیستم عامل")
-  const cleanTitle = (courseTitle || "").replace(/گفت‌وگو\s*(با)?\s*/g, "").trim();
-  const quizTitle = cleanTitle ? `کوییز ${cleanTitle}` : (t("osQuiz") || "کوییز سیستم عامل");
+  // Compute clean quiz title
+  const cleanTitle = (courseTitle || "")
+    .replace(/(گفت‌وگو\s*(با)?\s*|Chat\s*(with)?\s*)/gi, "")
+    .trim();
+  const quizTitle = cleanTitle
+    ? isRTL
+      ? `${t("quiz")} ${cleanTitle}`
+      : `${cleanTitle} ${t("quiz")}`
+    : t("osQuiz");
   const [activeTopic, setActiveTopic] = useState(cleanTitle);
 
   // Drag physics state
@@ -137,24 +143,24 @@ export const TelegramQuizBottomSheet = ({
 
           {/* Telegram TMA Navigation Bar */}
           <div className="h-[46px] px-3 flex items-center justify-between">
-            {/* Minimize / Collapse Button ("دکمه جمع شدن") */}
+            {/* Minimize / Collapse Button */}
             <button
               type="button"
               onClick={onMinimize}
-              aria-label={t("minimizeQuiz") || "کوچک کردن"}
-              title={t("minimizeQuiz") || "کوچک کردن"}
+              aria-label={t("minimizeQuiz")}
+              title={t("minimizeQuiz")}
               className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-scale1200 hover:bg-neutral-200 dark:hover:bg-neutral-scale1100 text-neutral-700 dark:text-neutral-200 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
             >
               <ChevronDown className="w-5 h-5" />
             </button>
 
-            {/* Title in Center: کوییز سیستم عامل */}
+            {/* Title in Center */}
             <div className="flex flex-col items-center justify-center min-w-0 px-2">
               <h2 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate font-vazir">
                 {quizTitle}
               </h2>
               <span className="text-[10px] text-primery-600 dark:text-sky-400 font-medium truncate">
-                {t("aiAssistant") || "هوش مصنوعی"}
+                {t("aiAssistant")}
               </span>
             </div>
 
@@ -162,8 +168,8 @@ export const TelegramQuizBottomSheet = ({
             <button
               type="button"
               onClick={handleAttemptClose}
-              aria-label={t("closeQuiz") || "بستن"}
-              title={t("closeQuiz") || "بستن"}
+              aria-label={t("closeQuiz")}
+              title={t("closeQuiz")}
               className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-scale1200 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-neutral-700 dark:text-neutral-200 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-2xs"
             >
               <X className="w-4 h-4" />
@@ -245,15 +251,14 @@ export const TelegramQuizBottomSheet = ({
                     isRTL ? "fa-title-3 font-vazir" : "en-title-3 font-inter"
                   }`}
                 >
-                  {t("exitQuizTitle") || "آیا از خروج از آزمون اطمینان دارید؟"}
+                  {t("exitQuizTitle")}
                 </h3>
                 <p
                   className={`text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed ${
                     isRTL ? "fa-caption-2 font-vazir" : "en-caption-2 font-inter"
                   }`}
                 >
-                  {t("exitQuizSubtitle") ||
-                    "پیشرفت شما در این آزمون ثبت نخواهد شد و از دست می‌رود."}
+                  {t("exitQuizSubtitle")}
                 </p>
               </div>
 
@@ -263,14 +268,14 @@ export const TelegramQuizBottomSheet = ({
                   onClick={() => setShowExitConfirm(false)}
                   className="flex-1 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-scale1200 hover:bg-neutral-200 dark:hover:bg-neutral-scale1100 text-neutral-700 dark:text-neutral-300 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
                 >
-                  {t("cancel") || "ادامه آزمون"}
+                  {t("cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmExit}
                   className="flex-1 h-10 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-sm shadow-rose-500/25"
                 >
-                  {t("confirmExit") || "خروج از آزمون"}
+                  {t("confirmExit")}
                 </button>
               </div>
             </div>

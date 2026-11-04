@@ -136,7 +136,7 @@ export const MessageBubble = ({
       console.error("Failed to play TTS audio:", err);
       setIsLoadingAudio(false);
       setIsPlaying(false);
-      setAudioError("خطا در برقراری ارتباط با سرور صوت");
+      setAudioError(t("errorConnectingAudioServer"));
     }
   };
 
@@ -297,12 +297,12 @@ export const MessageBubble = ({
             <div className="mt-2.5 flex flex-col gap-2">
               {comments.map((c, cIdx) => {
                 const rawTeacherName = (c.teacher_name || "").trim();
-                const cleanedTeacherName = (!rawTeacherName || rawTeacherName === "استاد دیجیتال" || rawTeacherName.includes("دیجیتال") || rawTeacherName === "استاد" || rawTeacherName.toLowerCase() === "teacher")
-                  ? "دکتر محمد اله بخش"
+                const cleanedTeacherName = (!rawTeacherName || rawTeacherName === "استاد دیجیتال" || rawTeacherName.includes("دیجیتال") || rawTeacherName === "استاد" || rawTeacherName.toLowerCase() === "teacher" || rawTeacherName.toLowerCase() === "digital twin")
+                  ? t("drAllahbakhsh")
                   : rawTeacherName;
-                const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر")
+                const teacherDisplayName = cleanedTeacherName.startsWith("استاد") || cleanedTeacherName.startsWith("دکتر") || cleanedTeacherName.startsWith("Dr.") || cleanedTeacherName.startsWith("Prof.")
                   ? cleanedTeacherName
-                  : `استاد ${cleanedTeacherName}`;
+                  : `${t("teacher")} ${cleanedTeacherName}`;
                 const isDeleting = deletingCommentIds.has(c.id);
                 const isUnread = Boolean(
                   isStudentViewer &&
@@ -342,7 +342,7 @@ export const MessageBubble = ({
                             </span>
                             {isUnread && (
                               <span className="text-[9px] leading-tight px-1.5 py-0.5 rounded-full bg-[#2481cc] dark:bg-[#52a2f6] text-white font-vazir font-medium shrink-0 animate-pulse">
-                                خوانده نشده
+                                {t("unread")}
                               </span>
                             )}
                           </div>
@@ -381,8 +381,8 @@ export const MessageBubble = ({
                                 handleDeleteComment(c.id);
                               }}
                               className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-500/10 dark:text-neutral-500 dark:hover:text-red-400 dark:hover:bg-red-400/15 transition-all duration-200 cursor-pointer active:scale-75 group select-none disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={t("deleteComment") || "حذف نظر"}
-                              aria-label={t("deleteComment") || "حذف نظر"}
+                              title={t("deleteComment")}
+                              aria-label={t("deleteComment")}
                             >
                               <Trash2
                                 className={`w-3 h-3 transition-transform duration-200 ${
@@ -421,12 +421,12 @@ export const MessageBubble = ({
               <div className="flex items-center justify-between text-xs border-b border-[#2481cc]/20 dark:border-[#52a2f6]/20 pb-1.5">
                 <span className="font-bold text-xs text-[#2481cc] dark:text-[#52a2f6] font-vazir truncate">
                   {(() => {
-                    const cleanName = (!teacherName || teacherName === "استاد دیجیتال" || teacherName.includes("دیجیتال") || teacherName === "استاد" || teacherName.toLowerCase() === "teacher")
-                      ? "دکتر محمد اله بخش"
+                    const cleanName = (!teacherName || teacherName === "استاد دیجیتال" || teacherName.includes("دیجیتال") || teacherName === "استاد" || teacherName.toLowerCase() === "teacher" || teacherName.toLowerCase() === "digital twin")
+                      ? t("drAllahbakhsh")
                       : teacherName;
-                    return cleanName.startsWith("استاد") || cleanName.startsWith("دکتر")
+                    return cleanName.startsWith("استاد") || cleanName.startsWith("دکتر") || cleanName.startsWith("Dr.") || cleanName.startsWith("Prof.")
                       ? cleanName
-                      : `استاد ${cleanName}`;
+                      : `${t("teacher")} ${cleanName}`;
                   })()}
                 </span>
 
@@ -451,10 +451,8 @@ export const MessageBubble = ({
                 onChange={(e) => setCommentInputText?.(e.target.value)}
                 placeholder={
                   isMine
-                    ? t("commentStudentPlaceholder") ||
-                      "توضیحات یا نکات راهنمایی خود را درباره پیام دانشجو بنویسید..."
-                    : t("commentPlaceholder") ||
-                      "توضیحات یا نکات اصلاحی خود را درباره پاسخ بات بنویسید..."
+                    ? t("commentStudentPlaceholder")
+                    : t("commentPlaceholder")
                 }
                 className="w-full resize-none text-xs sm:text-sm p-2 rounded-xl bg-white dark:bg-[#121c27] border border-[#2481cc]/30 dark:border-[#52a2f6]/30 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] font-vazir leading-relaxed"
                 onKeyDown={(e) => {
@@ -476,7 +474,7 @@ export const MessageBubble = ({
                   onClick={onCloseComment}
                   className="px-2.5 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-scale1200 rounded-lg transition-colors cursor-pointer"
                 >
-                  {t("cancelComment") || "انصراف"}
+                  {t("cancelComment")}
                 </button>
 
                 <button
@@ -491,7 +489,7 @@ export const MessageBubble = ({
                     <Check className="w-3.5 h-3.5" />
                   )}
 
-                  <span>{t("saveComment") || "ثبت نظر"}</span>
+                  <span>{t("saveComment")}</span>
                 </button>
               </div>
             </div>
@@ -554,7 +552,7 @@ export const MessageBubble = ({
               dir="rtl"
             >
               <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" />
-              <span>امکان پخش صدا برای پیام خطا وجود ندارد</span>
+              <span>{t("audioCannotPlayForError")}</span>
             </div>
           ) : audioError ? (
             <div
@@ -568,20 +566,20 @@ export const MessageBubble = ({
                 py-1
                 w-full
               "
-              dir="rtl"
+              dir={isRTL ? "rtl" : "ltr"}
             >
               <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-red-500 dark:text-red-400 font-vazir truncate">
                 <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0" />
-                <span className="truncate">خطا در اتصال به سرور</span>
+                <span className="truncate">{t("errorConnectingAudioServer")}</span>
               </div>
               <button
                 type="button"
                 onClick={handlePlayToggle}
                 className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-vazir text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors shrink-0 cursor-pointer shadow-xs active:scale-95"
-                title="تلاش مجدد"
+                title={t("retry")}
               >
                 <RotateCcw className="w-2.5 h-2.5" />
-                <span>تلاش مجدد</span>
+                <span>{t("retry")}</span>
               </button>
             </div>
           ) : (
@@ -606,8 +604,8 @@ export const MessageBubble = ({
                   transition-all
                   cursor-pointer
                 "
-                title={isPlaying ? "توقف" : "پخش صدا"}
-                aria-label={isPlaying ? "توقف" : "پخش صدا"}
+                title={isPlaying ? t("stopAudio") : t("playAudio")}
+                aria-label={isPlaying ? t("stopAudio") : t("playAudio")}
               >
                 {isLoadingAudio ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -629,7 +627,7 @@ export const MessageBubble = ({
                   cursor-pointer
                   py-0.5
                 "
-                title="کلیک برای پرش به این بخش از صدا"
+                title={t("clickToJumpAudio")}
                 onClick={(e) => {
                   e.stopPropagation();
                 }}

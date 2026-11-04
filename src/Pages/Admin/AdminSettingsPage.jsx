@@ -18,7 +18,7 @@ import { useTheme } from "@/Context/ThemeContext";
 
 export const AdminSettingsPage = () => {
   const navigate = useNavigate();
-  const { isRTL, language, toggleLanguage, logoutUser, currentUser } =
+  const { isRTL, language, setLanguage, toggleLanguage, logoutUser, currentUser, t } =
     useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
 
@@ -46,12 +46,10 @@ export const AdminSettingsPage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "تنظیمات و وضعیت سیستم" : "System Settings"}
+              {t("adminSystemSettings")}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL
-                ? "مدیریت دسترسی و پیکربندی سامانه"
-                : "Administration & Configuration"}
+              {t("systemAdminRoleDesc")}
             </p>
           </div>
         </div>
@@ -69,13 +67,11 @@ export const AdminSettingsPage = () => {
               <h2 className="text-base font-bold text-neutral-scale1800 dark:text-neutral-scale70">
                 {currentUser?.first_name
                   ? `${currentUser.first_name} ${currentUser.last_name || ""}`
-                  : isRTL
-                    ? "مدیر ارشد سامانه"
-                    : "System Administrator"}
+                  : t("systemAdminTitle")}
               </h2>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
-                <span>{isRTL ? "مدیر سامانه" : "Admin"}</span>
+                <span>{t("roleAdmin")}</span>
               </span>
             </div>
             <p className="text-xs text-start text-neutral-scale700 dark:text-neutral-scale400 font-mono mt-0.5">
@@ -87,7 +83,7 @@ export const AdminSettingsPage = () => {
         {/* Display & Language Settings */}
         <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
           <h3 className="text-xs text-start font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1">
-            {isRTL ? "تنظیمات کاربری و ظاهر" : "Appearance & Language"}
+            {t("accessManagement")}
           </h3>
 
           {/* Theme Toggle */}
@@ -102,16 +98,12 @@ export const AdminSettingsPage = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
-                  {isRTL ? "حالت پوسته" : "Theme Mode"}
+                  {t("themeMode")}
                 </span>
                 <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">
                   {isDark
-                    ? isRTL
-                      ? "تاریک"
-                      : "Dark"
-                    : isRTL
-                      ? "روشن"
-                      : "Light"}
+                    ? t("dark")
+                    : t("light")}
                 </span>
               </div>
             </div>
@@ -121,7 +113,7 @@ export const AdminSettingsPage = () => {
               onClick={toggleTheme}
               className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
             >
-              {isDark ? (isRTL ? "روشن" : "Light") : isRTL ? "تاریک" : "Dark"}
+              {isDark ? (t("light")) : t("dark")}
             </button>
           </div>
 
@@ -133,21 +125,24 @@ export const AdminSettingsPage = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 block">
-                  {isRTL ? "زبان سامانه" : "Interface Language"}
+                  {t("systemLanguage")}
                 </span>
                 <span className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400">
-                  {language === "fa" ? "فارسی" : "English"}
+                  {language === "fa" ? t("persian") : language === "ar" ? t("arabic") : t("english")}
                 </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={toggleLanguage}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white hover:bg-neutral-scale200 transition-colors cursor-pointer"
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              aria-label={t("systemLanguage")}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-scale100 dark:bg-neutral-scale1000 text-neutral-scale900 dark:text-white border border-neutral-scale200 dark:border-neutral-scale900 hover:bg-neutral-scale200 dark:hover:bg-neutral-scale900 transition-colors cursor-pointer outline-none"
             >
-              {language === "fa" ? "English" : "فارسی"}
-            </button>
+              <option value="fa">{t("persian")}</option>
+              <option value="en">{t("english")}</option>
+              <option value="ar">{t("arabic")}</option>
+            </select>
           </div>
         </section>
 
@@ -155,37 +150,37 @@ export const AdminSettingsPage = () => {
         <section className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[14px] p-3 flex flex-col gap-2.5 shadow-xs">
           <h3 className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale200 px-1 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-neutral-scale500" />
-            <span>{isRTL ? "وضعیت سرویس‌های سامانه" : "System Status"}</span>
+            <span>{t("serverStatus")}</span>
           </h3>
 
           <div className="grid grid-cols-3 gap-2">
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Server className="w-3.5 h-3.5 text-emerald-500 mb-1" />
               <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
-                {isRTL ? "سرویس اصلی" : "Main Svc"}
+                {t("coreService")}
               </span>
               <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                {isRTL ? "آنلاین" : "Online"}
+                {t("online")}
               </span>
             </div>
 
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Database className="w-3.5 h-3.5 text-emerald-500 mb-1" />
               <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
-                {isRTL ? "داده‌گاه" : "PostgreSQL"}
+                {t("mainDatabase")}
               </span>
               <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                {isRTL ? "متصل" : "Ready"}
+                {t("connected")}
               </span>
             </div>
 
             <div className="p-2 rounded-xl bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 flex flex-col items-center text-center">
               <Cpu className="w-3.5 h-3.5 text-emerald-500 mb-1" />
               <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400">
-                {isRTL ? "مدل هوش" : "AI Models"}
+                {t("aiModel")}
               </span>
               <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                {isRTL ? "فعال" : "Active"}
+                {t("activeAccount")}
               </span>
             </div>
           </div>
@@ -199,7 +194,7 @@ export const AdminSettingsPage = () => {
             className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-300 font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs text-xs"
           >
             <LogOut className="w-4 h-4" />
-            <span>{isRTL ? "خروج از حساب مدیریت" : "Sign Out"}</span>
+            <span>{t("logoutAdmin")}</span>
           </button>
         </section>
       </div>

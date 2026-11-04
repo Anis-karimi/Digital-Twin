@@ -174,7 +174,7 @@ export const StudentExams = () => {
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
-        message: "زمان برگزاری این آزمون به پایان رسیده است.",
+        message: t("examEndedNotice"),
       };
     }
 
@@ -192,7 +192,7 @@ export const StudentExams = () => {
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
-        message: "زمان برگزاری این آزمون به پایان رسیده است.",
+        message: t("examEndedNotice"),
       };
     }
 
@@ -203,11 +203,14 @@ export const StudentExams = () => {
       let waitStr = "";
       if (waitMins >= 1440) {
         const days = Math.floor(waitMins / 1440);
-        waitStr = `${days} روز دیگر`;
+        waitStr = t("inDaysText", "", { days: isRTL ? toPersianDigits(days) : days });
       } else if (waitMins >= 60) {
-        waitStr = `${Math.floor(waitMins / 60)} ساعت و ${waitMins % 60} دقیقه دیگر`;
+        waitStr = t("inHoursAndMinutesText", "", {
+          hours: isRTL ? toPersianDigits(Math.floor(waitMins / 60)) : Math.floor(waitMins / 60),
+          minutes: isRTL ? toPersianDigits(waitMins % 60) : waitMins % 60,
+        });
       } else {
-        waitStr = `${waitMins} دقیقه دیگر`;
+        waitStr = t("inMinutesText", "", { minutes: isRTL ? toPersianDigits(waitMins) : waitMins });
       }
 
       return {
@@ -217,7 +220,7 @@ export const StudentExams = () => {
         slotEnd: exam.studentSlotEnd,
         waitStr,
         remainingUntilStart,
-        message: `نوبت حضور شما هنوز فرا نرسیده است.`,
+        message: t("yourTurnNotYetNotice"),
       };
     }
 
@@ -229,7 +232,7 @@ export const StudentExams = () => {
           canEnter: true,
           slotStart: exam.studentSlotStart,
           slotEnd: exam.studentSlotEnd,
-          message: "بازه آزمون فعال است.",
+          message: t("examWindowActive"),
         };
       }
 
@@ -238,7 +241,7 @@ export const StudentExams = () => {
         canEnter: false,
         slotStart: exam.studentSlotStart,
         slotEnd: exam.studentSlotEnd,
-        message: "زمان برگزاری این آزمون به پایان رسیده است.",
+        message: t("examEndedNotice"),
       };
     }
 
@@ -246,7 +249,7 @@ export const StudentExams = () => {
     return {
       status: "current",
       canEnter: true,
-      message: "هم‌اکنون نوبت شماست!",
+      message: t("nowIsYourTurn"),
     };
   };
 
@@ -301,7 +304,7 @@ export const StudentExams = () => {
                         : String(g),
                     )
                     .filter(Boolean)
-                    .join("، ")
+                    .join(isRTL ? "، " : ", ")
                 : item.topic || item.description || item.title;
 
             mapped.push({
@@ -309,8 +312,8 @@ export const StudentExams = () => {
               assignment_id: item.assignment_id || key,
               session_id: item.session_id,
               title: item.title,
-              course: item.course || "سیستم عامل",
-              topic: topic || "مباحث آزمون",
+              course: item.course || t("operatingSystems"),
+              topic: topic || t("examTopicsDefault"),
               date:
                 item.date ||
                 item.exam_date ||
@@ -355,16 +358,16 @@ export const StudentExams = () => {
                             : String(g),
                         )
                         .filter(Boolean)
-                        .join("، ")
-                    : q.description || "مباحث آزمون";
+                        .join(isRTL ? "، " : ", ")
+                    : q.description || t("examTopicsDefault");
 
                 return {
                   id: q.quiz_id || q.id,
                   assignment_id: q.quiz_id || q.id,
                   session_id: null,
                   title: q.title,
-                  course: "سیستم عامل",
-                  topic: topic || "مباحث آزمون",
+                  course: t("operatingSystems"),
+                  topic: topic || t("examTopicsDefault"),
                   date:
                     q.exam_date ||
                     (q.start_at
@@ -536,7 +539,7 @@ export const StudentExams = () => {
 
     const timing = checkSlotTiming(exam);
     if (timing.status === "passed" || exam.status === "expired" || exam.status === "passed") {
-      setTurnWarning("زمان برگزاری این آزمون به پایان رسیده است.");
+      setTurnWarning(t("examEndedNotice"));
       return;
     }
 
@@ -547,9 +550,7 @@ export const StudentExams = () => {
           returnTo: `/StudentExam/${targetId}`,
           exam,
           reason: "biometrics_required",
-          message: isRTL
-            ? "جهت ورود به آزمون، احراز هویت چهره و نگاه الزامی است."
-            : "Biometric identity verification is required before entering the exam."
+          message: t("biometricsRequiredNotice")
         }
       });
       return;
@@ -582,7 +583,7 @@ export const StudentExams = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
             <ArrowLeft
@@ -599,7 +600,7 @@ export const StudentExams = () => {
                 : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
-            {isRTL ? "آزمون‌ها" : "Exams"}
+            {t("exams")}
           </h1>
         </div>
       </header>
@@ -622,19 +623,17 @@ export const StudentExams = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-bold font-vazir text-amber-800 dark:text-amber-300">
-                  {isRTL ? "احراز هویت بیومتریک الزامی است" : "Biometric Verification Required"}
+                  {t("biometricsRequired")}
                 </h4>
                 <p className="text-[11px] font-vazir text-amber-700/90 dark:text-amber-300/80 mt-0.5 leading-relaxed">
-                  {isRTL
-                    ? "پیش از شرکت در آزمون، تکمیل مراحل ثبت چهره، کالیبراسیون نگاه و حالت خنثی الزامی است."
-                    : "Face enrollment and gaze calibration must be completed before entering any exam."}
+                  {t("biometricsEnrollRequiredPopup")}
                 </p>
                 <button
                   type="button"
                   onClick={() => navigate("/StudentSettings/Biometrics", { state: { reason: "biometrics_required" } })}
                   className="mt-2 h-7 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 active:scale-95 text-white text-[11px] font-bold font-vazir flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                 >
-                  <span>{isRTL ? "تکمیل احراز هویت" : "Complete Verification"}</span>
+                  <span>{t("completeBiometrics")}</span>
                   <ArrowLeft className={`w-3 h-3 ${isRTL ? "" : "rotate-180"}`} />
                 </button>
               </div>
@@ -654,7 +653,7 @@ export const StudentExams = () => {
                         : "en-body-medium font-inter text-left"
                     }`}
                   >
-                    {isRTL ? "آزمون‌های من" : "My Exams"}
+                    {t("myExams")}
                   </p>
 
                   <span className="text-[11px] font-vazir font-semibold px-2 py-0.5 rounded-full bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale300">
@@ -679,7 +678,7 @@ export const StudentExams = () => {
                       className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
                     >
                       <Filter className="w-3.5 h-3.5" />
-                      <span>{isRTL ? "فیلتر" : "Filter"}</span>
+                      <span>{t("filter")}</span>
 
                       {filterStatus !== "all" && (
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400" />
@@ -707,7 +706,7 @@ export const StudentExams = () => {
                             }`}
                           >
                             <span>
-                              {isRTL ? "همه وضعیت‌ها" : "All statuses"}
+                              {t("allStatuses")}
                             </span>
 
                             {filterStatus === "all" && (
@@ -731,7 +730,7 @@ export const StudentExams = () => {
                             <span className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-success-500" />
                               <span>
-                                {isRTL ? "در حال برگزاری (سبز)" : "Active"}
+                                {t("inProgressGreen")}
                               </span>
                             </span>
 
@@ -756,7 +755,7 @@ export const StudentExams = () => {
                             <span className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-primery-500" />
                               <span>
-                                {isRTL ? "شروع نشده (آبی)" : "Upcoming"}
+                                {t("notStartedBlue")}
                               </span>
                             </span>
 
@@ -781,7 +780,7 @@ export const StudentExams = () => {
                             <span className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-neutral-scale700" />
                               <span>
-                                {isRTL ? "پایان یافته (خاکستری)" : "Ended"}
+                                {t("finishedGray")}
                               </span>
                             </span>
 
@@ -807,16 +806,10 @@ export const StudentExams = () => {
                       <ArrowUpDown className="w-3.5 h-3.5" />
                       <span>
                         {sortOrder === "date_desc"
-                          ? isRTL
-                            ? "جدیدترین تاریخ"
-                            : "Newest date"
+                          ? t("newestDate")
                           : sortOrder === "date_asc"
-                            ? isRTL
-                              ? "نزدیک‌ترین تاریخ"
-                              : "Earliest date"
-                            : isRTL
-                              ? "عنوان آزمون"
-                              : "Title"}
+                            ? t("nearestDate")
+                            : t("examTitle")}
                       </span>
                     </button>
 
@@ -837,7 +830,7 @@ export const StudentExams = () => {
                             className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
-                              {isRTL ? "جدیدترین تاریخ" : "Newest date"}
+                              {t("newestDate")}
                             </span>
 
                             {sortOrder === "date_desc" && (
@@ -855,7 +848,7 @@ export const StudentExams = () => {
                             className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
-                              {isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}
+                              {t("nearestDate")}
                             </span>
 
                             {sortOrder === "date_asc" && (
@@ -873,7 +866,7 @@ export const StudentExams = () => {
                             className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                           >
                             <span>
-                              {isRTL ? "عنوان آزمون (الفبایی)" : "Title"}
+                              {t("alphabeticalTitle")}
                             </span>
 
                             {sortOrder === "title" && (
@@ -902,23 +895,17 @@ export const StudentExams = () => {
                       >
                         <span className="text-[10px] font-vazir font-medium">
                           {filterStatus === "active"
-                            ? isRTL
-                              ? "در حال برگزاری"
-                              : "Active"
+                            ? t("inProgress")
                             : filterStatus === "upcoming"
-                              ? isRTL
-                                ? "شروع نشده"
-                                : "Upcoming"
-                              : isRTL
-                                ? "پایان یافته"
-                                : "Ended"}
+                              ? t("notStarted")
+                              : t("finished")}
                         </span>
 
                         <button
                           type="button"
                           onClick={() => setFilterStatus("all")}
                           className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primery-200 dark:hover:bg-primery-800 cursor-pointer transition-colors"
-                          aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
+                          aria-label={t("removeFilter")}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -936,7 +923,7 @@ export const StudentExams = () => {
                   <div className="w-6 h-6 border-2 border-primery-700 border-t-transparent rounded-full animate-spin" />
 
                   <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale300">
-                    {isRTL ? "در حال بارگذاری آزمون‌ها..." : "Loading exams..."}
+                    {t("loadingExams")}
                   </span>
                 </div>
               ) : displayedExams.length === 0 ? (
@@ -945,12 +932,8 @@ export const StudentExams = () => {
 
                   <span className="text-xs font-vazir text-neutral-500 dark:text-neutral-400">
                     {filterStatus !== "all"
-                      ? isRTL
-                        ? "هیچ آزمونی با این وضعیت یافت نشد."
-                        : "No exams match this filter."
-                      : isRTL
-                        ? "در حال حاضر هیچ آزمونی برای شما تعریف نشده است."
-                        : "No exams currently assigned to you."}
+                      ? t("noExamsMatchStatus")
+                      : t("noExamsAssigned")}
                   </span>
                 </div>
               ) : (
@@ -1045,10 +1028,10 @@ export const StudentExams = () => {
                             </span>
 
                             <span
-                              dir="rtl"
-                              className="fa-caption-1 font-vazir truncate text-neutral-scale1000 dark:text-neutral-scale300 text-right"
+                              dir={isRTL ? "rtl" : "ltr"}
+                              className="fa-caption-1 font-vazir truncate text-neutral-scale1000 dark:text-neutral-scale300"
                             >
-                              {exam.course || "سیستم عامل"}
+                              {exam.course || t("operatingSystems")}
                             </span>
                           </div>
                         </div>
@@ -1089,14 +1072,14 @@ export const StudentExams = () => {
 
                             <span className="fa-caption-1 font-vazir text-[11px] font-medium">
                               {isCompleted
-                                ? "تکمیل شده"
+                                ? t("statusCompleted")
                                 : isPassed
-                                  ? "پایان یافته"
+                                  ? t("finished")
                                     : isReadyToStart
-                                      ? "آماده شروع"
+                                      ? t("examReadyToStart")
                                       : isUpcoming
-                                        ? "در انتظار برگزاری"
-                                        : "تعریف شده"}
+                                        ? t("statusUpcoming")
+                                        : t("statusDefined")}
                             </span>
                           </div>
                         </div>
@@ -1121,7 +1104,7 @@ export const StudentExams = () => {
                       {/* Topic */}
                       <div className="flex items-start gap-[5px] text-xs font-vazir">
                         <span className="shrink-0 text-neutral-scale1200 dark:text-neutral-scale400 font-medium">
-                          {isRTL ? "مباحث آزمون:" : "Topics:"}
+                          {t("topics")}
                         </span>
 
                         <span
@@ -1147,12 +1130,8 @@ export const StudentExams = () => {
 
                           <span>
                             {exam.duration
-                              ? isRTL
-                                ? `${toPersianDigits(exam.duration)} دقیقه`
-                                : `${exam.duration} min`
-                              : isRTL
-                                ? "۲۰ دقیقه"
-                                : "20 min"}
+                              ? t("minutesCountText", "", { count: isRTL ? toPersianDigits(exam.duration) : exam.duration })
+                              : t("examDurationMinutes")}
                           </span>
                         </div>
                       </div>
@@ -1165,12 +1144,12 @@ export const StudentExams = () => {
                             <Clock3 className="w-3 h-3 text-[#2481cc]" />
 
                             <span>
-                              {isRTL ? "بازه کلی آزمون:" : "Overall Window:"}
+                              {t("overallExamInterval")}
                             </span>
                           </span>
 
-                          <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                            {toPersianDigits(exam.windowStart || "10:00")} تا{" "}
+                          <span className="font-semibold text-neutral-800 dark:text-neutral-200 dir-ltr inline-block">
+                            {toPersianDigits(exam.windowStart || "10:00")} -{" "}
                             {toPersianDigits(exam.windowEnd || "14:00")}
                           </span>
                         </div>
@@ -1182,24 +1161,20 @@ export const StudentExams = () => {
 
                             <span>
                               {isReadyToStart
-                                ? isRTL
-                                  ? "وضعیت جلسه:"
-                                  : "Session Status:"
-                                : isRTL
-                                  ? "نوبت حضور شما:"
-                                  : "Your Slot:"}
+                                ? t("sessionStatusLabel")
+                                : t("yourSlotTime")}
                             </span>
                           </span>
 
                           <span className="font-bold text-xs text-emerald-800 dark:text-emerald-300">
                             {isReadyToStart ? (
                               <span className="text-green-600 dark:text-green-400 font-semibold">
-                                {isRTL ? "آماده شروع" : "Ready to Start"}
+                                {t("examReadyToStart")}
                               </span>
                             ) : exam.studentSlotStart && exam.studentSlotEnd ? (
-                              `${toPersianDigits(
-                                exam.studentSlotStart,
-                              )} تا ${toPersianDigits(exam.studentSlotEnd)}`
+                              <span className="dir-ltr inline-block">
+                                {toPersianDigits(exam.studentSlotStart)} - {toPersianDigits(exam.studentSlotEnd)}
+                              </span>
                             ) : (
                               <span>
                                 {toPersianDigits(exam.windowStart || "10:00")}
@@ -1221,9 +1196,7 @@ export const StudentExams = () => {
                             <Clock3 className="w-3.5 h-3.5" />
 
                             <span>
-                              {isRTL
-                                ? "زمان‌بندی و تغییر نوبت حضور"
-                                : "Change Time Slot"}
+                              {t("scheduleAndChangeSlot")}
                             </span>
                           </button>
                         )}
@@ -1305,16 +1278,14 @@ export const StudentExams = () => {
                             <BarChart3 className="!w-[14px] !h-[14px]" />
 
                             <span>
-                              {isRTL
-                                ? "مشاهده کارنامه و نتیجه"
-                                : "View Result & Report"}
+                              {t("viewScoreAndResult")}
                             </span>
                           </>
                         ) : isUpcoming ? (
                           <>
                             <Clock3 className="!w-[14px] !h-[14px]" />
 
-                            <span>{isRTL ? "شروع آزمون" : "Start Exam"}</span>
+                            <span>{t("startExam")}</span>
 
                             <span
                               dir="ltr"
@@ -1333,23 +1304,21 @@ export const StudentExams = () => {
                           <>
                             <Play className="!w-[14px] !h-[14px]" />
 
-                            <span>{isRTL ? "شروع آزمون" : "Start Exam"}</span>
+                            <span>{t("startExam")}</span>
                           </>
                         ) : isPassed ? (
                           <>
                             <AlertCircle className="!w-[14px] !h-[14px]" />
 
                             <span>
-                              {isRTL
-                                ? "زمان برگزاری به پایان رسیده"
-                                : "Exam Ended"}
+                              {t("examTimeEnded")}
                             </span>
                           </>
                         ) : (
                           <>
                             <Play className="!w-[14px] !h-[14px]" />
 
-                            <span>{isRTL ? "شروع آزمون" : "Start Exam"}</span>
+                            <span>{t("startExam")}</span>
                           </>
                         )}
                       </button>
@@ -1371,7 +1340,7 @@ export const StudentExams = () => {
             </div>
 
             <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-              {isRTL ? "نوبت حضور در آزمون" : "Exam Slot Notice"}
+              {t("examSlotNotice")}
             </h3>
 
             <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed px-1">
@@ -1383,7 +1352,7 @@ export const StudentExams = () => {
               onClick={() => setTurnWarning("")}
               className="w-full py-2.5 mt-2 rounded-xl bg-primery-700 hover:bg-primery-800 text-white text-xs font-semibold cursor-pointer transition-colors shadow-md shadow-primery-700/25"
             >
-              {isRTL ? "متوجه شدم" : "Got it"}
+              {t("understood")}
             </button>
           </div>
         </div>

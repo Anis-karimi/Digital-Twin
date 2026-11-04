@@ -114,9 +114,7 @@ export const StudentExplore = () => {
         setJoinedCourseIds(updatedJoined);
         localStorage.setItem("student_joined_courses", JSON.stringify(updatedJoined));
         showToast(
-          isRTL
-            ? `شما با موفقیت در درس «${course.titleFa || course.title}» عضو شدید!`
-            : `Successfully enrolled in ${course.title}!`,
+          t("enrolledCourseSuccess", { course: course.titleFa || course.title }),
           "success"
         );
       } else {
@@ -124,9 +122,7 @@ export const StudentExplore = () => {
         setPendingRequestIds(updatedPending);
         localStorage.setItem("student_pending_requests", JSON.stringify(updatedPending));
         showToast(
-          isRTL
-            ? `درخواست عضویت در «${course.titleFa || course.title}» برای استاد ارسال شد و در انتظار تأیید است.`
-            : `Join request sent to the instructor for ${course.title}.`,
+          t("joinRequestSentSuccess", { course: course.titleFa || course.title }),
           "info"
         );
       }
@@ -136,9 +132,7 @@ export const StudentExplore = () => {
       setPendingRequestIds(updatedPending);
       localStorage.setItem("student_pending_requests", JSON.stringify(updatedPending));
       showToast(
-        isRTL
-          ? "درخواست عضویت شما برای استاد ارسال شد و در انتظار تأیید است."
-          : "Join request submitted.",
+        t("enrollmentSentWaitingApproval"),
         "info"
       );
     } finally {
@@ -217,12 +211,12 @@ export const StudentExplore = () => {
   const tabs = [
     {
       id: "all",
-      label: isRTL ? "همه دروس" : "All Courses",
+      label: t("allCoursesTab"),
       count: stats.total,
     },
     {
       id: "my_courses",
-      label: isRTL ? "دروس من" : "My Courses",
+      label: t("myCoursesTab"),
       count: stats.my,
     },
   ];
@@ -258,7 +252,7 @@ export const StudentExplore = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0 active:scale-95 transition-transform"
           >
             <BackIcon className="!w-6 !h-6 text-neutral-scale70" />
@@ -269,7 +263,7 @@ export const StudentExplore = () => {
               isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
-            {isRTL ? "اکسپلور و کاوش دروس" : "Explore Courses"}
+            {t("exploreCourses")}
           </h1>
         </div>
       </header>
@@ -297,7 +291,7 @@ export const StudentExplore = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isRTL ? "جستجوی نام درس، استاد، توضیحات..." : "Search courses..."}
+              placeholder={t("searchCoursesPlaceholder")}
               dir={isRTL ? "rtl" : "ltr"}
               className="flex-1 min-w-0 bg-transparent outline-none border-none text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder:text-neutral-scale900 dark:placeholder:text-neutral-scale500 font-vazir"
             />
@@ -306,7 +300,7 @@ export const StudentExplore = () => {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                aria-label={isRTL ? "پاک کردن جستجو" : "Clear search"}
+                aria-label={t("clearSearch")}
                 className="w-5 h-5 flex items-center justify-center rounded-full text-neutral-scale900 hover:text-neutral-scale1800 dark:text-neutral-scale400 dark:hover:text-neutral-scale100 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1100"
               >
                 <X className="!w-3.5 !h-3.5" />
@@ -357,9 +351,9 @@ export const StudentExplore = () => {
                   (courseIdStr === "c0000000-0000-4000-8000-000000000001" && joinedCourseIds.includes("os"));
                 const isPending = pendingRequestIds.includes(courseIdStr);
                 const isLoadingAction = actionLoadingId === courseIdStr;
-                const displayTitle = course.titleFa || course.title || "سیستم عامل";
+                const displayTitle = course.titleFa || course.title || t("operatingSystems");
                 const displayDesc =
-                  course.description || course.preview || (isRTL ? "بدون توضیحات" : "No description");
+                  course.description || course.preview || t("noDescription");
 
                 return (
                   <article
@@ -412,13 +406,13 @@ export const StudentExplore = () => {
                           onClick={() => handleEnterCourse(course)}
                           className="h-8 px-3 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
                         >
-                          <span>{isRTL ? "مشاهده درس" : "View"}</span>
+                          <span>{t("viewCourse")}</span>
                           <ForwardIcon className="w-3.5 h-3.5" />
                         </button>
                       ) : isPending ? (
                         <span className="h-8 px-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-vazir text-[11px] font-medium flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 animate-pulse" />
-                          <span>{isRTL ? "در انتظار تأیید" : "Pending"}</span>
+                          <span>{t("enrollmentPending")}</span>
                         </span>
                       ) : (
                         <button
@@ -428,7 +422,7 @@ export const StudentExplore = () => {
                           className="h-8 px-3 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
                           <UserPlus className="w-3.5 h-3.5" />
-                          <span>{isRTL ? "درخواست عضویت" : "Request Join"}</span>
+                          <span>{t("requestEnrollment")}</span>
                         </button>
                       )}
                     </div>
@@ -445,22 +439,14 @@ export const StudentExplore = () => {
 
               <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
                 {searchQuery
-                  ? isRTL
-                    ? "درسی با این مشخصات یافت نشد"
-                    : "No matching courses found"
-                  : isRTL
-                    ? "درسی در این دسته‌بندی وجود ندارد"
-                    : "No courses in this category"}
+                  ? t("noCoursesFoundQuery")
+                  : t("noCoursesInCategory")}
               </h4>
 
               <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
                 {searchQuery
-                  ? isRTL
-                    ? "عبارت دیگری را جستجو کنید یا فیلتر دسته‌بندی را تغییر دهید."
-                    : "Try searching with a different keyword."
-                  : isRTL
-                    ? "می‌توانید از تب «همه دروس» برای دیدن سایر درس‌ها استفاده کنید."
-                    : "Select 'All' to browse all courses."}
+                  ? t("tryAnotherSearch")
+                  : t("useAllCoursesTab")}
               </p>
 
               {searchQuery && (
@@ -469,7 +455,7 @@ export const StudentExplore = () => {
                   onClick={() => setSearchQuery("")}
                   className="mt-3 px-3 py-1.5 rounded-lg bg-neutral-scale200 dark:bg-neutral-scale1100 text-xs font-vazir text-neutral-scale1600 dark:text-neutral-scale100 hover:bg-neutral-scale300 cursor-pointer"
                 >
-                  {isRTL ? "پاک کردن فیلتر جستجو" : "Clear Search"}
+                  {t("clearSearchFilter")}
                 </button>
               )}
             </div>

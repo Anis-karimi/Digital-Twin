@@ -9,7 +9,7 @@ export const ExamsNavBar = ({
   onTabChange,
   counts = { active: 0, past: 0, all: 0 },
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const containerRef = useRef(null);
   const tablistRef = useRef(null);
   const tabsRef = useRef({});
@@ -17,20 +17,17 @@ export const ExamsNavBar = ({
   const items = [
     {
       id: "active",
-      labelFa: "آزمون‌های فعال",
-      labelEn: "Active Exams",
+      label: t("activeExams"),
       count: counts?.active ?? 0,
     },
     {
       id: "past",
-      labelFa: "آزمون‌های گذشته",
-      labelEn: "Past Exams",
+      label: t("pastExams"),
       count: counts?.past ?? 0,
     },
     {
       id: "all",
-      labelFa: "همه آزمون‌ها",
-      labelEn: "All Exams",
+      label: t("allExams"),
       count: counts?.all ?? 0,
     },
   ];
@@ -248,7 +245,7 @@ export const ExamsNavBar = ({
 
   return (
     <nav
-      aria-label={isRTL ? "دسته‌بندی آزمون‌ها" : "Exams Navigation"}
+      aria-label={t("examsCategory")}
       dir={isRTL ? "rtl" : "ltr"}
       className="flex w-full items-center px-3.5 pt-2 pb-1.5 z-20 shrink-0 swiper-no-swiping"
     >
@@ -286,7 +283,7 @@ export const ExamsNavBar = ({
 
           {items.map((item) => {
             const isActive = activeTab === item.id;
-            const displayLabel = isRTL ? item.labelFa : item.labelEn;
+            const displayLabel = item.label;
             const countDisplay = isRTL
               ? toPersianDigits(item.count > 99 ? "+99" : item.count)
               : item.count > 99

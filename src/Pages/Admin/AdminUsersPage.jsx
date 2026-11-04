@@ -24,7 +24,7 @@ import { adminApi } from "@/api";
 import { toPersianDigits } from "@/utils/dateUtils";
 
 export const AdminUsersPage = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
 
   const [users, setUsers] = useState([]);
@@ -82,14 +82,14 @@ export const AdminUsersPage = () => {
     switch (userType?.toUpperCase()) {
       case "ADMIN":
         return {
-          label: isRTL ? "مدیر سامانه" : "Administrator",
+          label: t("roleAdmin"),
           icon: Shield,
           colorClass:
             "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/40",
         };
       case "TEACHER":
         return {
-          label: isRTL ? "استاد" : "Instructor",
+          label: t("roleTeacher"),
           icon: School,
           colorClass:
             "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/40",
@@ -97,7 +97,7 @@ export const AdminUsersPage = () => {
       case "STUDENT":
       default:
         return {
-          label: isRTL ? "دانشجو" : "Student",
+          label: t("roleStudent"),
           icon: GraduationCap,
           colorClass:
             "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40",
@@ -111,15 +111,15 @@ export const AdminUsersPage = () => {
 
     const trimmedUsername = formData.username.trim();
     if (!trimmedUsername) {
-      setFormError(isRTL ? "لطفاً نام کاربری را وارد کنید." : "Please enter a username.");
+      setFormError(t("usernameRequired"));
       return;
     }
     if (trimmedUsername.includes(" ")) {
-      setFormError(isRTL ? "نام کاربری نمی‌تواند شامل فاصله باشد." : "Username cannot contain spaces.");
+      setFormError(t("usernameNoSpaces"));
       return;
     }
     if (!formData.password || formData.password.length < 4) {
-      setFormError(isRTL ? "رمز عبور باید حداقل ۴ کاراکتر باشد." : "Password must be at least 4 characters.");
+      setFormError(t("passwordMinLength"));
       return;
     }
 
@@ -149,15 +149,13 @@ export const AdminUsersPage = () => {
       });
       setActionMessage({
         type: "success",
-        text: isRTL
-          ? `کاربر «${newUser.full_name || newUser.username}» با موفقیت افزوده شد.`
-          : `User "${newUser.full_name || newUser.username}" created successfully.`,
+        text: t("userCreatedSuccess", "", { name: newUser.full_name || newUser.username }),
       });
       setTimeout(() => setActionMessage(null), 4000);
     } catch (err) {
       console.error("Create user failed:", err);
       setFormError(
-        err?.message || (isRTL ? "خطا در ایجاد کاربر. لطفاً مجدداً تلاش کنید." : "Failed to create user.")
+        err?.message || (t("userCreateError"))
       );
     } finally {
       setSubmitting(false);
@@ -174,20 +172,17 @@ export const AdminUsersPage = () => {
       );
       setActionMessage({
         type: "success",
-        text: isRTL
-          ? `وضعیت کاربر «${user.full_name || user.username}» به ${
-              updated.is_active ? "فعال" : "غیرفعال"
-            } تغییر کرد.`
-          : `User "${user.full_name || user.username}" is now ${
-              updated.is_active ? "Active" : "Inactive"
-            }.`,
+        text: t("userStatusChangedSuccess", "", {
+          name: user.full_name || user.username,
+          status: updated.is_active ? t("activeAccount") : t("inactiveAccount"),
+        }),
       });
       setTimeout(() => setActionMessage(null), 3000);
     } catch (err) {
       console.error("Toggle status error:", err);
       setActionMessage({
         type: "error",
-        text: isRTL ? "خطا در تغییر وضعیت کاربر." : "Failed to change user status.",
+        text: t("userStatusChangeError"),
       });
       setTimeout(() => setActionMessage(null), 3000);
     } finally {
@@ -212,10 +207,10 @@ export const AdminUsersPage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "مدیریت کاربران" : "Users Management"}
+              {t("adminUsers")}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? `${toPersianDigits(totalCount)} کاربر ثبت شده` : `${totalCount} registered users`}
+              {t("registeredUsersCount", "", { count: isRTL ? toPersianDigits(totalCount) : totalCount })}
             </p>
           </div>
         </div>
@@ -231,7 +226,7 @@ export const AdminUsersPage = () => {
             className="h-7 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 flex items-center gap-1 text-white text-[10px] font-bold shadow-xs transition-all cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>{isRTL ? "کاربر جدید" : "New User"}</span>
+            <span>{t("newUser")}</span>
           </button>
 
           <button
@@ -278,7 +273,7 @@ export const AdminUsersPage = () => {
             }`}
           >
             <span className="text-sm font-bold">{isRTL ? toPersianDigits(totalCount) : totalCount}</span>
-            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "همه" : "All"}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{t("all")}</span>
           </button>
 
           <button
@@ -291,7 +286,7 @@ export const AdminUsersPage = () => {
             }`}
           >
             <span className="text-sm font-bold">{isRTL ? toPersianDigits(studentsCount) : studentsCount}</span>
-            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "دانشجو" : "Student"}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{t("roleStudent")}</span>
           </button>
 
           <button
@@ -304,7 +299,7 @@ export const AdminUsersPage = () => {
             }`}
           >
             <span className="text-sm font-bold">{isRTL ? toPersianDigits(teachersCount) : teachersCount}</span>
-            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "استاد" : "Teacher"}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{t("roleTeacher")}</span>
           </button>
 
           <button
@@ -317,7 +312,7 @@ export const AdminUsersPage = () => {
             }`}
           >
             <span className="text-sm font-bold">{isRTL ? toPersianDigits(adminsCount) : adminsCount}</span>
-            <span className="text-[9px] mt-0.5 opacity-80">{isRTL ? "مدیر" : "Admin"}</span>
+            <span className="text-[9px] mt-0.5 opacity-80">{t("admin")}</span>
           </button>
         </section>
 
@@ -333,7 +328,7 @@ export const AdminUsersPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isRTL ? "جستجوی کاربر یا نام کاربری..." : "Search users..."}
+              placeholder={t("searchUsers")}
               className={`w-full bg-white dark:bg-neutral-scale1200 rounded-lg py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale500 focus:outline-none focus:border-primery-600 transition-colors ${
                 isRTL ? "pr-8 pl-2.5 text-right" : "pl-8 pr-2.5 text-left"
               }`}
@@ -347,14 +342,14 @@ export const AdminUsersPage = () => {
             <div className="w-full py-12 flex flex-col items-center justify-center gap-2">
               <div className="w-7 h-7 border-2 border-primery-600 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400">
-                {isRTL ? "در حال دریافت کاربران..." : "Loading users..."}
+                {t("fetchingUsers")}
               </p>
             </div>
           ) : users.length === 0 ? (
             <div className="bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-6 text-center flex flex-col items-center justify-center gap-2.5">
               <Users className="w-8 h-8 text-neutral-scale400" />
               <p className="text-xs font-bold text-neutral-scale700 dark:text-neutral-scale300">
-                {isRTL ? "کاربری با این مشخصات یافت نشد." : "No users found."}
+                {t("noUsersFound")}
               </p>
               <button
                 type="button"
@@ -365,7 +360,7 @@ export const AdminUsersPage = () => {
                 className="mt-1 px-3 py-1.5 rounded-lg bg-primery-700 hover:bg-primery-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>{isRTL ? "افزودن کاربر جدید" : "Create New User"}</span>
+                <span>{t("addUser")}</span>
               </button>
             </div>
           ) : (
@@ -417,11 +412,9 @@ export const AdminUsersPage = () => {
                       disabled={isUpdatingStatus}
                       onClick={() => handleToggleStatus(user)}
                       title={
-                        isRTL
-                          ? user.is_active
-                            ? "کلیک برای غیرفعال‌سازی حساب"
-                            : "کلیک برای فعال‌سازی حساب"
-                          : "Click to toggle account status"
+                        user.is_active
+                          ? t("clickToDeactivate")
+                          : t("clickToActivate")
                       }
                       className="transition-transform active:scale-95 cursor-pointer disabled:opacity-60"
                     >
@@ -430,12 +423,12 @@ export const AdminUsersPage = () => {
                       ) : user.is_active ? (
                         <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/40">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          <span>{isRTL ? "فعال" : "Active"}</span>
+                          <span>{t("activeAccount")}</span>
                         </span>
                       ) : (
                         <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-neutral-scale100 hover:bg-neutral-scale200 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 text-neutral-scale600 dark:text-neutral-scale400 flex items-center gap-1 border border-neutral-scale200 dark:border-neutral-scale1000">
                           <XCircle className="w-2.5 h-2.5" />
-                          <span>{isRTL ? "غیرفعال" : "Inactive"}</span>
+                          <span>{t("inactiveAccount")}</span>
                         </span>
                       )}
                     </button>
@@ -462,10 +455,10 @@ export const AdminUsersPage = () => {
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-xs font-bold leading-tight truncate">
-                    {isRTL ? "افزودن کاربر جدید" : "Create New User"}
+                    {t("addUser")}
                   </h3>
                   <p className="text-[9px] text-white/70 leading-tight truncate">
-                    {isRTL ? "تعریف دسترسی و حساب کاربری" : "Define credentials and role"}
+                    {t("defineCredentialsAndRole")}
                   </p>
                 </div>
               </div>
@@ -490,7 +483,7 @@ export const AdminUsersPage = () => {
               {/* Role Selector Chips */}
               <div>
                 <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                  {isRTL ? "نقش کاربری *" : "User Role *"}
+                  {t("userRole")}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
@@ -503,7 +496,7 @@ export const AdminUsersPage = () => {
                     }`}
                   >
                     <GraduationCap className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold">{isRTL ? "دانشجو" : "Student"}</span>
+                    <span className="text-[10px] font-bold">{t("roleStudent")}</span>
                   </button>
 
                   <button
@@ -516,7 +509,7 @@ export const AdminUsersPage = () => {
                     }`}
                   >
                     <School className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold">{isRTL ? "استاد" : "Teacher"}</span>
+                    <span className="text-[10px] font-bold">{t("roleTeacher")}</span>
                   </button>
 
                   <button
@@ -529,7 +522,7 @@ export const AdminUsersPage = () => {
                     }`}
                   >
                     <Shield className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold">{isRTL ? "مدیر" : "Admin"}</span>
+                    <span className="text-[10px] font-bold">{t("admin")}</span>
                   </button>
                 </div>
               </div>
@@ -537,7 +530,7 @@ export const AdminUsersPage = () => {
               {/* Username */}
               <div>
                 <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                  {isRTL ? "نام کاربری (یکتا) *" : "Username (Unique) *"}
+                  {t("username")}
                 </label>
                 <div className="relative">
                   <span
@@ -564,7 +557,7 @@ export const AdminUsersPage = () => {
               {/* Password */}
               <div>
                 <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                  {isRTL ? "رمز عبور *" : "Password *"}
+                  {t("password")}
                 </label>
                 <div className="relative">
                   <input
@@ -590,25 +583,25 @@ export const AdminUsersPage = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                    {isRTL ? "نام" : "First Name"}
+                    {t("userFirstNameLabel")}
                   </label>
                   <input
                     type="text"
                     value={formData.first_name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, first_name: e.target.value }))}
-                    placeholder={isRTL ? "مثال: علی" : "First name"}
+                    placeholder={t("userExampleFirstName")}
                     className="w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-lg py-1.5 px-2.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 focus:outline-none focus:border-primery-600 transition-colors"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                    {isRTL ? "نام خانوادگی" : "Last Name"}
+                    {t("userLastNameLabel")}
                   </label>
                   <input
                     type="text"
                     value={formData.last_name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, last_name: e.target.value }))}
-                    placeholder={isRTL ? "مثال: احمدی" : "Last name"}
+                    placeholder={t("userExampleLastName")}
                     className="w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-lg py-1.5 px-2.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 focus:outline-none focus:border-primery-600 transition-colors"
                   />
                 </div>
@@ -617,13 +610,13 @@ export const AdminUsersPage = () => {
               {/* Bio / Description */}
               <div>
                 <label className="text-[10px] font-bold text-neutral-scale900 dark:text-neutral-scale200 block mb-1">
-                  {isRTL ? "بیوگرافی / یادداشت (اختیاری)" : "Bio / Note (Optional)"}
+                  {t("bioOptional")}
                 </label>
                 <textarea
                   rows={2}
                   value={formData.bio}
                   onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
-                  placeholder={isRTL ? "توضیحات کوتاه درباره کاربر..." : "Short bio or notes..."}
+                  placeholder={t("shortBioPlaceholder")}
                   className="w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-lg p-2 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 focus:outline-none focus:border-primery-600 transition-colors resize-none"
                 />
               </div>
@@ -637,7 +630,7 @@ export const AdminUsersPage = () => {
                   className="w-3.5 h-3.5 accent-primery-600 rounded cursor-pointer"
                 />
                 <span className="text-[11px] font-bold text-neutral-scale900 dark:text-neutral-scale200">
-                  {isRTL ? "حساب کاربری از ابتدا فعال باشد" : "Account is active"}
+                  {t("userAccountActiveInitial")}
                 </span>
               </label>
 
@@ -649,7 +642,7 @@ export const AdminUsersPage = () => {
                   disabled={submitting}
                   className="flex-1 py-1.5 rounded-lg border border-neutral-scale200 dark:border-neutral-scale1000 text-neutral-scale700 dark:text-neutral-scale300 hover:bg-neutral-scale100 dark:hover:bg-neutral-scale1200 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  {isRTL ? "انصراف" : "Cancel"}
+                  {t("cancelComment")}
                 </button>
                 <button
                   type="submit"
@@ -661,7 +654,7 @@ export const AdminUsersPage = () => {
                   ) : (
                     <Check className="w-3.5 h-3.5" />
                   )}
-                  <span>{isRTL ? "ثبت کاربر" : "Create User"}</span>
+                  <span>{t("createUser")}</span>
                 </button>
               </div>
             </form>

@@ -214,7 +214,7 @@ export const StudentExamPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isRTL, currentUser } = useContext(AppContext);
+  const { isRTL, currentUser, t } = useContext(AppContext);
 
   const passedExam = location.state?.exam;
   const examDurationMinutes = passedExam?.duration ? Number(passedExam.duration) : 10;
@@ -418,7 +418,7 @@ export const StudentExamPage = () => {
       const blob = await captureExamFrameBlob(0.92, 960);
       if (!blob) {
         clearInterval(scanInterval);
-        setVerificationError("دوربین هنوز آماده دریافت تصویر نیست. لطفاً چند لحظه صبر کنید.");
+        setVerificationError(t("verificationCameraNotReady"));
         cooldownUntilRef.current = Date.now() + 2500;
         setIsScanning(false);
         setIsVerifyingIdentity(false);
@@ -477,12 +477,12 @@ export const StudentExamPage = () => {
         setScanProgress(100);
         setVerificationResult({
           verdict: "genuine",
-          title: isRTL ? "✅ تأیید هویت موفق: چهره واقعی دانشجو (مطابقت کامل)" : "✅ Identity Verified: Genuine Student",
-          message: isRTL ? "چهره واقعی شما با الگوی بیومتریک سامانه تطبیق داده شد. در حال ورود به آزمون..." : "Genuine face verified. Entering oral examination...",
-          liveness: isRTL ? "واقعی و زنده (Genuine Face)" : "Genuine (Passed)",
+          title: t("identityVerifiedSuccess"),
+          message: t("identityVerifiedMessage"),
+          liveness: t("genuineFaceLiveness"),
           confidence: 96,
           distance: verifyResponse?.cosine_distance || 0.22,
-          statusText: isRTL ? "دسترسی مجاز" : "Access Granted",
+          statusText: t("accessGranted"),
         });
         setTimeout(() => {
           setIsIdentityVerified(true);
@@ -491,20 +491,16 @@ export const StudentExamPage = () => {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
         setScanProgress(0);
-        const spoofMsg = isRTL
-          ? "🚫 هشدار امنیتی: تلاش برای جعل هویت با عکس / نمایشگر شناسایی شد (Spoof Detected)"
-          : "🚫 Security Alert: Photo / Screen Presentation Attack Detected";
+        const spoofMsg = t("spoofDetectedTitle");
         setVerificationError(spoofMsg);
         setVerificationResult({
           verdict: "spoof",
           title: spoofMsg,
-          message: isRTL
-            ? "سامانه ضدجعل MiniFASNet تشخیص داد که تصویر ارائهشده یک عکس چاپی یا صفحه نمایشگر دیجیتال است. لطفاً چهره زنده و واقعی خود را روبهروی دوربین قرار دهید."
-            : "Presentation attack detected. Digital screens, printouts, or static photos are prohibited.",
-          liveness: isRTL ? "رد شد (Spoof / 2D Presentation Attack)" : "Failed (Spoof Attack)",
+          message: t("presentationAttackDetectedDigitalScreensPrintouts"),
+          liveness: t("spoofFailedLiveness"),
           confidence: 14,
           distance: 0.94,
-          statusText: isRTL ? "دسترسی غیرمجاز (حمله تقلبی)" : "Access Denied (Spoof)",
+          statusText: t("accessDeniedSpoof"),
         });
         cooldownUntilRef.current = Date.now() + 3500;
         consecutiveQualityFramesRef.current = 0;
@@ -512,9 +508,7 @@ export const StudentExamPage = () => {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
         setScanProgress(0);
-        const faceMsg = isRTL
-          ? "چهره در کادر تصویر واضح نیست. لطفاً مستقیماً روبهروی دوربین قرار گیرید."
-          : "Face not clearly visible. Please look directly at the camera.";
+        const faceMsg = t("faceNotClearlyVisiblePleaseLook");
         setVerificationError(faceMsg);
         cooldownUntilRef.current = Date.now() + 2500;
         consecutiveQualityFramesRef.current = 0;
@@ -522,18 +516,16 @@ export const StudentExamPage = () => {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
         setScanProgress(0);
-        const enrollMsg = isRTL
-          ? "پروفایل بیومتریک چهره یافت نشد. لطفاً در تنظیمات ابتدا ثبت هویت نمایید."
-          : "Biometric profile not found. Please enroll first in settings.";
+        const enrollMsg = t("biometricsNotFoundMessage");
         setVerificationError(enrollMsg);
         setVerificationResult({
           verdict: "not_enrolled",
-          title: isRTL ? "⚠️ عدم ثبت الگوی بیومتریک دانشجو" : "⚠️ Biometrics Not Enrolled",
+          title: t("biometricsNotEnrolledTitle"),
           message: enrollMsg,
           liveness: "-",
           confidence: 0,
           distance: 1.0,
-          statusText: isRTL ? "نیاز به ثبت چهره" : "Enrollment Required",
+          statusText: t("enrollmentRequiredStatus"),
         });
         cooldownUntilRef.current = Date.now() + 4000;
         consecutiveQualityFramesRef.current = 0;
@@ -541,20 +533,16 @@ export const StudentExamPage = () => {
         setIsVerifiedSuccess(false);
         setIsScanning(false);
         setScanProgress(0);
-        const mismatchMsg = isRTL
-          ? "عدم تطابق چهره با الگوی ثبتشده در سامانه. لطفاً روبهروی دوربین قرار بگیرید."
-          : "Face does not match registered biometric template.";
+        const mismatchMsg = t("faceDoesNotMatchRegisteredBiometric");
         setVerificationError(mismatchMsg);
         setVerificationResult({
           verdict: "mismatch",
-          title: isRTL ? "❌ عدم تطابق چهره دانشجو (Mismatch)" : "❌ Face Mismatch (Access Denied)",
-          message: isRTL
-            ? "تصویر شما زنده تشخیص داده شد، اما با الگوی چهره ثبتشده برای این حساب همخوانی ندارد. لطفاً زاویه و نور را تنظیم و دوباره امتحان کنید."
-            : "Face is live but does not match enrolled student vector.",
-          liveness: isRTL ? "زنده (Genuine)" : "Genuine",
+          title: t("faceMismatchTitle"),
+          message: t("faceIsLiveButDoesNot"),
+          liveness: t("genuine"),
           confidence: 38,
           distance: verifyResponse?.cosine_distance || 0.76,
-          statusText: isRTL ? "عدم انطباق با پروفایل" : "Mismatch",
+          statusText: t("faceMismatchStatus"),
         });
         cooldownUntilRef.current = Date.now() + 3000;
         consecutiveQualityFramesRef.current = 0;
@@ -565,16 +553,16 @@ export const StudentExamPage = () => {
       setIsVerifiedSuccess(false);
       setIsScanning(false);
       setScanProgress(0);
-      const msg = err?.message || err?.data?.detail || "خطا در برقراری ارتباط با سرور احراز هویت.";
+      const msg = err?.message || err?.data?.detail || t("authServerError");
       setVerificationError(msg);
       setVerificationResult({
         verdict: "error",
-        title: isRTL ? "خطا در احراز هویت" : "Verification Error",
+        title: t("verificationErrorTitle"),
         message: msg,
         liveness: "-",
         confidence: 0,
         distance: 1.0,
-        statusText: isRTL ? "خطای سیستم" : "System Error",
+        statusText: t("systemError"),
       });
       cooldownUntilRef.current = Date.now() + 3000;
       consecutiveQualityFramesRef.current = 0;
@@ -641,9 +629,7 @@ export const StudentExamPage = () => {
         if (faceResult?.multipleFaces && isMounted) {
           setFaceStatus("multiple_faces");
           setVerificationError(
-            isRTL
-              ? "تنها یک چهره باید در کادر تصویر قرار داشته باشد. لطفاً به تنهایی در برابر دوربین باشید."
-              : "Only one face must be in frame."
+            t("onlyOneFaceAllowedMessage")
           );
           consecutiveQualityFramesRef.current = 0;
           setScanProgress(0);
@@ -805,25 +791,17 @@ export const StudentExamPage = () => {
       let title = "";
       let reasonText = "";
       if (violationType === "multiple_faces") {
-        title = isRTL ? "حضور بیش از یک نفر در کادر دوربین" : "Multiple Faces in Camera Frame";
-        reasonText = isRTL
-          ? "سیستم هوشمند آزمون حضور بیش از یک نفر را در کادر تصویر تشخیص داد. آزمون باید منحصراً و به صورت فردی توسط شما انجام شود."
-          : "Multiple people detected in frame. The exam must be taken strictly alone.";
+        title = t("multipleFacesAlert");
+        reasonText = t("multiplePeopleDetectedInFrameThe");
       } else if (violationType === "no_face") {
-        title = isRTL ? "عدم حضور چهره در کادر دوربین" : "No Face Detected in Frame";
-        reasonText = isRTL
-          ? "چهره شما در برابر دوربین مشاهده نشد. لطفاً مستقیماً در برابر وبکم قرار بگیرید تا تصویر شما به درستی ثبت شود."
-          : "Your face is not visible to the camera. Please stay centered in frame.";
+        title = t("noFaceAlert");
+        reasonText = t("yourFaceIsNotVisibleTo");
       } else if (violationType === "gaze_out_of_bounds") {
-        title = isRTL ? "انحراف مکرر دید / نگاه به خارج از کادر" : "Looking Away from Exam Screen";
-        reasonText = isRTL
-          ? "نگاه شما مکرراً به خارج از صفحه آزمون یا به سمت پایین منحرف شده است. لطفاً تمام توجه خود را به سوالات معطوف کنید."
-          : "Your gaze was repeatedly directed away from the screen. Please look directly at the exam.";
+        title = t("gazeDeviationAlert");
+        reasonText = t("yourGazeWasRepeatedlyDirectedAway");
       } else if (violationType === "face_mismatch") {
-        title = isRTL ? "عدم تطابق هویت با چهره ثبت‌شده" : "Identity Verification Mismatch";
-        reasonText = isRTL
-          ? "چهره حاضر در برابر دوربین با هویت و الگوی بیومتریک احراز شده دانشجو مطابقت ندارد."
-          : "The person in front of the camera does not match the enrolled student identity.";
+        title = t("faceMismatchAlert");
+        reasonText = t("faceMismatchAlertExplanation");
       }
 
       const incidentEntry = {
@@ -1021,7 +999,7 @@ export const StudentExamPage = () => {
           if (blob) {
             const res = await biometricsApi.verifyStudentFace(studentId, blob, "balanced");
             if (res && res.verified === false) {
-              setPeriodicAlert("هشدار امنیتی: عدم تطابق چهره مقابل دوربین با هویت ثبتشده دانشجو!");
+              setPeriodicAlert(t("faceMismatchWarningSecurity"));
               triggerProctorViolation("face_mismatch", {
                 cosine_distance: res.cosine_distance,
                 threshold: res.threshold,
@@ -1159,7 +1137,7 @@ export const StudentExamPage = () => {
           setSpokenWordCount(0);
 
           const courseName =
-            examMeta?.course || passedExam?.course || "سیستمهای عامل";
+            examMeta?.course || passedExam?.course || t("operatingSystems");
           try {
             speechText = await normalizeTextForTTS(text, courseName);
           } catch (normErr) {
@@ -1375,7 +1353,7 @@ export const StudentExamPage = () => {
         lastAutoPlayedQuestionRef.current = currentQuestion;
         setHasFinishedCurrentQuestion(false);
         const courseName =
-          examMeta?.course || passedExam?.course || "سیستمهای عامل";
+          examMeta?.course || passedExam?.course || t("operatingSystems");
         if (isQuestionRTL) {
           warmupQuestionNormalization(currentQuestion, courseName);
         }
@@ -1511,9 +1489,7 @@ export const StudentExamPage = () => {
         setFinalScore(0);
         setIsPassed(false);
         setLastFeedback(
-          isRTL
-            ? "آزمون شما به دلیل دریافت ۳ اخطار امنیتی متوقف گردید. مستندات ثبت‌شده توسط دوربین برای بررسی نهایی به استاد ارجاع داده شد."
-            : "Your exam was terminated due to 3 security violations. Camera evidence has been submitted to the instructor."
+          t("yourExamWasTerminatedDueTo")
         );
       }
 
@@ -1629,9 +1605,7 @@ export const StudentExamPage = () => {
                 returnTo: `/StudentExam/${id}`,
                 exam: passedExam,
                 reason: "biometrics_required",
-                message: isRTL
-                  ? "جهت شرکت در آزمون، احراز هویت چهره و نگاه الزامی است."
-                  : "Biometric identity verification is required before taking the exam.",
+                message: t("biometricIdentityVerificationIsRequiredBefore"),
               },
             });
             return;
@@ -1663,8 +1637,8 @@ export const StudentExamPage = () => {
           setSessionId(res.session_id);
           const durSec = res.duration_seconds || (examDurationMinutes * 60);
           setExamMeta({
-            title: res.title || passedExam?.title || (isRTL ? "آزمون ارزیابی تطبیقی" : "Adaptive Exam"),
-            course: res.course || passedExam?.course || (isRTL ? "سیستم عامل" : "Operating Systems"),
+            title: res.title || passedExam?.title || (t("adaptiveAssessmentExam")),
+            course: res.course || passedExam?.course || (t("operatingSystems")),
             duration: durSec,
           });
 
@@ -1688,9 +1662,7 @@ export const StudentExamPage = () => {
           const errDetail = res?.detail || res?.message;
           setError(
             errDetail ||
-            (isRTL
-              ? "امکان برگزاری آزمون در این لحظه وجود ندارد. ممکن است نوبت حضور شما فرا نرسیده باشد یا بازه آزمون منقضی شده باشد."
-              : "Unable to start exam. Your scheduled slot may not have arrived yet.")
+            (t("unableToStartExamYourScheduled"))
           );
         }
       } catch (err) {
@@ -1714,9 +1686,7 @@ export const StudentExamPage = () => {
         }
         setError(
           errMsg ||
-          (isRTL
-            ? "خطا در اتصال به موتور آزمون تطبیقی. لطفاً اتصال اینترنت خود را بررسی فرمایید."
-            : "Failed to connect to adaptive exam engine. Please check connection.")
+          (t("failedToConnectToAdaptiveExam"))
         );
       } finally {
         if (isMounted) setLoading(false);
@@ -1772,9 +1742,7 @@ export const StudentExamPage = () => {
           setCurrentTurnIndex((prev) => prev + 1);
           resetAnswerTurn();
           setCurrentQuestion(
-            isRTL
-              ? "مفهوم ریسه (Thread) و تفاوت فضای آدرسدهی آن با فرآیند مستقل را شرح دهید."
-              : "Explain the concept of Threads and how their address space differs from an independent process."
+            t("explainTheConceptOfThreadsAnd")
           );
         }
       }
@@ -1819,19 +1787,17 @@ export const StudentExamPage = () => {
               <UserCheck className="w-8 h-8 text-sky-400" />
             </div>
             <p className="text-sm font-semibold text-slate-300 mb-1 font-vazir">
-              {isRTL ? "دسترسی به دوربین وبکم الزامی است" : "Webcam access is required"}
+              {t("webcamAccessIsRequired")}
             </p>
             <p className="text-xs text-slate-400 mb-4 max-w-[260px] font-vazir">
-              {isRTL
-                ? "برای شرکت در آزمون شفاهی، لطفا دسترسی به دوربین را تایید نمایید."
-                : "Please allow camera access to proceed with the oral examination."}
+              {t("cameraRequiredMessage")}
             </p>
             <button
               type="button"
               onClick={startWebcam}
               className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-md"
             >
-              {isRTL ? "تلاش مجدد اتصال دوربین" : "Retry Camera"}
+              {t("retryCamera")}
             </button>
           </div>
         )}
@@ -1847,9 +1813,9 @@ export const StudentExamPage = () => {
           <button
             type="button"
             onClick={() => setShowExitModal(true)}
-            aria-label={isRTL ? "خروج از آزمون" : "Exit Exam"}
+            aria-label={t("leaveExamConfirm")}
             className="w-9 h-9 rounded-full bg-rose-600/85 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-90 transition-all cursor-pointer shrink-0 border border-rose-400/30"
-            title={isRTL ? "پایان و خروج از آزمون" : "Exit Exam"}
+            title={t("finishExamConfirmTitle")}
           >
             <DoorOpen className="w-4 h-4" />
           </button>
@@ -1866,12 +1832,8 @@ export const StudentExamPage = () => {
               }`}
               title={
                 strikesCount > 0
-                  ? isRTL
-                    ? `تعداد اخطارهای ثبت‌شده: ${toPersianDigits(strikesCount)} از ۳`
-                    : `Strikes: ${strikesCount}/3`
-                  : isRTL
-                  ? "امنیت فعال - بدون اخطار"
-                  : "Security optimal - 0 strikes"
+                  ? t("strikesRecordedCountOfThree", "", { count: isRTL ? toPersianDigits(strikesCount) : strikesCount })
+                  : t("securityActiveNoStrikes")
               }
             >
               <div className="flex items-center gap-1">
@@ -1887,9 +1849,7 @@ export const StudentExamPage = () => {
                 ))}
               </div>
               <span className="font-bold text-[10px]">
-                {isRTL
-                  ? `${toPersianDigits(strikesCount)} از ۳ اخطار`
-                  : `${strikesCount}/3 strikes`}
+                {t("strikesOutOfThree", "", { count: isRTL ? toPersianDigits(strikesCount) : strikesCount })}
               </span>
             </div>
           )}
@@ -1908,16 +1868,10 @@ export const StudentExamPage = () => {
               }`}
               title={
                 eyeState === "critical"
-                  ? isRTL
-                    ? "هشدار: چهره در کادر نیست یا نگاه معطوف به آزمون نمیباشد"
-                    : "Critical: Face out of frame or looking away"
+                  ? t("criticalFaceOutOfFrameOr")
                   : eyeState === "warning"
-                  ? isRTL
-                    ? "توجه: نگاه خود را به صفحه متمرکز نمایید"
-                    : "Warning: Refocus gaze on exam screen"
-                  : isRTL
-                  ? "وضعیت مطلوب: تمرکز نگاه تایید شده است"
-                  : "Optimal focus"
+                  ? t("focusScreenNotice")
+                  : t("goodFocusConfirmed")
               }
             >
               <LiveProctoringEye
@@ -2005,18 +1959,18 @@ export const StudentExamPage = () => {
               {isVerifiedSuccess ? (
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
                   <Check className="w-3 h-3 stroke-[3]" />
-                  <span>تأیید شد</span>
+                  <span>{t("verified")}</span>
                 </span>
               ) : faceStatus === "multiple_faces" ? (
-                <span className="text-rose-400 font-bold">بیش از ۱ چهره</span>
+                <span className="text-rose-400 font-bold">{t("moreThanOneFace")}</span>
               ) : isScanning ? (
                 <span className="text-sky-300 font-mono font-bold">
                   {Math.round(scanProgress)}%
                 </span>
               ) : faceStatus === "face_locked" ? (
-                <span className="text-sky-300 font-bold">آماده تأیید</span>
+                <span className="text-sky-300 font-bold">{t("readyToVerify")}</span>
               ) : (
-                <span className="text-white/70">احراز هویت چهره</span>
+                <span className="text-white/70">{t("faceAuth")}</span>
               )}
             </span>
           </div>
@@ -2143,10 +2097,10 @@ export const StudentExamPage = () => {
             </div>
             <div className="space-y-1.5">
               <h3 className="text-sm font-bold text-white font-vazir">
-                {isRTL ? "در حال آماده سازی ازمون " : "Connecting to Exam..."}
+                {t("connectingToExam")}
               </h3>
               <p className="text-xs text-slate-300 font-vazir leading-relaxed">
-                {isRTL ? "جلسه آزمون شفاهی در حال آمادهسازی است." : "Oral exam room is being initialized."}
+                {t("oralExamRoomIsBeingInitialized")}
               </p>
             </div>
           </div>
@@ -2162,7 +2116,7 @@ export const StudentExamPage = () => {
                 onClick={() => navigate("/StudentExams")}
                 className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
               >
-                {isRTL ? "بازگشت به فهرست آزمونها" : "Return to Exams"}
+                {t("returnToExams")}
               </button>
               {error?.includes("بیومتریک") || error?.includes("احراز هویت") ? (
                 <button
@@ -2178,7 +2132,7 @@ export const StudentExamPage = () => {
                   }
                   className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
                 >
-                  {isRTL ? "تکمیل احراز هویت بیومتریک" : "Complete Biometrics"}
+                  {t("completeBiometricAuth")}
                 </button>
               ) : (
                 <button
@@ -2186,7 +2140,7 @@ export const StudentExamPage = () => {
                   onClick={() => window.location.reload()}
                   className="w-full sm:w-auto flex-1 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-vazir text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer"
                 >
-                  {isRTL ? "تلاش مجدد برای ورود" : "Retry Launch"}
+                  {t("retryLaunch")}
                 </button>
               )}
             </div>
@@ -2200,13 +2154,11 @@ export const StudentExamPage = () => {
               </div>
 
               <h2 className="font-vazir font-bold text-lg text-white mb-1">
-                {isRTL ? "خاتمه و ابطال آزمون به دلیل تخلف امنیتی" : "Exam Disqualified - Security Violations"}
+                {t("disqualifiedSecurityViolations")}
               </h2>
 
               <p className="font-vazir text-xs text-rose-300/90 mb-4 leading-relaxed">
-                {isRTL
-                  ? "سیستم هوشمند نظارت تصویری ۳ اخطار تخلف در این آزمون ثبت کرده است. به دلیل نقض مکرر قوانین، آزمون شما متوقف و با نمره صفر خاتمه یافت."
-                  : "The proctoring system recorded 3 security violations. The session has been terminated and disqualified."}
+                {t("theProctoringSystemRecorded3Security")}
               </p>
 
               {/* 3 Strikes Evidence Grid */}
@@ -2215,10 +2167,10 @@ export const StudentExamPage = () => {
                   <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
                     <span className="font-vazir text-xs font-bold text-white flex items-center gap-1.5">
                       <Camera className="w-3.5 h-3.5 text-rose-400" />
-                      {isRTL ? "مستندات و تصاویر تخلفات ثبت‌شده:" : "Recorded Violation Snapshots:"}
+                      {t("recordedViolationSnapshots")}
                     </span>
                     <span className="font-vazir text-[11px] text-rose-400 font-semibold">
-                      {isRTL ? `${toPersianDigits(incidentsList.length)} از ۳ اخطار` : `${incidentsList.length}/3 Strikes`}
+                      {t("strikesOutOfThree", "", { count: isRTL ? toPersianDigits(incidentsList.length) : incidentsList.length })}
                     </span>
                   </div>
 
@@ -2240,17 +2192,17 @@ export const StudentExamPage = () => {
                           </div>
                         )}
                         <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-rose-600/90 text-white font-vazir text-[9px] font-bold shadow">
-                          {isRTL ? `اخطار ${toPersianDigits(inc.strikeNumber || idx + 1)}` : `Strike ${inc.strikeNumber || idx + 1}`}
+                          {t("strikeNumber", "", { num: isRTL ? toPersianDigits(inc.strikeNumber || idx + 1) : inc.strikeNumber || idx + 1 })}
                         </div>
                         <div className="p-1 bg-slate-900/90 text-center">
                           <p className="font-vazir text-[9px] text-slate-300 truncate">
                             {inc.violationType === "multiple_faces"
-                              ? (isRTL ? "بیش از ۱ نفر" : "Multiple Faces")
+                              ? (t("multipleFacesDetectedBadge"))
                               : inc.violationType === "no_face"
-                              ? (isRTL ? "عدم حضور" : "No Face")
+                              ? (t("noFace"))
                               : inc.violationType === "gaze_out_of_bounds"
-                              ? (isRTL ? "انحراف دید" : "Looking Away")
-                              : (isRTL ? "عدم انطباق" : "Mismatch")}
+                              ? (t("lookingAwayFromScreen"))
+                              : (t("faceMismatchStatus"))}
                           </p>
                           <span className="font-mono text-[8px] text-slate-500 block">
                             {inc.timestamp}
@@ -2266,20 +2218,20 @@ export const StudentExamPage = () => {
               <div className="w-full bg-slate-950/60 border border-white/10 rounded-2xl p-3.5 mb-4 flex items-center justify-around">
                 <div className="flex flex-col items-center">
                   <span className="font-vazir text-[11px] text-slate-400 mb-0.5">
-                    {isRTL ? "نمره نهایی" : "Final Score"}
+                    {t("finalEvaluationScore")}
                   </span>
                   <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-rose-400`}>
-                    {isRTL ? "۰٪" : "0%"}
+                    {t("0")}
                   </span>
                 </div>
                 <div className="w-[1px] h-8 bg-white/10" />
                 <div className="flex flex-col items-center">
                   <span className="font-vazir text-[11px] text-slate-400 mb-0.5">
-                    {isRTL ? "وضعیت نهایی" : "Status"}
+                    {t("finalStatus")}
                   </span>
                   <span className="font-vazir text-xs font-bold text-rose-400 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" />
-                    {isRTL ? "مردود (اخراج امنیتی)" : "Disqualified"}
+                    {t("disqualifiedBadge")}
                   </span>
                 </div>
               </div>
@@ -2288,7 +2240,7 @@ export const StudentExamPage = () => {
                 <div className="w-full text-right bg-black/40 rounded-xl p-3 mb-4 text-xs font-vazir text-slate-200 border border-white/10">
                   <div className="font-bold mb-1 flex items-center gap-1 text-rose-400">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    {isRTL ? "توضیحات و گزارش تخلف:" : "Violation Report:"}
+                    {t("violationReportLabel")}
                   </div>
                   <p className="leading-relaxed text-slate-300">{lastFeedback}</p>
                 </div>
@@ -2298,9 +2250,7 @@ export const StudentExamPage = () => {
                 <div className="w-full mb-3 text-center text-xs font-vazir text-slate-400 flex items-center justify-center gap-1.5">
                   <Clock3 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                   <span>
-                    {isRTL
-                      ? `انتقال به فهرست آزمونها در ${toPersianDigits(autoRedirectSeconds)} ثانیه...`
-                      : `Redirecting in ${autoRedirectSeconds}s...`}
+                    {t("redirectingToExamsInSeconds", "", { seconds: isRTL ? toPersianDigits(autoRedirectSeconds) : autoRedirectSeconds })}
                   </span>
                 </div>
               )}
@@ -2312,7 +2262,7 @@ export const StudentExamPage = () => {
                   className="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
                 >
                   <DoorOpen className="w-4 h-4" />
-                  {isRTL ? "خروج و بازگشت به فهرست آزمونها" : "Return to Exams List"}
+                  {t("returnToExamsList")}
                 </button>
               </div>
             </div>
@@ -2324,31 +2274,29 @@ export const StudentExamPage = () => {
 
             <h2 className="font-vazir font-bold text-lg text-white mb-1">
               {completionReason === "timeout"
-                ? (isRTL ? "زمان آزمون به پایان رسید" : "Exam Time Expired")
-                : (isRTL ? "جلسه آزمون شفاهی پایان یافت" : "Oral Exam Completed")}
+                ? (t("examTimeExpired"))
+                : (t("oralExamCompleted"))}
             </h2>
 
             <p className="font-vazir text-xs text-slate-300 mb-4">
-              {isRTL
-                ? "ارزیابی چندبُعدی و تطبیقی پاسخهای شما ثبت و نهایی شد."
-                : "Your multidimensional adaptive responses have been graded."}
+              {t("yourMultidimensionalAdaptiveResponsesHaveBeen")}
             </p>
 
             <div className="w-full bg-slate-950/60 border border-white/10 rounded-2xl p-4 mb-4 flex items-center justify-around">
               <div className="flex flex-col items-center">
                 <span className="font-vazir text-[11px] text-slate-400 mb-1">
-                  {isRTL ? "نمره ارزیابی" : "Score"}
+                  {t("finalScore")}
                 </span>
                 <span className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-bold text-sky-400`}>
                   {finalScore !== null
                     ? isRTL ? `${toPersianDigits(finalScore)}٪` : `${finalScore}%`
-                    : isRTL ? "۸۵٪" : "85%"}
+                    : t("85")}
                 </span>
               </div>
               <div className="w-[1px] h-8 bg-white/10" />
               <div className="flex flex-col items-center">
                 <span className="font-vazir text-[11px] text-slate-400 mb-1">
-                  {isRTL ? "وضعیت قبولی" : "Status"}
+                  {t("status")}
                 </span>
                 <span
                   className={`font-vazir text-sm font-bold flex items-center gap-1 ${
@@ -2359,8 +2307,8 @@ export const StudentExamPage = () => {
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   {isPassed
-                    ? (isRTL ? "قبول" : "Passed")
-                    : (isRTL ? "نیاز به بررسی" : "Needs Review")}
+                    ? (t("examPassed"))
+                    : (t("examNeedsReview"))}
                 </span>
               </div>
             </div>
@@ -2369,7 +2317,7 @@ export const StudentExamPage = () => {
               <div className="w-full text-right bg-black/40 rounded-xl p-3 mb-4 text-xs font-vazir text-slate-200 border border-white/10">
                 <div className="font-bold mb-1 flex items-center gap-1 text-sky-300">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {isRTL ? "بازخورد هوش مصنوعی:" : "AI Feedback:"}
+                  {t("aiFeedbackLabel")}
                 </div>
                 <p className="leading-relaxed">{lastFeedback}</p>
               </div>
@@ -2379,9 +2327,7 @@ export const StudentExamPage = () => {
               <div className="w-full mb-3 text-center text-xs font-vazir text-slate-400 flex items-center justify-center gap-1.5">
                 <Clock3 className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                 <span>
-                  {isRTL
-                    ? `انتقال به فهرست آزمونها در ${toPersianDigits(autoRedirectSeconds)} ثانیه...`
-                    : `Redirecting in ${autoRedirectSeconds}s...`}
+                  {t("redirectingToExamsInSeconds", "", { seconds: isRTL ? toPersianDigits(autoRedirectSeconds) : autoRedirectSeconds })}
                 </span>
               </div>
             )}
@@ -2406,7 +2352,7 @@ export const StudentExamPage = () => {
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:brightness-110 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sky-600/30 cursor-pointer"
               >
                 <Award className="w-4 h-4" />
-                {isRTL ? "مشاهده کارنامه و تحلیل کامل آزمون" : "View Full Exam Report"}
+                {t("viewFullExamReport")}
               </button>
 
               <button
@@ -2414,7 +2360,7 @@ export const StudentExamPage = () => {
                 onClick={() => navigate("/StudentExams")}
                 className="w-full h-10 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 font-vazir text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
               >
-                {isRTL ? "بازگشت به فهرست آزمونها" : "Return to Exams List"}
+                {t("returnToExams")}
               </button>
             </div>
           </div>
@@ -2427,14 +2373,10 @@ export const StudentExamPage = () => {
             </div>
             <div className="space-y-1.5">
               <h3 className="text-sm font-bold text-white font-vazir">
-                {isRTL
-                  ? "هوش مصنوعی در حال تحلیل پاسخ شماست..."
-                  : "AI is analyzing your answer..."}
+                {t("aiAnalyzingYourAnswer")}
               </h3>
               <p className="text-xs text-slate-300 font-vazir leading-relaxed max-w-[260px]">
-                {isRTL
-                  ? "طراحی و آمادهسازی سوال تطبیقی بعدی متناسب با سطح پاسخ شما"
-                  : "Formulating next adaptive question based on your response"}
+                {t("formulatingNextAdaptiveQuestionBasedOn")}
               </p>
             </div>
           </div>
@@ -2481,32 +2423,32 @@ export const StudentExamPage = () => {
                   }`}
                 >
                   {isVerifiedSuccess
-                    ? (isRTL ? "هویت شما با موفقیت تأیید شد (چهره واقعی)" : "Identity Verified (Genuine Student)")
+                    ? (t("identityVerifiedGenuineStudent"))
                     : verificationResult?.title
                     ? verificationResult.title
                     : faceStatus === "multiple_faces"
-                    ? (isRTL ? "بیش از یک چهره در کادر قرار دارد!" : "Multiple faces detected!")
+                    ? (t("multipleFacesDetected"))
                     : isScanning || isVerifyingIdentity
-                    ? (isRTL ? "در حال اسکن و ارزیابی اصالت چهره..." : "Scanning & verifying liveness...")
+                    ? (t("scanningVerifyingLiveness"))
                     : faceStatus === "face_locked"
-                    ? (isRTL ? "چهره شناسایی شد (آماده تأیید و ورود)" : "Face locked (Ready to enter)")
-                    : (isRTL ? "احراز هویت و ورود به آزمون" : "Face Verification")}
+                    ? (t("faceLockedReadyToEnter"))
+                    : (t("faceVerification"))}
                 </h3>
               </div>
 
               <div className="w-full grid grid-cols-3 gap-1.5 py-1.5 px-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-slate-300">
                 <div className="flex flex-col items-center">
-                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "شفافیت تصویر" : "Sharpness"}</span>
+                  <span className="text-slate-400 text-[9px] font-vazir">{t("sharpnessLabel")}</span>
                   <span className="text-sky-300 font-bold">{toPersianDigits(liveMetrics.sharpness)}٪</span>
                 </div>
                 <div className="flex flex-col items-center border-x border-white/10">
-                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "نور محیط" : "Lighting"}</span>
+                  <span className="text-slate-400 text-[9px] font-vazir">{t("lightingLabel")}</span>
                   <span className="text-emerald-300 font-bold">{toPersianDigits(liveMetrics.brightness)}٪</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-slate-400 text-[9px] font-vazir">{isRTL ? "وضعیت قفل" : "Lock Status"}</span>
+                  <span className="text-slate-400 text-[9px] font-vazir">{t("lockStatusLabel")}</span>
                   <span className={`font-bold font-vazir text-[9px] ${faceStatus === "face_locked" ? "text-sky-300" : "text-slate-400"}`}>
-                    {faceStatus === "face_locked" ? (isRTL ? "قفل شد" : "Locked") : (isRTL ? "در حال جستجو" : "Searching")}
+                    {faceStatus === "face_locked" ? (t("lockedBadge")) : (t("searchingBadge"))}
                   </span>
                 </div>
               </div>
@@ -2523,25 +2465,19 @@ export const StudentExamPage = () => {
                 >
                   <p className="leading-relaxed font-medium">{verificationResult.message}</p>
                   <div className="w-full flex items-center justify-between pt-1 border-t border-white/10 text-[10px] text-slate-300">
-                    <span>{isRTL ? "اصالت چهره:" : "Liveness:"} <strong className="text-white">{verificationResult.liveness}</strong></span>
-                    <span>{isRTL ? "وضعیت:" : "Status:"} <strong className="text-white">{verificationResult.statusText}</strong></span>
+                    <span>{t("faceLivenessLabel")} <strong className="text-white">{verificationResult.liveness}</strong></span>
+                    <span>{t("faceStatusLabel")} <strong className="text-white">{verificationResult.statusText}</strong></span>
                   </div>
                 </div>
               ) : (
                 <p className="text-[11px] sm:text-xs text-slate-300 font-vazir leading-relaxed max-w-[320px]">
                   {isScanning || isVerifyingIdentity
-                    ? (isRTL ? "در حال اسکن بیومتریک و سنجش زنده بودن چهره..." : "Scanning face depth & anti-spoofing...")
+                    ? (t("scanningFaceDepth"))
                     : faceStatus === "multiple_faces"
-                    ? (isRTL
-                        ? "تنها یک چهره باید در کادر تصویر باشد. لطفاً به تنهایی در برابر دوربین قرار گیرید."
-                        : "Only one face must be in camera frame.")
+                    ? (t("onlyOneFaceMustBeIn"))
                     : faceStatus === "face_locked"
-                    ? (isRTL
-                        ? "کادر آبی روی چهره شما قفل شد. برای اسکن و ورود به آزمون، دکمه زیر را لمس کنید."
-                        : "Face locked in blue frame. Tap 'Confirm Identity & Enter Exam' below.")
-                    : (isRTL
-                        ? "صورت خود را روبهروی دوربین قرار دهید تا کادر به رنگ آبی روی چهره قفل شود."
-                        : "Position your face in front of the camera until framed in blue.")}
+                    ? (t("faceBoxLockedNotice"))
+                    : (t("positionYourFaceInFrontOf"))}
                 </p>
               )}
 
@@ -2565,7 +2501,7 @@ export const StudentExamPage = () => {
                   }
                   className="text-[11px] text-sky-400 hover:text-sky-300 underline font-vazir cursor-pointer"
                 >
-                  {isRTL ? "رفتن به بخش ثبت اطلاعات بیومتریک" : "Go to Biometrics Settings"}
+                  {t("goToBiometricsSettings")}
                 </button>
               )}
 
@@ -2587,17 +2523,17 @@ export const StudentExamPage = () => {
                   {isVerifyingIdentity || isScanning ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>{isRTL ? "در حال اسکن و سنجش اصالت..." : "Scanning & verifying..."}</span>
+                      <span>{t("scanningLivenessBtn")}</span>
                     </>
                   ) : verificationResult ? (
                     <>
                       <RefreshCw className="w-4 h-4" />
-                      <span>{isRTL ? "تلاش مجدد و اسکن دوباره" : "Retry Face Scan"}</span>
+                      <span>{t("retryFaceScanBtn")}</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4 text-sky-300" />
-                      <span>{isRTL ? "تأیید هویت و ورود به آزمون" : "Confirm Identity & Enter Exam"}</span>
+                      <span>{t("confirmIdentityEnterBtn")}</span>
                     </>
                   )}
                 </button>
@@ -2679,14 +2615,14 @@ export const StudentExamPage = () => {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping inline-block" />
                         <span className={`text-[11px] font-bold text-sky-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
-                          {isQuestionRTL ? `سوال ${toPersianDigits(currentTurnIndex)}` : `Question ${currentTurnIndex}`}
+                          {t("questionNum", "", { num: isQuestionRTL ? toPersianDigits(currentTurnIndex) : currentTurnIndex })}
                         </span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 ${isQuestionRTL ? "font-vazir" : "font-inter"}`}>
                           {currentDifficulty > 0.6
-                            ? (isQuestionRTL ? "پیشرفته" : "Hard")
+                            ? t("difficultyAdvanced")
                             : currentDifficulty > 0.35
-                            ? (isQuestionRTL ? "متوسط" : "Medium")
-                            : (isQuestionRTL ? "مقدماتی" : "Easy")}
+                            ? t("difficultyIntermediate")
+                            : t("difficultyBasic")}
                         </span>
                       </div>
 
@@ -2704,7 +2640,7 @@ export const StudentExamPage = () => {
                             ? "bg-sky-500/20 border-sky-400/40 text-sky-300 animate-pulse"
                             : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
                         }`}
-                        title={isQuestionRTL ? "پخش مجدد صدای سوال" : "Replay question audio"}
+                        title={t("replayQuestionAudio")}
                       >
                         {isSpeakingQuestion || isBufferingTTS ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                       </button>
@@ -2721,7 +2657,7 @@ export const StudentExamPage = () => {
                         <div className="flex items-center justify-center gap-2 py-1 text-sky-300/90 animate-pulse text-xs">
                           <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping inline-block" />
                           <span className={isQuestionRTL ? "font-vazir" : "font-inter"}>
-                            {isQuestionRTL ? "در حال دریافت صوت سوال..." : "Loading question audio..."}
+                            {t("loadingQuestionAudio")}
                           </span>
                         </div>
                       ) : questionWords.length > 0 ? (
@@ -2746,7 +2682,7 @@ export const StudentExamPage = () => {
                         })
                       ) : (
                         <span className="text-slate-400">
-                          {isQuestionRTL ? "در حال دریافت سوال آزمون..." : "Loading question..."}
+                          {t("loadingQuestion")}
                         </span>
                       )}
                     </div>
@@ -2797,11 +2733,7 @@ export const StudentExamPage = () => {
                             baseTextRef.current = val.trim();
                           }
                         }}
-                        placeholder={
-                          isQuestionRTL
-                            ? (isAutoVADEnabled ? "پاسخ را بنویسید یا کافیست صحبت کنید..." : "پاسخ را اینجا بنویسید یا با میکروفون صحبت کنید...")
-                            : (isAutoVADEnabled ? "Type response or simply speak..." : "Type response here or speak with mic...")
-                        }
+                        placeholder={isAutoVADEnabled ? t("typeResponseOrSpeak") : t("typeResponseOrMic")}
                         className={`w-full bg-transparent border-0 p-0 text-xs sm:text-sm text-white placeholder-slate-400/75 focus:outline-none resize-none leading-relaxed text-center [text-shadow:_0_1px_3px_rgba(0,0,0,0.85)] relative z-10 ${
                           isAnswerRTL ? "font-vazir" : "font-inter"
                         }`}
@@ -2823,8 +2755,8 @@ export const StudentExamPage = () => {
                         } ${isVoiceActive ? "ring-2 ring-white/80 shadow-lg shadow-white/40" : ""}`}
                         title={
                           isAutoVADEnabled
-                            ? (isRTL ? "تشخیص خودکار گفتار فعال است (میکروفون با صحبت شما خودکار روشن می‌شود)" : "Auto Voice-Activation ON (Speak to answer)")
-                            : (isRTL ? "فعال‌سازی حالت خودکار گفتار (Hands-Free)" : "Enable Auto Voice-Activation")
+                            ? (t("autoVoiceEnabledHint"))
+                            : (t("enableAutoVoice"))
                         }
                       >
                         <Sparkles className={`w-4 h-4 transition-transform duration-300 ${isAutoVADEnabled ? "scale-110 text-white" : "opacity-60"}`} />
@@ -2868,7 +2800,7 @@ export const StudentExamPage = () => {
                       onClick={handleSubmitAnswer}
                       isRTL={isRTL}
                       size={52}
-                      title={isRTL ? "ارسال پاسخ و سوال بعد" : "Submit answer & next"}
+                      title={t("submitAndNext")}
                     />
                   </div>
                 </div>
@@ -2923,13 +2855,11 @@ export const StudentExamPage = () => {
               >
                 <AlertCircle className="w-3.5 h-3.5" />
                 <span>
-                  {isRTL
-                    ? activeStrikeModal.strikeNumber === 1
-                      ? "اخطار اول (۱ از ۳)"
-                      : activeStrikeModal.strikeNumber === 2
-                      ? "اخطار دوم (۲ از ۳) - هشدار جدی"
-                      : "اخطار سوم (۳ از ۳) - خاتمه آزمون"
-                    : `Strike ${activeStrikeModal.strikeNumber} of 3`}
+                  {activeStrikeModal.strikeNumber === 1
+                    ? t("firstStrikeWarning")
+                    : activeStrikeModal.strikeNumber === 2
+                    ? t("secondStrikeWarning")
+                    : t("thirdStrikeFinalWarning")}
                 </span>
               </div>
             </div>
@@ -2950,7 +2880,7 @@ export const StudentExamPage = () => {
                 <div className="flex items-center justify-between px-1">
                   <span className="font-vazir text-[10px] text-slate-400 flex items-center gap-1">
                     <Camera className="w-3 h-3 text-sky-400" />
-                    {isRTL ? "تصویر ثبت‌شده در لحظه تخلف (مستندات آزمون)" : "Recorded Violation Snapshot"}
+                    {t("recordedViolationMoment")}
                   </span>
                   <span className="font-mono text-[9px] text-rose-400 font-bold">
                     REC ●
@@ -2963,7 +2893,7 @@ export const StudentExamPage = () => {
                     className="w-full h-auto max-h-40 object-cover"
                   />
                   <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded bg-black/75 text-[9px] font-vazir text-slate-300 backdrop-blur-xs">
-                    {isRTL ? "مستند تخلف ارسال‌شده برای استاد" : "Reported to instructor"}
+                    {t("reportedToInstructor")}
                   </div>
                 </div>
               </div>
@@ -2979,17 +2909,11 @@ export const StudentExamPage = () => {
             >
               {activeStrikeModal.strikeNumber >= 3 ? (
                 <p>
-                  {isRTL
-                    ? "به علت دریافت ۳ اخطار پیاپی، آزمون شما متوقف شده و با نمره صفر پایان یافت. تصاویر و لاگ تخلفات برای بررسی استاد ارسال گردید."
-                    : "Due to 3 strikes, your exam has been terminated. The incident evidence was sent to the instructor."}
+                  {t("dueTo3StrikesYourExam")}
                 </p>
               ) : (
                 <p>
-                  {isRTL
-                    ? `قانون نظارت هوشمند: در صورت دریافت ۳ اخطار، جلسه بلافاصله قطع شده و نمره صفر لحاظ می‌گردد. (شما تاکنون ${toPersianDigits(
-                        activeStrikeModal.strikeNumber
-                      )} اخطار دریافت کرده‌اید)`
-                    : `Proctoring Policy: 3 strikes will immediately disqualify the exam. You have received ${activeStrikeModal.strikeNumber} strike(s).`}
+                  {t("proctoringStrikesRuleNotice", "", { strikes: isRTL ? toPersianDigits(activeStrikeModal.strikeNumber) : activeStrikeModal.strikeNumber })}
                 </p>
               )}
             </div>
@@ -3006,7 +2930,7 @@ export const StudentExamPage = () => {
                   className="w-full h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-600/30 font-vazir flex items-center justify-center gap-1.5"
                 >
                   <DoorOpen className="w-4 h-4" />
-                  {isRTL ? "خروج از آزمون و ثبت مستندات" : "Exit Exam"}
+                  {t("exitAndSaveDocs")}
                 </button>
               ) : (
                 <button
@@ -3014,7 +2938,7 @@ export const StudentExamPage = () => {
                   onClick={() => setActiveStrikeModal(null)}
                   className="w-full h-10 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-sky-600/30 font-vazir"
                 >
-                  {isRTL ? "متوجه شدم و بازگشت به آزمون" : "Understood, Return to Exam"}
+                  {t("understoodReturnToExam")}
                 </button>
               )}
             </div>
@@ -3032,12 +2956,10 @@ export const StudentExamPage = () => {
 
             <div className="space-y-1">
               <h3 className="text-base font-bold text-white font-vazir">
-                {isRTL ? "خروج از آزمون" : "Leave Exam"}
+                {t("leaveExamConfirm")}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed font-vazir">
-                {isRTL
-                  ? "آیا مطمئن هستید که میخواهید جلسه آزمون را پایان دهید؟ پاسخهای ارسال شده تا این لحظه ذخیره میشوند."
-                  : "Are you sure you want to end this exam session? Answers submitted so far will be saved."}
+                {t("finishExamConfirmMessage")}
               </p>
             </div>
 
@@ -3047,7 +2969,7 @@ export const StudentExamPage = () => {
                 onClick={() => setShowExitModal(false)}
                 className="flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 font-semibold text-xs active:scale-95 transition-all cursor-pointer font-vazir"
               >
-                {isRTL ? "ادامه آزمون" : "Continue"}
+                {t("continueExamBtn")}
               </button>
               <button
                 type="button"
@@ -3057,7 +2979,7 @@ export const StudentExamPage = () => {
                 }}
                 className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs active:scale-95 transition-all cursor-pointer shadow-md shadow-rose-600/30 font-vazir"
               >
-                {isRTL ? "خروج از آزمون" : "Leave Exam"}
+                {t("leaveExamConfirm")}
               </button>
             </div>
           </div>

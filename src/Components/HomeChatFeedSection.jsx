@@ -51,8 +51,7 @@ export const HomeChatFeedSection = () => {
       <div className="flex flex-col w-full items-start gap-2.5 p-2.5 pb-[80px]">
         <div className="flex flex-col items-start gap-3 relative self-stretch w-full flex-[0_0_auto]">
           {chats.map((item, index) => {
-            // Course names always come from backend in Persian and do not translate on UI language change
-            const displayTitle = item.titleFa || item.title || "سیستم عامل";
+            const displayTitle = item.titleFa || item.title || t("operatingSystemsCourse");
 
             return (
               <article

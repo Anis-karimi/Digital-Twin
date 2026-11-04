@@ -59,13 +59,14 @@ export function AppProvider({ children }) {
   });
   const [selectedResources, setSelectedResources] = useState([]);
 
-  const isRTL = language === "fa";
+  const isRTL = language === "fa" || language === "ar";
   const isAuthenticated = Boolean(sessionToken);
 
   const t = useCallback(
-    (key, fallback = "") => getTranslation(language, key, fallback),
+    (key, fallback = "", params = null) => getTranslation(language, key, fallback, params),
     [language]
   );
+
 
   const strings = useMemo(
     () => translations[language] || translations.fa,
@@ -73,17 +74,23 @@ export function AppProvider({ children }) {
   );
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.t = t;
+    }
+  }, [t]);
+
+  useEffect(() => {
     localStorage.setItem("language", language);
     const root = document.documentElement;
 
-    if (language === "fa") {
+    if (language === "fa" || language === "ar") {
       root.setAttribute("dir", "rtl");
-      root.setAttribute("lang", "fa");
+      root.setAttribute("lang", language);
       root.classList.add("rtl");
       root.classList.remove("ltr");
     } else {
       root.setAttribute("dir", "ltr");
-      root.setAttribute("lang", "en");
+      root.setAttribute("lang", language);
       root.classList.add("ltr");
       root.classList.remove("rtl");
     }
@@ -112,7 +119,11 @@ export function AppProvider({ children }) {
   }, []);
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "fa" ? "en" : "fa"));
+    setLanguage((prev) => {
+      if (prev === "fa") return "en";
+      if (prev === "en") return "ar";
+      return "fa";
+    });
   };
 
   const loginUser = (user, token) => {

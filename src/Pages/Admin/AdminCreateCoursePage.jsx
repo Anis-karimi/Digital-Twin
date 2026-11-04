@@ -75,7 +75,7 @@ export const AdminCreateCoursePage = () => {
   const [title, setTitle] = useState("");
   const [teacherId, setTeacherId] = useState("t0000000-0000-4000-8000-000000000001");
   const [units, setUnits] = useState(3);
-  const [subject, setSubject] = useState("مهندسی کامپیوتر");
+  const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [isActive, setIsActive] = useState(true);
@@ -86,11 +86,11 @@ export const AdminCreateCoursePage = () => {
   const [formSuccess, setFormSuccess] = useState("");
 
   const popularSubjects = [
-    "مهندسی کامپیوتر",
-    "هوش مصنوعی",
-    "نرم‌افزار",
-    "فناوری اطلاعات",
-    "علوم کامپیوتر",
+    t("computerEngineering"),
+    t("artificialIntelligence"),
+    t("softwareEngineering"),
+    t("informationTechnology"),
+    t("computerScience"),
   ];
 
   // Fetch courses and metrics
@@ -170,7 +170,7 @@ export const AdminCreateCoursePage = () => {
     setTitle("");
     setDescription("");
     setUnits(3);
-    setSubject("مهندسی کامپیوتر");
+    setSubject("");
     setIsPublic(true);
     setIsActive(true);
     setFormError("");
@@ -184,12 +184,12 @@ export const AdminCreateCoursePage = () => {
     setFormSuccess("");
 
     if (!title.trim()) {
-      setFormError(isRTL ? "لطفاً عنوان درس را وارد نمایید." : "Please enter the course title.");
+      setFormError(t("pleaseEnterTheCourseTitle"));
       return;
     }
 
     if (!teacherId) {
-      setFormError(isRTL ? "لطفاً استاد درس را انتخاب نمایید." : "Please select an instructor.");
+      setFormError(t("selectInstructor"));
       return;
     }
 
@@ -198,7 +198,7 @@ export const AdminCreateCoursePage = () => {
       const payload = {
         title: title.trim(),
         description: description.trim(),
-        subject: subject.trim() || "مهندسی کامپیوتر",
+        subject: subject.trim() || t("computerEngineering"),
         teacher_id: teacherId,
         units: Number(units) || 3,
         is_public: Boolean(isPublic),
@@ -207,9 +207,7 @@ export const AdminCreateCoursePage = () => {
 
       const result = await adminApi.createCourse(payload);
       setFormSuccess(
-        isRTL
-          ? `درس «${result.title}» با موفقیت در سامانه ثبت گردید.`
-          : `Course "${result.title}" created successfully.`
+        t("courseRegisteredSuccess", "", { title: result.title })
       );
 
       // Refresh list & metrics
@@ -223,7 +221,7 @@ export const AdminCreateCoursePage = () => {
     } catch (err) {
       console.error("Course creation failed:", err);
       setFormError(
-        err.message || (isRTL ? "خطا در ثبت درس. لطفاً دوباره تلاش کنید." : "Failed to create course.")
+        err.message || (t("courseCreateError"))
       );
     } finally {
       setSubmitting(false);
@@ -250,9 +248,7 @@ export const AdminCreateCoursePage = () => {
       const deletedTitle = courseToDelete.title;
       setCourseToDelete(null);
       setDeleteSuccess(
-        isRTL
-          ? `درس «${deletedTitle}» با موفقیت حذف گردید.`
-          : `Course "${deletedTitle}" deleted successfully.`
+        t("courseDeletedSuccess", "", { title: deletedTitle })
       );
 
       setTimeout(() => {
@@ -261,7 +257,7 @@ export const AdminCreateCoursePage = () => {
     } catch (err) {
       console.error("Failed to delete course:", err);
       setDeleteError(
-        err.message || (isRTL ? "خطا در حذف درس. لطفاً دوباره تلاش کنید." : "Failed to delete course.")
+        err.message || (t("deleteCourseError"))
       );
     } finally {
       setDeletingCourse(false);
@@ -302,10 +298,10 @@ export const AdminCreateCoursePage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "ثبت و مدیریت دروس" : "Course Registration"}
+              {t("courseRegistration")}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? "پنل مدیریت سامانه" : "Administration Panel"}
+              {t("administrationPanel")}
             </p>
           </div>
         </div>
@@ -334,12 +330,12 @@ export const AdminCreateCoursePage = () => {
             {isCreateOpen ? (
               <>
                 <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
-                <span>{isRTL ? "بستن فرم" : "Close"}</span>
+                <span>{t("close")}</span>
               </>
             ) : (
               <>
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>{isRTL ? "ثبت درس" : "New"}</span>
+                <span>{t("newCourseTab")}</span>
               </>
             )}
           </button>
@@ -395,10 +391,10 @@ export const AdminCreateCoursePage = () => {
 
               <div className="min-w-0">
                 <h2 className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                  {isRTL ? "ثبت درس جدید" : "Register New Course"}
+                  {t("registerCourse")}
                 </h2>
                 <p className="text-[10px] text-neutral-scale700 dark:text-neutral-scale400 truncate mt-0.5">
-                  {isRTL ? "افزودن درس، تعیین واحد و انتساب به استاد" : "Add course, set units & assign instructor"}
+                  {t("addCourseSetUnitsAssignInstructor")}
                 </p>
               </div>
             </div>
@@ -406,12 +402,8 @@ export const AdminCreateCoursePage = () => {
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[11px] font-bold text-primery-700 dark:text-primery-300">
                 {isCreateOpen
-                  ? isRTL
-                    ? "بستن فرم"
-                    : "Close"
-                  : isRTL
-                  ? "ایجاد درس"
-                  : "Open"}
+                  ? t("close")
+                  : t("newCourse")}
               </span>
               <div
                 className={`w-6 h-6 rounded-full bg-neutral-scale100 dark:bg-neutral-scale1200 flex items-center justify-center text-neutral-scale700 dark:text-neutral-scale300 transition-transform duration-200 ${
@@ -446,7 +438,7 @@ export const AdminCreateCoursePage = () => {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                    <span>{isRTL ? "عنوان درس *" : "Course Title *"}</span>
+                    <span>{t("courseTitle")}</span>
                   </label>
                   <input
                     type="text"
@@ -454,9 +446,7 @@ export const AdminCreateCoursePage = () => {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={
-                      isRTL
-                        ? "مثال: سیستم عامل، پایگاه داده، هوش مصنوعی"
-                        : "e.g., Operating Systems"
+                      t("eGOperatingSystems")
                     }
                     className="w-full !border !border-neutral-scale200 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1400 rounded-xl px-3 py-2 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 dark:placeholder-neutral-scale500 focus:!border-primery-600 focus:ring-1 focus:ring-primery-600 transition-colors"
                   />
@@ -466,12 +456,12 @@ export const AdminCreateCoursePage = () => {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                     <School className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                    <span>{isRTL ? "استاد درس *" : "Course Instructor *"}</span>
+                    <span>{t("courseInstructor")}</span>
                   </label>
                   {loadingTeachers ? (
                     <div className="text-xs text-neutral-scale500 py-2 flex items-center gap-2">
                       <div className="w-3.5 h-3.5 border-2 border-primery-600 border-t-transparent rounded-full animate-spin" />
-                      <span>{isRTL ? "در حال دریافت اساتید..." : "Loading instructors..."}</span>
+                      <span>{t("fetchingInstructors")}</span>
                     </div>
                   ) : (
                     <div className="relative w-full">
@@ -496,10 +486,10 @@ export const AdminCreateCoursePage = () => {
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                       <GraduationCap className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                      <span>{isRTL ? "تعداد واحد" : "Units"}</span>
+                      <span>{t("courseUnits")}</span>
                     </label>
                     <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 bg-primery-50 dark:bg-primery-950/60 px-2 py-0.5 rounded-md border border-primery-200 dark:border-primery-800/40">
-                      {isRTL ? `${toPersianDigits(units)} واحد` : `${units} Units`}
+                      {t("unitsCountText", "", { count: isRTL ? toPersianDigits(units) : units })}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
@@ -514,7 +504,7 @@ export const AdminCreateCoursePage = () => {
                             : "!bg-white dark:!bg-neutral-scale1400 !border-neutral-scale200 dark:!border-neutral-scale1000 text-neutral-scale1800 dark:text-neutral-scale70 hover:!border-primery-300"
                         }`}
                       >
-                        {isRTL ? toPersianDigits(u) : u} {isRTL ? "واحد" : ""}
+                        {isRTL ? toPersianDigits(u) : u} {t("unit")}
                       </button>
                     ))}
                   </div>
@@ -524,19 +514,19 @@ export const AdminCreateCoursePage = () => {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                    <span>{isRTL ? "گروه آموزشی" : "Subject"}</span>
+                    <span>{t("departmentGroup")}</span>
                   </label>
                   <input
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder={isRTL ? "مثال: مهندسی کامپیوتر" : "e.g., Computer Engineering"}
+                    placeholder={t("eGComputerEngineering")}
                     className="w-full !border !border-neutral-scale200 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1400 rounded-xl px-3 py-2 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 dark:placeholder-neutral-scale500 focus:!border-primery-600 focus:ring-1 focus:ring-primery-600 transition-colors"
                   />
                   {/* Quick Subject Tags */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[10px] text-neutral-scale500 dark:text-neutral-scale400 shrink-0">
-                      {isRTL ? "پیشنهاد سریع:" : "Quick pick:"}
+                      {t("quickSuggestions")}
                     </span>
                     {popularSubjects.map((s) => {
                       const isSelected = subject === s;
@@ -562,16 +552,14 @@ export const AdminCreateCoursePage = () => {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
-                    <span>{isRTL ? "توضیحات و اهداف درس" : "Description"}</span>
+                    <span>{t("courseDescriptionAndGoals")}</span>
                   </label>
                   <textarea
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={
-                      isRTL
-                        ? "سرفصل‌ها و اهداف آموزشی درس را مختصراً وارد نمایید..."
-                        : "Course objectives and topics..."
+                      t("courseDescriptionGoalsPlaceholder")
                     }
                     className="w-full !border !border-neutral-scale200 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1400 rounded-xl px-3 py-2 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale400 dark:placeholder-neutral-scale500 focus:!border-primery-600 focus:ring-1 focus:ring-primery-600 transition-colors resize-none"
                   />
@@ -593,10 +581,10 @@ export const AdminCreateCoursePage = () => {
                   >
                     <div className="flex flex-col min-w-0 pr-1">
                       <span className="text-[11px] font-bold leading-tight truncate">
-                        {isRTL ? "درس فعال" : "Active"}
+                        {t("activeAccount")}
                       </span>
                       <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
-                        {isActive ? (isRTL ? "در دسترس" : "Available") : isRTL ? "غیرفعال" : "Disabled"}
+                        {isActive ? (t("availableSlot")) : t("inactiveAccount")}
                       </span>
                     </div>
 
@@ -621,10 +609,10 @@ export const AdminCreateCoursePage = () => {
                   >
                     <div className="flex flex-col min-w-0 pr-1">
                       <span className="text-[11px] font-bold leading-tight truncate">
-                        {isRTL ? "درس عمومی" : "Public"}
+                        {t("coursePublic")}
                       </span>
                       <span className="text-[9px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5 truncate">
-                        {isPublic ? (isRTL ? "همه دانشجویان" : "Open") : isRTL ? "خصوصی" : "Restricted"}
+                        {isPublic ? (t("allStudents")) : t("coursePrivate")}
                       </span>
                     </div>
 
@@ -646,12 +634,12 @@ export const AdminCreateCoursePage = () => {
                     {submitting ? (
                       <>
                         <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>{isRTL ? "در حال ثبت درس..." : "Saving..."}</span>
+                        <span>{t("saving")}</span>
                       </>
                     ) : (
                       <>
                         <FolderPlus className="w-4 h-4" />
-                        <span>{isRTL ? "ثبت نهایی و ایجاد درس" : "Create Course"}</span>
+                        <span>{t("submitCourse")}</span>
                       </>
                     )}
                   </button>
@@ -664,7 +652,7 @@ export const AdminCreateCoursePage = () => {
                     }}
                     className="!bg-white dark:!bg-neutral-scale1400 hover:!bg-neutral-scale100 dark:hover:!bg-neutral-scale1300 text-neutral-scale800 dark:text-neutral-scale200 text-xs font-semibold py-2.5 px-3 rounded-xl !border !border-neutral-scale200 dark:!border-neutral-scale1000 transition-all cursor-pointer"
                   >
-                    {isRTL ? "انصراف" : "Cancel"}
+                    {t("cancelComment")}
                   </button>
                 </div>
               </form>
@@ -681,7 +669,7 @@ export const AdminCreateCoursePage = () => {
               {isRTL ? toPersianDigits(totalCoursesCount) : totalCoursesCount}
             </span>
             <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5">
-              {isRTL ? "کل دروس" : "Total"}
+              {t("totalCourses")}
             </span>
           </div>
 
@@ -690,7 +678,7 @@ export const AdminCreateCoursePage = () => {
               {isRTL ? toPersianDigits(activeCoursesCount) : activeCoursesCount}
             </span>
             <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5">
-              {isRTL ? "دروس فعال" : "Active"}
+              {t("activeCourses")}
             </span>
           </div>
 
@@ -699,7 +687,7 @@ export const AdminCreateCoursePage = () => {
               {isRTL ? toPersianDigits(enrollmentsCount) : enrollmentsCount}
             </span>
             <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 mt-0.5">
-              {isRTL ? "ثبت‌نامی‌ها" : "Enrolled"}
+              {t("enrolled")}
             </span>
           </div>
         </section>
@@ -718,18 +706,18 @@ export const AdminCreateCoursePage = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h3 className="text-xs font-bold font-vazir text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                  {isRTL ? "پایش زمان‌بندی و همپوشانی آزمون‌ها" : "Exam Schedule & Server Load"}
+                  {t("scheduleOverlapMonitorSubtitle")}
                 </h3>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <p className="text-[10px] text-neutral-scale800 dark:text-neutral-scale400 font-vazir truncate mt-0.5">
-                {isRTL ? "بررسی تداخل ساعات آزمون اساتید و ظرفیت سرور" : "Check overlap & server capacity"}
+                {t("serverCapacityCheck")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1 text-[11px] font-bold text-primery-700 dark:text-primery-300 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform shrink-0">
-            <span>{isRTL ? "مشاهده" : "View"}</span>
+            <span>{t("overview")}</span>
             {isRTL ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
           </div>
         </section>
@@ -749,7 +737,7 @@ export const AdminCreateCoursePage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={isRTL ? "جستجوی درس یا استاد..." : "Search courses..."}
+              placeholder={t("searchCourses")}
               className={`w-full !border !border-neutral-scale200 dark:!border-neutral-scale1000 !bg-white dark:!bg-neutral-scale1200 rounded-lg py-1.5 text-xs text-neutral-scale1800 dark:text-neutral-scale70 placeholder-neutral-scale500 focus:outline-none focus:!border-primery-600 transition-colors ${
                 isRTL ? "pr-8 pl-2.5 text-right" : "pl-8 pr-2.5 text-left"
               }`}
@@ -767,7 +755,7 @@ export const AdminCreateCoursePage = () => {
                   : "text-neutral-scale700 dark:text-neutral-scale400 hover:text-neutral-scale900"
               }`}
             >
-              {isRTL ? "همه" : "All"}
+              {t("all")}
             </button>
             <button
               type="button"
@@ -778,7 +766,7 @@ export const AdminCreateCoursePage = () => {
                   : "text-neutral-scale700 dark:text-neutral-scale400 hover:text-neutral-scale900"
               }`}
             >
-              {isRTL ? "فعال" : "Active"}
+              {t("activeAccount")}
             </button>
             <button
               type="button"
@@ -789,7 +777,7 @@ export const AdminCreateCoursePage = () => {
                   : "text-neutral-scale700 dark:text-neutral-scale400 hover:text-neutral-scale900"
               }`}
             >
-              {isRTL ? "غیرفعال" : "Inactive"}
+              {t("inactiveAccount")}
             </button>
           </div>
         </section>
@@ -802,7 +790,7 @@ export const AdminCreateCoursePage = () => {
             <div className="w-full py-12 flex flex-col items-center justify-center gap-2">
               <div className="w-7 h-7 border-2 border-primery-600 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs text-neutral-scale700 dark:text-neutral-scale400">
-                {isRTL ? "در حال دریافت فهرست دروس..." : "Loading courses..."}
+                {t("loginCoursesLoading")}
               </p>
             </div>
           ) : filteredCourses.length === 0 ? (
@@ -811,7 +799,7 @@ export const AdminCreateCoursePage = () => {
                 <FolderPlus className="w-5 h-5" />
               </div>
               <p className="text-xs font-bold text-neutral-scale900 dark:text-neutral-scale100">
-                {isRTL ? "هیچ درسی با این مشخصات یافت نشد" : "No courses found"}
+                {t("noCoursesFoundAdmin")}
               </p>
               <button
                 type="button"
@@ -824,7 +812,7 @@ export const AdminCreateCoursePage = () => {
                 className="mt-1 bg-primery-700 hover:bg-primery-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>{isRTL ? "ثبت درس جدید" : "Register Course"}</span>
+                <span>{t("registerCourse")}</span>
               </button>
             </div>
           ) : (
@@ -845,11 +833,11 @@ export const AdminCreateCoursePage = () => {
                           {course.title}
                         </h3>
                         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-primery-50 dark:bg-primery-950/60 text-primery-800 dark:text-primery-300 border border-primery-200 dark:border-primery-800/40 shrink-0">
-                          {isRTL ? toPersianDigits(course.units) : course.units} {isRTL ? "واحد" : "Units"}
+                          {isRTL ? toPersianDigits(course.units) : course.units} {t("courseUnits")}
                         </span>
                       </div>
                       <p className="text-[10px] text-neutral-scale700 dark:text-neutral-scale400 truncate mt-0.5">
-                        {course.subject || (isRTL ? "مهندسی کامپیوتر" : "Computer Engineering")}
+                        {course.subject || (t("computerEngineering"))}
                       </p>
                     </div>
                   </div>
@@ -858,12 +846,12 @@ export const AdminCreateCoursePage = () => {
                     {course.is_active ? (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
                         <CheckCircle2 className="w-2.5 h-2.5" />
-                        <span>{isRTL ? "فعال" : "Active"}</span>
+                        <span>{t("activeAccount")}</span>
                       </span>
                     ) : (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 flex items-center gap-0.5">
                         <XCircle className="w-2.5 h-2.5" />
-                        <span>{isRTL ? "غیرفعال" : "Inactive"}</span>
+                        <span>{t("inactiveAccount")}</span>
                       </span>
                     )}
                   </div>
@@ -880,17 +868,17 @@ export const AdminCreateCoursePage = () => {
                 <div className="pt-1.5 border-t border-neutral-scale100 dark:border-neutral-scale1100/60 flex items-center justify-between text-[11px] text-neutral-scale700 dark:text-neutral-scale400 gap-2">
                   <div className="flex items-center gap-1 truncate">
                     <span className="font-medium text-neutral-scale500 dark:text-neutral-scale500 text-[10px] shrink-0">
-                      {isRTL ? "استاد:" : "Teacher:"}
+                      {t("teacher1")}
                     </span>
                     <span className="font-bold text-primery-800 dark:text-neutral-scale100 truncate">
-                      {course.teacher_name || (isRTL ? "تعیین‌نشده" : "Not assigned")}
+                      {course.teacher_name || (t("notAssigned"))}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
                     <Users className="w-3 h-3 text-neutral-scale500" />
                     <span>
-                      {isRTL ? toPersianDigits(course.students_count || 0) : course.students_count || 0} {isRTL ? "دانشجو" : "Students"}
+                      {isRTL ? toPersianDigits(course.students_count || 0) : course.students_count || 0} {t("roleStudent")}
                     </span>
                   </div>
                 </div>
@@ -904,7 +892,7 @@ export const AdminCreateCoursePage = () => {
                     className="flex-1 bg-primery-50 hover:bg-primery-100 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 border border-primery-200 dark:border-neutral-scale1000 text-primery-800 dark:text-primery-300 text-[11px] font-bold py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Users className="w-3 h-3" />
-                    <span>{isRTL ? "مدیریت اعضا و استاد" : "Manage Members"}</span>
+                    <span>{t("manageMembersAndTeacher")}</span>
                   </button>
 
                   {/* Delete Course Button */}
@@ -914,11 +902,11 @@ export const AdminCreateCoursePage = () => {
                       setDeleteError("");
                       setCourseToDelete(course);
                     }}
-                    title={isRTL ? "حذف درس" : "Delete Course"}
+                    title={t("deleteCourse")}
                     className="bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:text-red-700 text-[11px] font-bold py-1.5 px-2.5 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>{isRTL ? "حذف" : "Delete"}</span>
+                    <span>{t("delete")}</span>
                   </button>
                 </div>
               </div>
@@ -953,12 +941,10 @@ export const AdminCreateCoursePage = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                  {isRTL ? "حذف درس" : "Delete Course"}
+                  {t("deleteCourse")}
                 </h3>
                 <p className="text-[11px] text-neutral-scale600 dark:text-neutral-scale400 mt-0.5">
-                  {isRTL
-                    ? "آیا از حذف این درس اطمینان دارید؟"
-                    : "Are you sure you want to delete this course?"}
+                  {t("deleteCourseConfirm")}
                 </p>
               </div>
               <button
@@ -978,20 +964,18 @@ export const AdminCreateCoursePage = () => {
                   «{courseToDelete.title}»
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-primery-100 dark:bg-neutral-scale1100 text-primery-800 dark:text-neutral-scale200">
-                  {isRTL ? toPersianDigits(courseToDelete.units) : courseToDelete.units} {isRTL ? "واحد" : "Units"}
+                  {isRTL ? toPersianDigits(courseToDelete.units) : courseToDelete.units} {t("courseUnits")}
                 </span>
               </div>
               <div className="text-[10px] text-neutral-scale600 dark:text-neutral-scale400 flex items-center justify-between">
-                <span>{isRTL ? "استاد:" : "Teacher:"} {courseToDelete.teacher_name || "---"}</span>
-                <span>{isRTL ? toPersianDigits(courseToDelete.students_count || 0) : courseToDelete.students_count || 0} {isRTL ? "دانشجو" : "Students"}</span>
+                <span>{t("teacher1")} {courseToDelete.teacher_name || "---"}</span>
+                <span>{isRTL ? toPersianDigits(courseToDelete.students_count || 0) : courseToDelete.students_count || 0} {t("roleStudent")}</span>
               </div>
             </div>
 
             {/* Danger Warning Text */}
             <p className="text-[11px] text-red-600 dark:text-red-400 leading-relaxed">
-              {isRTL
-                ? "توجه: این عملیات غیرقابل بازگشت است و تمامی سرفصل‌ها، آزمون‌ها و اعضای ثبت‌نام شده در درس حذف خواهند شد."
-                : "Warning: This action cannot be undone. All materials, quizzes, and enrolled members will be removed."}
+              {t("deleteCourseWarning")}
             </p>
 
             {deleteError && (
@@ -1011,12 +995,12 @@ export const AdminCreateCoursePage = () => {
                 {deletingCourse ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>{isRTL ? "در حال حذف..." : "Deleting..."}</span>
+                    <span>{t("deleting")}</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>{isRTL ? "تأیید و حذف درس" : "Confirm Delete"}</span>
+                    <span>{t("confirmDeleteCourse")}</span>
                   </>
                 )}
               </button>
@@ -1027,7 +1011,7 @@ export const AdminCreateCoursePage = () => {
                 disabled={deletingCourse}
                 className="bg-neutral-scale100 hover:bg-neutral-scale200 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 text-neutral-scale800 dark:text-neutral-scale200 text-xs font-semibold py-2.5 px-3.5 rounded-xl transition-all cursor-pointer"
               >
-                {isRTL ? "انصراف" : "Cancel"}
+                {t("cancelComment")}
               </button>
             </div>
           </div>

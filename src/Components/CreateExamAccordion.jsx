@@ -38,101 +38,25 @@ import {
   getTodayJalaliDate,
 } from "@/utils/dateUtils";
 
-export const BLOOM_LEVELS_FA = [
-  {
-    level: 1,
-    name: "یادآوری",
-    desc: "بازشناسی و یادآوری تعاریف، کلیدواژه‌ها و اصول پایه",
-    key: "remember",
-  },
-  {
-    level: 2,
-    name: "درک مفاهیم",
-    desc: "تفسیر، تشریح و توضیح عمیق موضوعات به بیان خود دانشجو",
-    key: "understand",
-  },
-  {
-    level: 3,
-    name: "به‌کارگیری",
-    desc: "استفاده عملی از مفاهیم در حل سناریوها و مسائل عینی",
-    key: "apply",
-  },
-  {
-    level: 4,
-    name: "تحلیل",
-    desc: "کالبدشکافی ساختار، کشف ارتباط اجزا، مقایسه و عیب‌یابی",
-    key: "analyze",
-  },
-  {
-    level: 5,
-    name: "ارزیابی",
-    desc: "نقد فنی، داوری بر اساس معیارها و استدلال نقادانه",
-    key: "evaluate",
-  },
-  {
-    level: 6,
-    name: "آفرینش",
-    desc: "طراحی معماری، خلق راه‌حل نوآورانه و ترکیب مفاهیم",
-    key: "create",
-  },
+export const getBloomLevels = (t = (k) => k) => [
+  { level: 1, name: t("rememberLevel"), desc: t("rememberLevelDesc"), key: "remember" },
+  { level: 2, name: t("understandLevel"), desc: t("understandLevelDesc"), key: "understand" },
+  { level: 3, name: t("applyLevel"), desc: t("applyLevelDesc"), key: "apply" },
+  { level: 4, name: t("analyzeLevel"), desc: t("analyzeLevelDesc"), key: "analyze" },
+  { level: 5, name: t("evaluateLevel"), desc: t("evaluateLevelDesc"), key: "evaluate" },
+  { level: 6, name: t("createLevel"), desc: t("createLevelDesc"), key: "create" },
 ];
 
-export const BLOOM_LEVELS_EN = [
-  {
-    level: 1,
-    name: "Remember",
-    desc: "Recognizing and recalling definitions, keywords, and basic principles",
-    key: "remember",
-  },
-  {
-    level: 2,
-    name: "Understand",
-    desc: "Interpreting, explaining, and providing an in-depth understanding of topics in the student's own words",
-    key: "understand",
-  },
-  {
-    level: 3,
-    name: "Apply",
-    desc: "Applying concepts in practice to solve scenarios and real-world problems",
-    key: "apply",
-  },
-  {
-    level: 4,
-    name: "Analyze",
-    desc: "Breaking down structures, identifying relationships between components, comparing, and troubleshooting",
-    key: "analyze",
-  },
-  {
-    level: 5,
-    name: "Evaluate",
-    desc: "Technical critique, judgment based on criteria, and critical reasoning",
-    key: "evaluate",
-  },
-  {
-    level: 6,
-    name: "Create",
-    desc: "Designing architectures, creating innovative solutions, and combining concepts",
-    key: "create",
-  },
+export const getGoalTypes = (t = (k) => k) => [
+  { id: "theoretical", label: t("goalTypeTheoretical") },
+  { id: "practical", label: t("goalTypePractical") },
+  { id: "analytical", label: t("goalTypeAnalytical") },
 ];
 
-export const GOAL_TYPES_FA = [
-  { id: "theoretical", label: "تئوری و مفهومی" },
-  { id: "practical", label: "کاربردی و عملی" },
-  { id: "analytical", label: "تحلیلی و حل مسئله" },
-];
-
-export const GOAL_TYPES_EN = [
-  { id: "theoretical", label: "Theoretical and Conceptual" },
-  { id: "practical", label: "Practical and Applied" },
-  { id: "analytical", label: "Analytical and Problem Solving" },
-];
-
-const getListsByLanguage = (isRTL) => ({
-  BLOOM_LEVELS: isRTL ? BLOOM_LEVELS_FA : BLOOM_LEVELS_EN,
-  GOAL_TYPES: isRTL ? GOAL_TYPES_FA : GOAL_TYPES_EN,
-});
-
+export const BLOOM_LEVELS_FA = getBloomLevels();
+export const BLOOM_LEVELS_EN = getBloomLevels();
+export const GOAL_TYPES_FA = getGoalTypes();
+export const GOAL_TYPES_EN = getGoalTypes();
 // Utility helpers for time and minute math
 const calculateTotalMinutes = (studentCount, durationMinutes, gapMinutes = 5) => {
   const n = parseInt(studentCount, 10) || 0;
@@ -159,7 +83,7 @@ const isTimeEqualOrAfter = (timeA, timeB) => {
 
 export const CreateExamAccordion = ({
   courseId = "c0000000-0000-4000-8000-000000000001",
-  courseTitle = "سیستم عامل",
+  courseTitle: providedCourseTitle,
   onExamCreated,
   onCancel,
   initialExam = null,
@@ -167,6 +91,9 @@ export const CreateExamAccordion = ({
   onExamUpdated,
 }) => {
   const { isRTL, t } = useContext(AppContext);
+  const courseTitle = providedCourseTitle || t("osCourse");
+  const BLOOM_LEVELS = useMemo(() => getBloomLevels(t), [t]);
+  const GOAL_TYPES = useMemo(() => getGoalTypes(t), [t]);
 
   // Form State
   const [examTitle, setExamTitle] = useState(() => initialExam?.title || "");
@@ -186,7 +113,7 @@ export const CreateExamAccordion = ({
   const [isFilesOpen, setIsFilesOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(true);
 
-  const { BLOOM_LEVELS, GOAL_TYPES } = getListsByLanguage(isRTL);
+  // lists initialized via useMemo(t) above
 
   // Initial Goals
   const initialGoalsList = useMemo(() => {
@@ -213,7 +140,7 @@ export const CreateExamAccordion = ({
       });
     }
     if (initialExam?.topic && typeof initialExam.topic === "string") {
-      const parts = initialExam.topic.split("،").map((t) => t.trim()).filter(Boolean);
+      const parts = initialExam.topic.split(/[،,]/).map((t) => t.trim()).filter(Boolean);
       if (parts.length > 0) {
         return parts.map((t) => ({
           title: t,
@@ -392,9 +319,7 @@ export const CreateExamAccordion = ({
     if (!rawFiles || rawFiles.length === 0) {
       setGoalAiNotice({
         type: "warning",
-        message: isRTL
-          ? "لطفاً ابتدا در بخش بالای اهداف (پیوست فایل‌ها و منابع مرجع)، یک فایل جزوه، اسلاید یا سند بارگذاری نمایید."
-          : "Please attach a reference file (PDF, DOCX, PPTX, TXT) in the section above first.",
+        message: t("pleaseAttachAReferenceFilePdf"),
       });
       setIsFilesOpen(true);
       return;
@@ -429,11 +354,9 @@ export const CreateExamAccordion = ({
         setIsGoalSuccess(true);
         setGoalAiNotice({
           type: "success",
-          message: isRTL
-            ? finalGoals.length < requestedCount
-              ? `${toPersianDigits(finalGoals.length)} هدف آموزشی استخراج شد (به دلیل محدودیت محتوای فایل، تعداد به ${toPersianDigits(finalGoals.length)} هدف تنظیم گردید).`
-              : `${toPersianDigits(finalGoals.length)} هدف آموزشی با تحلیل هوشمند فایل «${targetFile.name}» با موفقیت تنظیم شد.`
-            : `Successfully generated ${finalGoals.length} goals from "${targetFile.name}".`,
+          message: finalGoals.length < requestedCount
+            ? t("goalsExtractedDueToLimit", "", { count: isRTL ? toPersianDigits(finalGoals.length) : finalGoals.length })
+            : t("goalsExtractedSmartAnalysis", "", { count: isRTL ? toPersianDigits(finalGoals.length) : finalGoals.length, filename: targetFile.name }),
         });
       } else {
         throw new Error("No valid goals returned from server");
@@ -443,9 +366,7 @@ export const CreateExamAccordion = ({
       setIsGoalSuccess(false);
       setGoalAiNotice({
         type: "error",
-        message: isRTL
-          ? "خطا در استخراج هوشمند اهداف از فایل. لطفاً از اتصال اینترنت یا فرمت فایل اطمینان حاصل کرده یا اهداف را دستی وارد نمایید."
-          : "Failed to extract goals using AI. Please check the file or enter goals manually.",
+        message: t("failedToExtractGoalsUsingAi"),
       });
     } finally {
       setIsGeneratingGoals(false);
@@ -506,11 +427,7 @@ export const CreateExamAccordion = ({
   const handleEndTimeChange = (newVal) => {
     setEndTime(newVal);
     if (!isTimeEqualOrAfter(newVal, minCalculatedEndTime)) {
-      setTimeError(
-        isRTL
-          ? `حداقل زمان پایان بر اساس گپ ۵ دقیقه‌ای باید ${minCalculatedEndTime} باشد.`
-          : `End time must be at least ${minCalculatedEndTime} based on 5m gaps.`
-      );
+      setTimeError(t("minCalculatedGapNotice", "", { time: minCalculatedEndTime }));
     } else {
       setTimeError("");
     }
@@ -523,27 +440,21 @@ export const CreateExamAccordion = ({
 
     if (!examTitle.trim()) {
       setFormError(
-        isRTL ? "لطفاً نام آزمون را وارد کنید." : "Please enter the exam title."
+        t("pleaseEnterTheExamTitle")
       );
       return;
     }
 
     if (selectedStudentIds.length === 0) {
       setFormError(
-        isRTL
-          ? "حداقل باید یک دانشجو برای شرکت در آزمون انتخاب شود."
-          : "Please select at least one student for the exam."
+        t("pleaseSelectAtLeastOneStudent")
       );
       setIsStudentsOpen(true);
       return;
     }
 
     if (!isTimeEqualOrAfter(endTime, minCalculatedEndTime)) {
-      setFormError(
-        isRTL
-          ? `زمان پایان نمی‌تواند کمتر از ${minCalculatedEndTime} باشد.`
-          : `End time cannot be earlier than ${minCalculatedEndTime}.`
-      );
+      setFormError(t("endTimeCannotBeLessThanMin", "", { time: minCalculatedEndTime }));
       setIsTimeOpen(true);
       return;
     }
@@ -583,7 +494,7 @@ export const CreateExamAccordion = ({
 
       const payload = {
         title: examTitle.trim(),
-        description: `آزمون درس ${courseTitle} با ${validGoals.length} هدف آموزشی`,
+        description: t("examForCourseWithGoals", "", { course: courseTitle, count: isRTL ? toPersianDigits(validGoals.length) : validGoals.length }),
         duration_minutes: durationPerStudent,
         goals: validGoals.length > 0 ? validGoals : [examTitle.trim()],
         student_ids: selectedStudentIds,
@@ -616,7 +527,7 @@ export const CreateExamAccordion = ({
           title: examTitle.trim(),
           description: payload.description,
           course: courseTitle,
-          topic: topicTitles.join("، ") || "مباحث آزمون",
+          topic: topicTitles.join(isRTL ? "، " : ", ") || t("examTopicsDefault"),
           date: examDate,
           exam_date: examDate,
           start_at: isoStart || startTime,
@@ -624,7 +535,7 @@ export const CreateExamAccordion = ({
           starts_at: isoStart || startTime,
           ends_at: isoEnd || endTime,
           time: `${startTime} - ${endTime}`,
-          duration: `${durationPerStudent} دقیقه هر دانشجو`,
+          duration: t("durationPerStudentText", "", { duration: durationPerStudent }),
           duration_minutes: durationPerStudent,
           active: true,
           is_active: true,
@@ -651,7 +562,7 @@ export const CreateExamAccordion = ({
         title: examTitle.trim(),
         description: payload.description,
         course: courseTitle,
-        topic: topicTitles.join("، ") || "مباحث آزمون",
+        topic: topicTitles.join(isRTL ? "، " : ", ") || t("examTopicsDefault"),
         date: examDate,
         exam_date: examDate,
         start_at: isoStart || startTime,
@@ -659,7 +570,7 @@ export const CreateExamAccordion = ({
         starts_at: isoStart || startTime,
         ends_at: isoEnd || endTime,
         time: `${startTime} - ${endTime}`,
-        duration: `${durationPerStudent} دقیقه هر دانشجو`,
+        duration: t("durationPerStudentText", "", { duration: durationPerStudent }),
         duration_minutes: durationPerStudent,
         active: true,
         is_active: true,
@@ -677,8 +588,8 @@ export const CreateExamAccordion = ({
       setFormError(
         isRTL
           ? isEditMode
-            ? "خطا در به‌روزرسانی آزمون. لطفاً مجدداً تلاش فرمایید."
-            : "خطا در برقراری ارتباط با سرور. لطفاً مجدداً تلاش فرمایید."
+            ? t("examUpdateError")
+            : t("connectionError")
           : isEditMode
           ? "Failed to update exam. Please try again."
           : "Failed to create exam. Please try again."
@@ -700,7 +611,7 @@ export const CreateExamAccordion = ({
             <BookOpen className="w-4 h-4" />
           </div>
           <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
-            {isRTL ? "نام درس" : "Course Name"}
+            {t("courseTitleInput")}
           </span>
         </div>
 
@@ -720,7 +631,7 @@ export const CreateExamAccordion = ({
       )}
 
       {/* =========================================================
-          ITEM 1: انتخاب نام آزمون (NO EXTEND - همیشه باز و مستقیم)
+          ITEM 1: Exam Title (NO EXTEND)
           ========================================================= */}
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 p-3.5 shadow-2xs">
         <div className="flex items-center gap-2 mb-2">
@@ -728,7 +639,7 @@ export const CreateExamAccordion = ({
             <FileText className="w-4 h-4" />
           </div>
           <label className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
-            {isRTL ? "نام آزمون" : "Exam Title"}
+            {t("examTitle")}
             <span className="text-red-500 mr-1">*</span>
           </label>
         </div>
@@ -738,18 +649,14 @@ export const CreateExamAccordion = ({
           value={examTitle}
           onChange={(e) => setExamTitle(e.target.value)}
           placeholder={
-            isRTL
-              ? "مثلاً: آزمون میان‌ترم مفاهیم پایه سیستم عامل..."
-              : "e.g., Operating Systems Midterm Exam..."
+            t("eGOperatingSystemsMidtermExam")
           }
           className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-xs  focus:outline-none focus:ring-2 focus:ring-[#2481cc]/25 focus:border-[#2481cc] transition-all"
         />
       </div>
 
       {/* =========================================================
-          ITEM 2: نمایش دانشجویان درس که می‌خوای شرکت بکنن (EXTENDABLE)
-          بسته: آواتار استک دایره‌ای روی هم
-          باز: لیست کامل با سوییچ tg-switch و اسکرول
+          ITEM 2: Course Students (EXTENDABLE)
           ========================================================= */}
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
         {/* Outer Summary Header (Always Visible & Clickable) */}
@@ -765,12 +672,13 @@ export const CreateExamAccordion = ({
 
             <div className="flex flex-col min-w-0">
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100  leading-tight">
-                {isRTL ? "دانشجویان شرکت‌کننده" : "Participating Students"}
+                {t("participatingStudents")}
               </span>
               <span className="text-[10px] text-[#2481cc] dark:text-[#52a2f6]  leading-tight mt-0.5">
-                {isRTL
-                  ? `${selectedStudentIds.length} از ${students.length} دانشجو انتخاب شده`
-                  : `${selectedStudentIds.length} of ${students.length} selected`}
+                {t("selectedStudentsCount", "", {
+                  selected: isRTL ? toPersianDigits(selectedStudentIds.length) : selectedStudentIds.length,
+                  total: isRTL ? toPersianDigits(students.length) : students.length
+                })}
               </span>
             </div>
           </div>
@@ -803,7 +711,7 @@ export const CreateExamAccordion = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span>{(st.title || st.name || "د").charAt(0)}</span>
+                    <span>{(st.title || st.name || t("student")).charAt(0)}</span>
                   )}
                 </div>
               ))}
@@ -844,9 +752,7 @@ export const CreateExamAccordion = ({
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
                   placeholder={
-                    isRTL
-                      ? "جستجوی دانشجو با نام..."
-                      : "Search student by name..."
+                    t("searchStudentByName")
                   }
                   className="w-full pr-8 pl-3 py-1.5 text-xs rounded-lg bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc] "
                 />
@@ -859,12 +765,8 @@ export const CreateExamAccordion = ({
                 className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25 hover:bg-[#e1eefc] dark:hover:bg-[#203244] transition-colors cursor-pointer  shrink-0"
               >
                 {selectedStudentIds.length === students.length
-                  ? isRTL
-                    ? "لغو همه"
-                    : "Deselect"
-                  : isRTL
-                    ? "انتخاب همه"
-                    : "Select All"}
+                  ? t("deselect")
+                  : t("selectAll")}
               </button>
             </div>
 
@@ -873,12 +775,12 @@ export const CreateExamAccordion = ({
               <div className="py-6 flex items-center justify-center gap-2 text-xs text-neutral-500 ">
                 <Loader2 className="w-4 h-4 animate-spin text-[#2481cc]" />
                 <span>
-                  {isRTL ? "در حال دریافت دانشجویان..." : "Loading students..."}
+                  {t("loadingStudents")}
                 </span>
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="py-4 text-center text-s text-neutral-400 ">
-                {isRTL ? "دانشجویی یافت نشد" : "No students found"}
+                {t("noStudentsFound")}
               </div>
             ) : (
               <div className="max-h-[220px] overflow-y-auto space-y-2 px-2.5 py-1 custom-scroll">
@@ -905,7 +807,7 @@ export const CreateExamAccordion = ({
                             />
                           ) : (
                             <span>
-                              {(st.title || st.name || "د").charAt(0)}
+                              {(st.title || st.name || t("student")).charAt(0)}
                             </span>
                           )}
                         </div>
@@ -915,7 +817,7 @@ export const CreateExamAccordion = ({
                             {st.title || st.name}
                           </span>
                           <span className="text-[10px] text-neutral-400 ">
-                            {st.statusFa || st.status || "دانشجو"}
+                            {st.status === "online" ? t("online") : (isRTL ? st.statusFa : st.statusEn) || t("student")}
                           </span>
                         </div>
                       </div>
@@ -945,8 +847,7 @@ export const CreateExamAccordion = ({
       </div>
 
       {/* =========================================================
-          ITEM 3: پیوست فایل‌ها و منابع مرجع آزمون (ACCORDION)
-          قرارگیری قبل از اهداف برای امکان تولید هوشمند اهداف از فایل
+          ITEM 3: Attached Reference Files (ACCORDION)
           ========================================================= */}
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
         <div
@@ -959,18 +860,12 @@ export const CreateExamAccordion = ({
             </div>
             <div className="flex flex-col items-start ">
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100">
-                {isRTL
-                  ? "پیوست فایل‌ها و منابع مرجع آزمون"
-                  : "Exam Reference Files"}
+                {t("examReferenceFiles")}
               </span>
               <span className="text-[10px] text-neutral-400">
                 {attachedFiles.length > 0
-                  ? isRTL
-                    ? `${toPersianDigits(attachedFiles.length)} فایل پیوست شده (آماده استخراج هوشمند اهداف)`
-                    : `${attachedFiles.length} file(s) attached (ready for AI goal extraction)`
-                  : isRTL
-                    ? "اسلایدهای کلاسی، جزوه، کتب مرجع جهت تولید خودکار اهداف و سوالات (اختیاری)"
-                    : "Course slides, notes, or reference docs for auto-generating goals (optional)"}
+                  ? t("attachedFilesCountReady", "", { count: isRTL ? toPersianDigits(attachedFiles.length) : attachedFiles.length })
+                  : t("courseSlidesNotesOrReferenceDocs")}
               </span>
             </div>
           </div>
@@ -996,14 +891,10 @@ export const CreateExamAccordion = ({
               <UploadCloud className="w-6 h-6 text-[#2481cc] dark:text-[#52a2f6]" />
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
-                  {isRTL
-                    ? "انتخاب یا کشیدن فایل‌های مرجع آزمون"
-                    : "Select or drop reference files"}
+                  {t("selectOrDropReferenceFiles")}
                 </span>
                 <span className="text-[10px] text-neutral-400">
-                  {isRTL
-                    ? "پشتیبانی از فرمت‌های PDF، DOCX، PPTX، TXT (حداکثر ۲۰ مگابایت)"
-                    : "Supports PDF, DOCX, PPTX, TXT (up to 20MB)"}
+                  {t("supportsPdfDocxPptxTxtUp")}
                 </span>
               </div>
               <input
@@ -1057,7 +948,7 @@ export const CreateExamAccordion = ({
                         );
                       }}
                       className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                      title={isRTL ? "حذف فایل" : "Remove file"}
+                      title={t("removeFile")}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1070,9 +961,7 @@ export const CreateExamAccordion = ({
       </div>
 
       {/* =========================================================
-          ITEM 4: زمان آزمون و تعداد هدف‌ها goal (EXTENDABLE)
-          بیرونی: فیلد زمان هر نفر و تعداد گل
-          اکستند: تولید خودکار با هوش مصنوعی از فایل، اسکلت لودینگ، تنظیمات بلوم
+          ITEM 4: Exam Timing & Learning Goals (EXTENDABLE)
           ========================================================= */}
       <div className="w-full bg-neutral-scale70 dark:bg-neutral-scale1300 rounded-[14px] border border-neutral-scale100 dark:border-neutral-scale1100 overflow-hidden shadow-2xs transition-all">
         {/* Outer Fields (Always Visible) */}
@@ -1083,7 +972,7 @@ export const CreateExamAccordion = ({
                 <Target className="w-4 h-4" />
               </div>
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
-                {isRTL ? "زمان هر دانشجو و اهداف آزمون" : "Duration & Goals"}
+                {t("durationGoals")}
               </span>
             </div>
 
@@ -1107,7 +996,7 @@ export const CreateExamAccordion = ({
             {/* 1. Duration per student */}
             <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000">
               <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 ">
-                {isRTL ? "زمان هر دانشجو" : "Per Student"}
+                {t("perStudent")}
               </span>
 
               <div className="flex items-center justify-between gap-1 mt-0.5">
@@ -1135,7 +1024,7 @@ export const CreateExamAccordion = ({
                     className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none "
                   />
                   <span className="text-[10px] text-neutral-400 ">
-                    {isRTL ? "دقیقه" : "min"}
+                    {t("minutesSuffix")}
                   </span>
                 </div>
 
@@ -1154,7 +1043,7 @@ export const CreateExamAccordion = ({
             {/* 2. Number of Goals */}
             <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-white dark:bg-[#121c27] border border-neutral-scale300 dark:border-neutral-scale1000">
               <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 ">
-                {isRTL ? "تعداد هدف‌ها (Goal)" : "Goal Count"}
+                {t("goalCount")}
               </span>
 
               <div className="flex items-center justify-between gap-1 mt-0.5">
@@ -1176,7 +1065,7 @@ export const CreateExamAccordion = ({
                     className="w-12 text-center font-bold text-xs text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none "
                   />
                   <span className="text-[10px] text-neutral-400 ">
-                    {isRTL ? "هدف" : "goals"}
+                    {t("goals")}
                   </span>
                 </div>
 
@@ -1199,15 +1088,15 @@ export const CreateExamAccordion = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
-                  {isRTL ? "زبان برگزاری آزمون و اهداف" : "Exam & Goals Language"}
+                  {t("examGoalsLanguage")}
                 </span>
                 <span className="text-[10px] text-neutral-400 leading-tight">
                   {isRTL
                     ? examLanguage === "fa"
-                      ? "فارسی تخصصی (همراه با ذکر نام اصلی انگلیسی اصطلاحات جهت فهم دقیق)"
+                      ? t("persianSpecializedWithEn")
                       : examLanguage === "en"
-                      ? "آزمون، سرفصل‌ها و مصاحبه به زبان انگلیسی"
-                      : "تشخیص هوشمند بر اساس زبان فایل منبع"
+                      ? t("examTopicsInterviewEn")
+                      : t("smartDetectionFromSource")
                     : examLanguage === "fa"
                     ? "Persian with canonical English technical terms preserved"
                     : examLanguage === "en"
@@ -1228,7 +1117,7 @@ export const CreateExamAccordion = ({
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                 }`}
               >
-                {isRTL ? "فارسی" : "Persian"}
+                {t("persianLang")}
               </button>
               <button
                 type="button"
@@ -1250,7 +1139,7 @@ export const CreateExamAccordion = ({
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
                 }`}
               >
-                {isRTL ? "خودکار" : "Auto"}
+                {t("auto")}
               </button>
             </div>
           </div>
@@ -1273,12 +1162,8 @@ export const CreateExamAccordion = ({
                   disabled={isGeneratingGoals}
                   title={
                     isGoalSuccess
-                      ? isRTL
-                        ? "اهداف با موفقیت استخراج شد (کلیک برای استخراج مجدد)"
-                        : "Goals generated (click to regenerate)"
-                      : isRTL
-                        ? "استخراج هوشمند اهداف با هوش مصنوعی"
-                        : "Generate goals via AI"
+                      ? t("goalsGeneratedClickToRegenerate")
+                      : t("generateGoalsViaAi")
                   }
                   className={`w-11 h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
                     isGoalSuccess
@@ -1304,16 +1189,10 @@ export const CreateExamAccordion = ({
               <div className="flex flex-col items-center gap-0.5 text-center select-none">
                 <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 leading-tight">
                   {isGeneratingGoals
-                    ? isRTL
-                      ? "در حال استخراج هوشمند اهداف با هوش مصنوعی..."
-                      : "Extracting goals with AI..."
+                    ? t("extractingGoalsWithAi")
                     : isGoalSuccess
-                      ? isRTL
-                        ? "اهداف آزمون با موفقیت تنظیم شد"
-                        : "Goals extracted successfully from file"
-                      : isRTL
-                        ? "تولید هوشمند اهداف با هوش مصنوعی"
-                        : "Auto-generate goals via AI"}
+                      ? t("goalsExtractedSuccessfullyFromFile")
+                      : t("autoGenerateGoalsViaAi")}
                 </span>
                 {rawFiles.length > 0 && !isGeneratingGoals && (
                   <span className="text-[10px] font-normal text-neutral-400 dark:text-neutral-500 max-w-xs truncate">
@@ -1345,9 +1224,7 @@ export const CreateExamAccordion = ({
                 <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-[#2481cc]/25 text-xs text-[#2481cc] dark:text-[#52a2f6]">
                   <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#2481cc]" />
                   <span className="font-semibold">
-                    {isRTL
-                      ? "هوش مصنوعی در حال تحلیل عمیق محتوا و تدوین اهداف یادگیری بلوم است..."
-                      : "AI is analyzing document contents and formulating Bloom learning goals..."}
+                    {t("aiIsAnalyzingDocumentContentsAnd")}
                   </span>
                 </div>
 
@@ -1406,9 +1283,7 @@ export const CreateExamAccordion = ({
                  ======================================================== */
               <>
                 <span className="text-[11px] font-semibold text-[#2481cc] dark:text-[#52a2f6] pt-1">
-                  {isRTL
-                    ? `تعریف و تنظیمات ${toPersianDigits(goalCount)} هدف آزمون (سطح تسلط بلوم و نوع ارزیابی):`
-                    : `Define details for ${goalCount} goals (Bloom depth & goal type):`}
+                  {t("defineExamGoalsBloom", "", { count: isRTL ? toPersianDigits(goalCount) : goalCount })}
                 </span>
 
                 {Array.from({ length: goalCount }).map((_, idx) => {
@@ -1438,9 +1313,7 @@ export const CreateExamAccordion = ({
                               {toPersianDigits(idx + 1)}
                             </span>
                             <span>
-                              {isRTL
-                                ? `عنوان هدف شماره ${toPersianDigits(idx + 1)}:`
-                                : `Goal ${idx + 1} Title:`}
+                              {t("goalNumberTitle", "", { num: isRTL ? toPersianDigits(idx + 1) : idx + 1 })}
                             </span>
                           </label>
 
@@ -1453,7 +1326,7 @@ export const CreateExamAccordion = ({
                                 setGoalCount(next.length);
                               }}
                               className="text-neutral-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
-                              title={isRTL ? "حذف این هدف" : "Remove goal"}
+                              title={t("removeGoal")}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1466,11 +1339,7 @@ export const CreateExamAccordion = ({
                           onChange={(e) =>
                             handleGoalFieldChange(idx, "title", e.target.value)
                           }
-                          placeholder={
-                            isRTL
-                              ? `مثال: مفاهیم چندنخی (Multithreading) و همگام‌سازی پروسس‌ها...`
-                              : `e.g. Multithreading concepts and process synchronization...`
-                          }
+                          placeholder={t("goalPlaceholderExample")}
                           className="w-full px-3 py-2 text-xs rounded-lg bg-neutral-scale50 dark:bg-neutral-scale1200/50 border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#2481cc]"
                         />
                       </div>
@@ -1478,7 +1347,7 @@ export const CreateExamAccordion = ({
                       {/* Goal Type Selector */}
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
-                          {isRTL ? "نوع هدف (Goal Type):" : "Goal Type:"}
+                          {t("goalType")}
                         </span>
                         <div className="grid grid-cols-3 gap-1.5">
                           {GOAL_TYPES.map((gt) => {
@@ -1509,14 +1378,10 @@ export const CreateExamAccordion = ({
                       <div className="flex flex-col gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/60">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">
-                            {isRTL
-                              ? "سطح یادگیری مورد انتظار (تاکسونومی بلوم):"
-                              : "Expected Learning Depth (Bloom):"}
+                            {t("expectedLearningDepthBloom")}
                           </span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2481cc]/10 dark:bg-[#52a2f6]/15 text-[#2481cc] dark:text-[#52a2f6] border border-[#2481cc]/25">
-                            {isRTL
-                              ? `سطح ${toPersianDigits(currentBloomLevel)}: ${currentBloomObj.name}`
-                              : `Level ${currentBloomLevel}: ${currentBloomObj.name}`}
+                            {t("levelNName", "", { level: isRTL ? toPersianDigits(currentBloomLevel) : currentBloomLevel, name: currentBloomObj.name })}
                           </span>
                         </div>
 
@@ -1583,7 +1448,7 @@ export const CreateExamAccordion = ({
                           {/* Level Description Info Box */}
                           <div className="mt-2 p-2 rounded-lg bg-[#f8fafc] dark:bg-[#15202b] border border-neutral-scale200 dark:border-neutral-scale1100 text-[10px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
                             <span className="font-bold text-[#2481cc] dark:text-[#52a2f6] ml-1">
-                              {isRTL ? "شاخص سنجش:" : "Criteria:"}
+                              {t("criteria")}
                             </span>
                             {currentBloomObj.desc}
                           </div>
@@ -1616,10 +1481,10 @@ export const CreateExamAccordion = ({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-s font-bold text-neutral-scale1600 dark:text-neutral-scale100 ">
-                {isRTL ? "زمان‌بندی و برگزاری آزمون" : "Date & Time Scheduling"}
+                {t("dateTimeScheduling")}
               </span>
               <span className="text-[10px] text-neutral-400 ">
-                {examDate} • {startTime} {isRTL ? "تا" : "to"} {endTime}
+                {examDate} • {startTime} {t("toHour")} {endTime}
               </span>
             </div>
           </div>
@@ -1639,7 +1504,7 @@ export const CreateExamAccordion = ({
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5 text-[#2481cc]" />
-                  <span>{isRTL ? "تاریخ برگزاری آزمون" : "Exam Date"}</span>
+                  <span>{t("examDate")}</span>
                 </label>
                 <button
                   type="button"
@@ -1647,7 +1512,7 @@ export const CreateExamAccordion = ({
                   className="px-2 py-0.5 rounded-md bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] text-[10px] font-semibold cursor-pointer hover:bg-[#e1eefc] dark:hover:bg-[#203244] border border-[#2481cc]/25 transition-colors flex items-center gap-1"
                 >
                   <CalendarIcon className="w-3 h-3" />
-                  <span>{isRTL ? "انتخاب از تقویم" : "Calendar"}</span>
+                  <span>{t("calendar")}</span>
                 </button>
               </div>
 
@@ -1670,7 +1535,7 @@ export const CreateExamAccordion = ({
                   }}
                   className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 group-hover:text-[#2481cc] dark:group-hover:text-[#52a2f6] transition-colors cursor-pointer p-1"
                   title={
-                    isRTL ? "باز کردن تقویم انتخاب تاریخ" : "Open Calendar"
+                    t("openCalendar")
                   }
                 >
                   <CalendarDays className="w-4 h-4" />
@@ -1685,7 +1550,7 @@ export const CreateExamAccordion = ({
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                     <Clock3 className="w-3.5 h-3.5 text-primery-700" />
-                    <span>{isRTL ? "ساعت شروع" : "Start Time"}</span>
+                    <span>{t("startTime")}</span>
                   </label>
                   <button
                     type="button"
@@ -1693,7 +1558,7 @@ export const CreateExamAccordion = ({
                     className="px-2 py-0.5 rounded-md bg-[#edf5fd] dark:bg-[#182533] text-primery-700 dark:text-[#52a2f6] text-[10px] font-semibold cursor-pointer hover:bg-[#e1eefc] dark:hover:bg-[#203244] border border-primery-700/25 transition-colors flex items-center gap-1 active:scale-95"
                   >
                     <Clock3 className="w-3 h-3" />
-                    <span>{isRTL ? "انتخاب ساعت" : "Select"}</span>
+                    <span>{t("select")}</span>
                   </button>
                 </div>
 
@@ -1714,7 +1579,7 @@ export const CreateExamAccordion = ({
                       setIsStartTimePickerOpen(true);
                     }}
                     className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 group-hover:text-primery-700 dark:group-hover:text-[#52a2f6] transition-colors cursor-pointer p-1"
-                    title={isRTL ? "تنظیم ساعت شروع" : "Set Start Time"}
+                    title={t("setStartTime")}
                   >
                     <Clock3 className="w-4 h-4" />
                   </button>
@@ -1722,7 +1587,7 @@ export const CreateExamAccordion = ({
 
                 <div className="flex items-center justify-between text-[9.5px] px-1">
                   <span className="text-neutral-400 ">
-                    {isRTL ? "کلیک جهت باز کردن ساعت" : "Click to set time"}
+                    {t("clickToSetTime")}
                   </span>
                 </div>
               </div>
@@ -1732,7 +1597,7 @@ export const CreateExamAccordion = ({
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300  flex items-center gap-1.5">
                     <Clock3 className="w-3.5 h-3.5 text-primery-700" />
-                    <span>{isRTL ? "ساعت پایان" : "End Time"}</span>
+                    <span>{t("endTime")}</span>
                   </label>
                   <button
                     type="button"
@@ -1740,7 +1605,7 @@ export const CreateExamAccordion = ({
                     className="px-2 py-0.5 rounded-md bg-[#edf5fd] dark:bg-[#182533] text-primery-700 dark:text-[#52a2f6] text-[10px] font-semibold cursor-pointer hover:bg-[#e1eefc] dark:hover:bg-[#203244] border border-primery-700/25 transition-colors flex items-center gap-1 active:scale-95"
                   >
                     <Clock3 className="w-3 h-3" />
-                    <span>{isRTL ? "انتخاب ساعت" : "Select"}</span>
+                    <span>{t("select")}</span>
                   </button>
                 </div>
 
@@ -1765,7 +1630,7 @@ export const CreateExamAccordion = ({
                       setIsEndTimePickerOpen(true);
                     }}
                     className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 group-hover:text-primery-700 dark:group-hover:text-[#52a2f6] transition-colors cursor-pointer p-1"
-                    title={isRTL ? "تنظیم ساعت پایان" : "Set End Time"}
+                    title={t("setEndTime")}
                   >
                     <Clock3 className="w-4 h-4" />
                   </button>
@@ -1774,7 +1639,7 @@ export const CreateExamAccordion = ({
                 <div className="flex items-center justify-between text-[9.5px] px-1">
                   <span className="text-neutral-400 ">
                     {isRTL
-                      ? `حداقل مجاز: ${minCalculatedEndTime}`
+                      ? t("minimumAllowedTime", "", { time: minCalculatedEndTime })
                       : `Min: ${minCalculatedEndTime}`}
                   </span>
                 </div>
@@ -1792,7 +1657,7 @@ export const CreateExamAccordion = ({
       </div>
 
       {/* =========================================================
-          BOTTOM ACTIONS: ثبت و ایجاد آزمون / انصراف
+          BOTTOM ACTIONS: Create / Cancel
           ========================================================= */}
       <div className="flex items-center gap-2 pt-2">
         <button
@@ -1801,7 +1666,7 @@ export const CreateExamAccordion = ({
           disabled={isSubmitting}
           className="flex-1 py-3 px-4 rounded-xl border border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-700 dark:text-neutral-300  text-s font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer text-center"
         >
-          {isRTL ? "انصراف" : "Cancel"}
+          {t("cancelComment")}
         </button>
 
         <button
@@ -1817,12 +1682,8 @@ export const CreateExamAccordion = ({
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>
                 {isEditMode
-                  ? isRTL
-                    ? "در حال ذخیره تغییرات..."
-                    : "Saving changes..."
-                  : isRTL
-                    ? "در حال ایجاد آزمون..."
-                    : "Creating exam..."}
+                  ? t("savingChanges")
+                  : t("creatingExam")}
               </span>
             </>
           ) : (
@@ -1830,12 +1691,8 @@ export const CreateExamAccordion = ({
               <Check className="w-4 h-4" />
               <span>
                 {isEditMode
-                  ? isRTL
-                    ? "ذخیره تغییرات آزمون"
-                    : "Save Exam Changes"
-                  : isRTL
-                    ? "ثبت و ایجاد آزمون"
-                    : "Create Exam"}
+                  ? t("saveExamChanges")
+                  : t("createExam")}
               </span>
             </>
           )}
@@ -1848,7 +1705,7 @@ export const CreateExamAccordion = ({
         onClose={() => setIsDatePickerOpen(false)}
         selectedDate={selectedIsoDate}
         onSelectDate={handleDateSelected}
-        title={isRTL ? "انتخاب تاریخ آزمون" : "Select Exam Date"}
+        title={t("selectExamDate")}
       />
 
       {/* Start Time Clock Picker Modal */}
@@ -1857,7 +1714,7 @@ export const CreateExamAccordion = ({
         onClose={() => setIsStartTimePickerOpen(false)}
         initialTime={startTime}
         onConfirm={(newTime) => setStartTime(newTime)}
-        title={isRTL ? "تنظیم ساعت شروع آزمون" : "Set Start Time"}
+        title={t("setStartTime")}
       />
 
       {/* End Time Clock Picker Modal with Min Time Lock */}
@@ -1867,7 +1724,7 @@ export const CreateExamAccordion = ({
         initialTime={endTime}
         minTime={minCalculatedEndTime}
         onConfirm={(newTime) => handleEndTimeChange(newTime)}
-        title={isRTL ? "تنظیم ساعت پایان آزمون" : "Set End Time"}
+        title={t("setEndTime")}
       />
     </div>
   );

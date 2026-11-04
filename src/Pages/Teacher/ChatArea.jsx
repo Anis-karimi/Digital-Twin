@@ -274,7 +274,7 @@ export const ChatArea = () => {
       const full = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
       const raw = full || user?.full_name || user?.name || user?.username || "";
       if (!raw || raw === "استاد دیجیتال" || raw.includes("دیجیتال") || raw === "استاد" || raw.toLowerCase() === "teacher") {
-        return "دکتر محمد اله بخش";
+        return t("drAllahbakhsh");
       }
       return raw;
     };
@@ -466,7 +466,7 @@ export const ChatArea = () => {
     const currentStudent = isStudentChat ? chatEntity : null;
     const currentCourse = !isStudentChat ? chatEntity : null;
     const currentChat = chatEntity;
-    const chatTitle = currentChat?.title || currentChat?.name || (isStudentChat ? "گفت‌وگو با دانشجو" : "گفت‌وگو با درس");
+    const chatTitle = currentChat?.title || currentChat?.name || (isStudentChat ? t("chatWithStudent") : t("chatWithCourse"));
 
     const isCourseInactive = Boolean(
       !isStudentChat &&
@@ -479,9 +479,13 @@ export const ChatArea = () => {
     const [isQuizMinimized, setIsQuizMinimized] = useState(false);
 
     const courseDisplayName = (currentCourse?.title || currentChat?.title || chatTitle || "")
-      .replace(/گفت‌وگو\s*(با)?\s*/g, "")
+      .replace(/(گفت‌وگو\s*(با)?\s*|Chat\s*(with)?\s*)/gi, "")
       .trim();
-    const quizBarTitle = courseDisplayName ? `کوییز ${courseDisplayName}` : (t("osQuiz") || "کوییز سیستم عامل");
+    const quizBarTitle = courseDisplayName
+      ? isRTL
+        ? `${t("quiz")} ${courseDisplayName}`
+        : `${courseDisplayName} ${t("quiz")}`
+      : t("osQuiz");
 
     const handleOpenQuiz = () => {
       setIsQuizOpen(true);
@@ -571,15 +575,9 @@ export const ChatArea = () => {
 
       const pdfContent = messages
         .map((message) => {
-          const isUser = message.sender === "me";
-
-          const roleName = isPersian
-            ? isUser
-              ? "شما"
-              : "دستیار دانای"
-            : isUser
-              ? "You"
-              : "Danai";
+          const roleName = isUser
+            ? t("you")
+            : t("danaiAssistant");
 
           const direction = getTextDirection(message.text);
 
@@ -998,7 +996,7 @@ export const ChatArea = () => {
 
             aiText = errorDetail
                 ? (typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail))
-                : "مشکلی در ارتباط با سرور به وجود آمد.";
+                : t("serverErrorMessage");
         }
 
         const aiNow = new Date();
@@ -1274,11 +1272,11 @@ export const ChatArea = () => {
               type="button"
               onClick={() => handleJumpToComment(unreadComments[0])}
               className="relative flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#2481cc] hover:bg-[#1c72b8] text-white shadow-lg shadow-[#2481cc]/30 cursor-pointer active:scale-95 transition-all group font-vazir"
-              title={isRTL ? "رفتن به نظر استاد" : "Jump to teacher comment"}
+              title={t("jumpToTeacherComment")}
             >
               <QuoteSvg className="w-3.5 h-3.5 text-white shrink-0 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold leading-none">
-                {isRTL ? "نظر جدید استاد" : "New Comment"}
+                {t("newTeacherComment")}
               </span>
               <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[#2481cc] font-mono text-[11px] font-extrabold flex items-center justify-center leading-none">
                 {unreadComments.length}
@@ -1300,9 +1298,7 @@ export const ChatArea = () => {
               >
                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span className="text-xs font-vazir text-amber-800 dark:text-amber-300 font-medium text-center">
-                  {isRTL
-                    ? "این درس توسط استاد غیرفعال شده است و امکان ارسال پیام وجود ندارد."
-                    : "This course is inactive and sending messages is disabled."}
+                  {t("courseInactiveDisabledMessage")}
                 </span>
               </div>
             ) : (
@@ -1400,7 +1396,7 @@ export const ChatArea = () => {
                       type="button"
                       className="absolute bottom-[1px] right-[1px] w-[35px] h-[35px] z-20 transition-all duration-300 flex items-center justify-center cursor-pointer"
                       onClick={sendMessage}
-                      title={isRTL ? "ارسال پیام" : "Send message"}
+                      title={t("sendMessage")}
                     >
                       <Send className="!w-[35px] !h-[35px] text-primery-500" />
                     </button>
@@ -1451,7 +1447,7 @@ export const ChatArea = () => {
 
                       {/* Status Tag */}
                       <span className="text-[10px] font-medium text-primery-700 dark:text-sky-400 bg-primery-50 dark:bg-sky-950/40 px-2 py-0.5 rounded-full border border-primery-200/50 dark:border-sky-800/40 truncate">
-                        {t("inProgressQuiz") || "در حال اجرا"}
+                        {t("inProgressQuiz")}
                       </span>
                     </div>
 
@@ -1463,8 +1459,8 @@ export const ChatArea = () => {
                           setIsQuizMinimized(false);
                         }}
                         className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-primery-600 dark:hover:text-sky-400 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                        title={t("expandQuiz") || "بزرگ کردن"}
-                        aria-label={t("expandQuiz") || "بزرگ کردن"}
+                        title={t("expandQuiz")}
+                        aria-label={t("expandQuiz")}
                       >
                         <ChevronUp className="w-4 h-4" />
                       </button>
@@ -1476,8 +1472,8 @@ export const ChatArea = () => {
                           handleCloseQuiz();
                         }}
                         className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                        title={t("closeQuiz") || "بستن"}
-                        aria-label={t("closeQuiz") || "بستن"}
+                        title={t("closeQuiz")}
+                        aria-label={t("closeQuiz")}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>

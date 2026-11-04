@@ -23,11 +23,13 @@ import { useNeutralCalibration } from "../hooks/useNeutralCalibration";
 import { CircumplexGrid } from "./CircumplexGrid";
 import { ActionUnitMeters } from "./ActionUnitMeters";
 import { DebugOverlayCanvas } from "./DebugOverlayCanvas";
+import { useTranslation } from "@/translations/useTranslation";
 
 export function BiometricsDashboard({
   userId = "default_user",
   className = "",
 }) {
+  const { t, isRTL } = useTranslation();
   const [showDebugOverlay, setShowDebugOverlay] = useState(true);
 
   // 1. Camera Hook
@@ -87,17 +89,17 @@ export function BiometricsDashboard({
   return (
     <div
       className={`flex flex-col gap-5 max-w-5xl mx-auto p-6 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl text-slate-100 ${className}`}
-      dir="rtl"
+      dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
             <Cpu className="w-6 h-6 text-indigo-400" />
-            داشبورد بیومتریک و تله‌متری چهره
+            {t("biometricsDashboardTitle")}
           </h2>
           <p className="text-xs text-slate-400 mt-1 font-mono">
-            شناسه کاربر: <span className="text-sky-300 font-bold">{userId}</span>
+            {t("userIdentifier")} <span className="text-sky-300 font-bold">{userId}</span>
           </p>
         </div>
 
@@ -111,7 +113,7 @@ export function BiometricsDashboard({
             }`}
           >
             <Target className="w-3.5 h-3.5" />
-            {isGazeCalibrated ? "کالیبراسیون نگاه فعال" : "نگاه هندسی اولیه"}
+            {isGazeCalibrated ? t("gazeCalibrationActive") : t("geometricGazeFallback")}
           </span>
           <span
             className={`text-xs px-3 py-1 rounded-full font-medium border flex items-center gap-1.5 ${
@@ -121,7 +123,7 @@ export function BiometricsDashboard({
             }`}
           >
             <Smile className="w-3.5 h-3.5" />
-            {isNeutralCalibrated ? "مبنای خنثی کالیبره‌شده" : "بدون مبنای خنثی"}
+            {isNeutralCalibrated ? t("neutralBaselineCalibrated") : t("noNeutralBaseline")}
           </span>
         </div>
       </div>
@@ -158,7 +160,7 @@ export function BiometricsDashboard({
             {!isCameraActive && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-2">
                 <CameraOff className="w-10 h-10 stroke-[1.5]" />
-                <span className="text-sm">دوربین غیرفعال است</span>
+                <span className="text-sm">{t("cameraInactive")}</span>
               </div>
             )}
           </div>
@@ -173,7 +175,7 @@ export function BiometricsDashboard({
               >
                 {devices.map((d) => (
                   <option key={d.deviceId} value={d.deviceId}>
-                    {d.label || `دوربین ${d.deviceId.slice(0, 5)}`}
+                    {d.label || t("cameraN", "", { id: d.deviceId.slice(0, 5) })}
                   </option>
                 ))}
               </select>
@@ -186,7 +188,7 @@ export function BiometricsDashboard({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all"
               >
                 <Camera className="w-4 h-4" />
-                روشن کردن دوربین
+                {t("turnOnCamera")}
               </button>
             ) : (
               <button
@@ -194,7 +196,7 @@ export function BiometricsDashboard({
                 onClick={stopCamera}
                 className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition-all"
               >
-                خاموش کردن دوربین
+                {t("turnOffCamera")}
               </button>
             )}
 
@@ -207,7 +209,7 @@ export function BiometricsDashboard({
                   : "bg-slate-800 text-slate-400 border-slate-700"
               }`}
             >
-              {showDebugOverlay ? "لایه HUD روشن" : "لایه HUD خاموش"}
+              {showDebugOverlay ? t("hudOverlayOn") : t("hudOverlayOff")}
             </button>
           </div>
 
@@ -226,7 +228,7 @@ export function BiometricsDashboard({
               }`}
             >
               <Activity className="w-4 h-4" />
-              {isStreaming ? "توقف ارسال تله‌متری" : "شروع تله‌متری برخط (1 FPS)"}
+              {isStreaming ? t("stopTelemetryStream") : t("startTelemetryStream")}
             </button>
 
             <button
@@ -236,8 +238,8 @@ export function BiometricsDashboard({
               className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all"
             >
               {isNeutralCalibrating
-                ? `در حال کالیبراسیون (${neutralCountdown}s)...`
-                : " مبنای خنثی (۳ ثانیه)"}
+                ? t("calibratingSeconds", "", { seconds: neutralCountdown })
+                : t("neutralBaselineThreeSeconds")}
             </button>
 
             <button
@@ -246,7 +248,7 @@ export function BiometricsDashboard({
               disabled={!isCameraActive || isGazeCalibrating}
               className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-all"
             >
-               کالیبراسیون نگاه 
+               {t("startGazeCalibration")} 
             </button>
           </div>
         </div>
@@ -257,7 +259,7 @@ export function BiometricsDashboard({
           <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center">
             <h4 className="text-xs font-bold text-slate-300 mb-3 w-full text-right flex items-center gap-2">
               <Eye className="w-4 h-4 text-sky-400" />
-              فضای عاطفی دوبعدی راسل (Valence / Arousal)
+              {t("russellCircumplexModel")}
             </h4>
             <CircumplexGrid
               valence={telemetry?.continuous_valence}
@@ -272,7 +274,7 @@ export function BiometricsDashboard({
           <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 flex flex-col gap-3">
             <div>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-slate-400">میزان تمرکز و پایداری توجه:</span>
+                <span className="text-slate-400">{t("focusStabilityMetric")}</span>
                 <b className={attentionScore >= 60 ? "text-emerald-400" : "text-rose-400"}>
                   {attentionScore.toFixed(1)}%
                 </b>
@@ -290,7 +292,7 @@ export function BiometricsDashboard({
 
             <div>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-slate-400">شاخص استرس مرکب:</span>
+                <span className="text-slate-400">{t("compositeStressIndex")}</span>
                 <b className={stressScore < 50 ? "text-emerald-400" : "text-rose-400"}>
                   {stressScore.toFixed(1)}%
                 </b>
@@ -307,8 +309,8 @@ export function BiometricsDashboard({
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/5 font-mono">
-              <span>زاویه سر: P:{telemetry?.pitch?.toFixed(1) || 0}° Y:{telemetry?.yaw?.toFixed(1) || 0}°</span>
-              <span>تاخیر شبکه: {latencyMs}ms</span>
+              <span>{t("headPosePitchYaw", "", { pitch: telemetry?.pitch?.toFixed(1) || 0, yaw: telemetry?.yaw?.toFixed(1) || 0 })}</span>
+              <span>{t("networkLatency", "", { ms: latencyMs })}</span>
             </div>
           </div>
 
@@ -327,7 +329,7 @@ export function BiometricsDashboard({
         <div className="fixed inset-0 bg-slate-950/95 z-[9999] flex flex-col items-center justify-center p-6 select-none">
           {/* <div className="absolute top-10 text-center">
             <span className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-              مرحله {gazeStep} از {gazeTotalSteps}
+              {t("stepOf", "", { current: gazeStep, total: gazeTotalSteps })}
             </span>
             <h3 className="text-xl font-bold text-white mt-2">
               {gazeTarget.label}

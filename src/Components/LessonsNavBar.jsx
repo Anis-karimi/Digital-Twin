@@ -17,7 +17,7 @@ export const LessonsNavBar = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const containerRef = useRef(null);
   const tabsRef = useRef({});
@@ -377,10 +377,8 @@ export const LessonsNavBar = ({
             const isActive = activeTab === item.id;
             const displayLabel =
               item.id === "lessons"
-                ? isRTL
-                  ? item.labelFa || item.label || "درس‌ها"
-                  : item.labelEn || item.label || "Lessons"
-                : item.labelFa || item.label || "سیستم عامل";
+                ? t("courses")
+                : (isRTL ? item.labelFa : item.labelEn) || item.label || item.title || t("operatingSystemsCourse");
             const isPersianLabel = /[\u0600-\u06FF]/.test(displayLabel);
 
             return (

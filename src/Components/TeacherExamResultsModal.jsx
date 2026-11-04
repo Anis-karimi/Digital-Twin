@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext, useCallback } from "react";
 import { AppContext } from "@/Context/AppContext";
+import { useTranslation } from "@/translations/useTranslation";
 import { examsApi } from "@/api/new/exams.api";
 import { biometricsApi } from "@/api/new/biometrics.api";
 import { studentsApi } from "@/api/new/students.api";
@@ -36,7 +37,7 @@ const toPersianDigits = (num) => {
   return String(num).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
 };
 
-const buildFallbackResults = (exam, isRTL, courseStudents = []) => {
+const buildFallbackResults = (exam, isRTL, courseStudents = [], t = (k) => k) => {
   const durMins = Number(exam?.duration_minutes) || 10;
   const gapMins = Number(exam?.gap_minutes) || 5;
   const timeStr = exam?.time || "10:00 - 11:30";
@@ -76,7 +77,7 @@ const buildFallbackResults = (exam, isRTL, courseStudents = []) => {
     const studentName =
       matchedProfile?.name ||
       matchedProfile?.student_name ||
-      (isRTL ? `دانشجو ${sIdStr.slice(-4)}` : `Student ${sIdStr.slice(-4)}`);
+      t("studentWithId", "", { id: sIdStr.slice(-4) });
 
     return {
       student_id: sIdStr,
@@ -102,8 +103,8 @@ const buildFallbackResults = (exam, isRTL, courseStudents = []) => {
       exam?.quizId ||
       exam?.assignmentId ||
       "assignment",
-    title: exam?.title || (isRTL ? "نتایج آزمون" : "Exam Results"),
-    course: exam?.course || "سیستم عامل",
+    title: exam?.title || (t("examResults")),
+    course: exam?.course || t("operatingSystems"),
     date: exam?.date || exam?.exam_date || getTodayJalaliDate(),
     window_start: startTime,
     window_end: endTime,
@@ -118,7 +119,7 @@ const buildFallbackResults = (exam, isRTL, courseStudents = []) => {
 };
 
 export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
-  const { isRTL } = useContext(AppContext);
+  const { t, isRTL } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [resultsData, setResultsData] = useState(null);
@@ -163,9 +164,9 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
 
     if (!assignmentId) {
       if (exam) {
-        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents, t));
       } else {
-        setError(isRTL ? "شناسه آزمون معتبر نمی‌باشد." : "Exam ID is missing.");
+        setError(t("examIdIsMissing"));
       }
       setLoading(false);
       return;
@@ -188,16 +189,14 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 : match?.name ||
                   match?.student_name ||
                   s.student_name ||
-                  (isRTL
-                    ? `دانشجو ${String(s.student_id).slice(-4)}`
-                    : `Student ${String(s.student_id).slice(-4)}`),
+                  t("studentWithId", "", { id: String(s.student_id).slice(-4) }),
             profile_url:
               s.profile_url || match?.avatar || match?.profile_url || null,
           };
         });
         setResultsData({ ...data, students: enrichedStudents });
       } else {
-        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents, t));
       }
     } catch (err) {
       console.warn(
@@ -205,18 +204,16 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
         err
       );
       if (exam) {
-        setResultsData(buildFallbackResults(exam, isRTL, courseStudents));
+        setResultsData(buildFallbackResults(exam, isRTL, courseStudents, t));
       } else {
         setError(
-          isRTL
-            ? "دریافت نتایج آزمون با خطا مواجه شد."
-            : "Failed to load exam results."
+          t("errorFetchingExamResults")
         );
       }
     } finally {
       setLoading(false);
     }
-  }, [isOpen, assignmentId, exam, isRTL]);
+  }, [isOpen, assignmentId, exam, isRTL, t]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -291,10 +288,10 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
             </div>
             <div className="min-w-0">
               <h2 className="font-vazir font-bold text-sm text-neutral-scale70 truncate">
-                {resultsData?.title || exam?.title || (isRTL ? "نتایج آزمون" : "Exam Results")}
+                {resultsData?.title || exam?.title || (t("examResults"))}
               </h2>
               <span className="font-vazir text-[11px] text-neutral-scale200 block truncate">
-                {resultsData?.course || "سیستم عامل"} • {resultsData?.date || exam?.date || getTodayJalaliDate()}
+                {resultsData?.course || t("operatingSystems")} • {resultsData?.date || exam?.date || getTodayJalaliDate()}
               </span>
             </div>
           </div>
@@ -302,7 +299,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
           <button
             type="button"
             onClick={onClose}
-            aria-label={isRTL ? "بستن" : "Close"}
+            aria-label={t("close")}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/15 text-neutral-scale70 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
@@ -315,7 +312,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
             <div className="py-16 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-8 h-8 text-primery-700 dark:text-primery-400 animate-spin" />
               <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale400">
-                {isRTL ? "در حال دریافت نتایج و آمار آزمون..." : "Loading results..."}
+                {t("fetchingExamResults")}
               </p>
             </div>
           ) : error && !resultsData ? (
@@ -328,7 +325,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold text-xs hover:bg-red-700 transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <RotateCw className="w-3.5 h-3.5" />
-                <span>{isRTL ? "تلاش مجدد" : "Try Again"}</span>
+                <span>{t("retry")}</span>
               </button>
             </div>
           ) : selectedSessionStudent ? (
@@ -341,7 +338,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   className="flex items-center gap-1 text-xs font-vazir text-primery-700 dark:text-primery-300 font-semibold cursor-pointer hover:underline"
                 >
                   {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-                  <span>{isRTL ? "بازگشت به فهرست دانشجویان" : "Back to Student Roster"}</span>
+                  <span>{t("backToStudentsList")}</span>
                 </button>
 
                 <span className="font-vazir text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70">
@@ -353,7 +350,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="py-12 flex flex-col items-center justify-center gap-2">
                   <Loader2 className="w-6 h-6 text-primery-700 dark:text-primery-400 animate-spin" />
                   <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "در حال دریافت متن مصاحبه..." : "Loading transcript..."}
+                    {t("fetchingInterviewTranscript")}
                   </span>
                 </div>
               ) : sessionDetail ? (
@@ -362,7 +359,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <div className="bg-primery-50 dark:bg-neutral-scale1200 rounded-xl p-3 border border-primery-200 dark:border-neutral-scale1000 flex items-center justify-between">
                     <div>
                       <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 block">
-                        {isRTL ? "نمره ارزیابی نهایی" : "Final Score"}
+                        {t("finalEvaluationScore")}
                       </span>
                       <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-lg text-primery-800 dark:text-primery-200`}>
                         {sessionDetail.score !== null ? (isRTL ? `${toPersianDigits(sessionDetail.score)}٪` : `${sessionDetail.score}%`) : "—"}
@@ -378,12 +375,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                         }`}
                       >
                         {sessionDetail.passed
-                          ? isRTL
-                            ? "قبول شده"
-                            : "Passed"
-                          : isRTL
-                          ? "نیاز به تلاش"
-                          : "Needs Review"}
+                          ? t("passedStatus")
+                          : t("needsEffort")}
                       </span>
                     </div>
                   </div>
@@ -393,16 +386,16 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                     <div className="flex items-center justify-between">
                       <span className="font-vazir text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale80 flex items-center gap-1.5">
                         <ShieldAlert className="w-4 h-4 text-primery-700 dark:text-primery-300" />
-                        {isRTL ? "مستندات نظارت تصویری و تخلفات (وبکم)" : "Proctoring Evidence & Photos"}
+                        {t("violationsWebcamDocs")}
                       </span>
                       {Array.isArray(sessionDetail.incidents) && sessionDetail.incidents.length > 0 ? (
                         <span className="font-vazir text-[11px] font-bold text-rose-500 bg-rose-500/10 dark:bg-rose-950/40 px-2 py-0.5 rounded-md border border-rose-500/20">
-                          {isRTL ? `${toPersianDigits(sessionDetail.incidents.length)} اخطار ثبت‌شده` : `${sessionDetail.incidents.length} Strikes`}
+                          {t("strikesCountRecorded", "", { count: isRTL ? toPersianDigits(sessionDetail.incidents.length) : sessionDetail.incidents.length })}
                         </span>
                       ) : (
                         <span className="font-vazir text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
-                          {isRTL ? "بدون تخلف (تأیید کامل)" : "Clean Session"}
+                          {t("noViolationsFullApproval")}
                         </span>
                       )}
                     </div>
@@ -413,9 +406,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                           <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs font-vazir text-rose-600 dark:text-rose-400 flex items-center gap-1.5 font-semibold">
                             <AlertCircle className="w-4 h-4 shrink-0" />
                             <span>
-                              {isRTL
-                                ? "دانشجو به دلیل دریافت ۳ اخطار تخلف از آزمون اخراج و جلسه با نمره صفر ابطال گردید."
-                                : "Student was disqualified and ejected due to 3 proctoring strikes."}
+                              {t("ejectedViolationsNotice")}
                             </span>
                           </div>
                         )}
@@ -447,11 +438,11 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                                 ) : (
                                   <div className="flex flex-col items-center justify-center text-slate-500 gap-1">
                                     <Camera className="w-6 h-6" />
-                                    <span className="font-vazir text-[9px]">{isRTL ? "تصویر ثبت نشده" : "No image"}</span>
+                                    <span className="font-vazir text-[9px]">{t("noImage")}</span>
                                   </div>
                                 )}
                                 <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-rose-600 text-white font-vazir text-[9px] font-bold shadow">
-                                  {isRTL ? `اخطار ${toPersianDigits(inc.strike_number || iIdx + 1)}` : `Strike ${inc.strike_number || iIdx + 1}`}
+                                  {t("strikeNumber", "", { num: isRTL ? toPersianDigits(inc.strike_number || iIdx + 1) : inc.strike_number || iIdx + 1 })}
                                 </div>
                               </div>
 
@@ -461,22 +452,22 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                                   {inc.violation_type === "multiple_faces" ? (
                                     <>
                                       <Users className="w-3.5 h-3.5 shrink-0" />
-                                      <span className="truncate">{isRTL ? "بیش از ۱ چهره" : "Multiple Faces"}</span>
+                                      <span className="truncate">{t("multipleFacesDetectedBadge")}</span>
                                     </>
                                   ) : inc.violation_type === "no_face" ? (
                                     <>
                                       <UserX className="w-3.5 h-3.5 shrink-0" />
-                                      <span className="truncate">{isRTL ? "عدم حضور چهره" : "No Face"}</span>
+                                      <span className="truncate">{t("noFaceInFrame")}</span>
                                     </>
                                   ) : inc.violation_type === "gaze_out_of_bounds" ? (
                                     <>
                                       <EyeOff className="w-3.5 h-3.5 shrink-0" />
-                                      <span className="truncate">{isRTL ? "انحراف دید" : "Looking Away"}</span>
+                                      <span className="truncate">{t("lookingAwayFromScreen")}</span>
                                     </>
                                   ) : (
                                     <>
                                       <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                                      <span className="truncate">{isRTL ? "عدم انطباق چهره" : "Face Mismatch"}</span>
+                                      <span className="truncate">{t("faceMismatchWithIdentity")}</span>
                                     </>
                                   )}
                                 </div>
@@ -501,9 +492,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                       <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs font-vazir text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                         <span>
-                          {isRTL
-                            ? "هیچ تخلفی در طول این آزمون ثبت نشده است. حضور پیوسته، عدم حضور افراد دیگر و انطباق هویت دانشجو تأیید شده است."
-                            : "Clean session. Full attendance, solo presence, and biometric verification confirmed."}
+                          {t("noViolationsRecordedNotice")}
                         </span>
                       </div>
                     )}
@@ -513,7 +502,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   <div className="space-y-2">
                     <span className="font-vazir text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale80 flex items-center gap-1.5">
                       <MessageSquare className="w-4 h-4 text-primery-700 dark:text-primery-300" />
-                      {isRTL ? "متن سوالات و پاسخ‌های شفاهی" : "Oral Dialogue Transcript"}
+                      {t("oralQuestionsAndAnswers")}
                     </span>
 
                     {Array.isArray(sessionDetail.turns) && sessionDetail.turns.length > 0 ? (
@@ -526,7 +515,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                             <Bot className="w-4 h-4 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                             <div className="flex-1">
                               <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                {isRTL ? `پرسش ${toPersianDigits(tIdx + 1)}:` : `Question ${tIdx + 1}:`}
+                                {t("questionNumWithColon", "", { num: isRTL ? toPersianDigits(tIdx + 1) : tIdx + 1 })}
                               </span>
                               <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed font-medium">
                                 {turn.question}
@@ -538,10 +527,10 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                             <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                             <div className="flex-1">
                               <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                                {isRTL ? "پاسخ دانشجو:" : "Student Answer:"}
+                                {t("studentResponseLabel")}
                               </span>
                               <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed bg-white dark:bg-neutral-scale1300 p-2 rounded-lg border border-neutral-scale200 dark:border-neutral-scale1000">
-                                {turn.answer || (isRTL ? "پاسخی ثبت نشد." : "No answer.")}
+                                {turn.answer || (t("noResponseRecorded"))}
                               </p>
                             </div>
                           </div>
@@ -551,7 +540,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                               <Sparkles className="w-3.5 h-3.5 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                               <div className="flex-1">
                                 <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                  {isRTL ? "ارزیابی هوش مصنوعی:" : "AI Evaluation:"}
+                                  {t("aiEvaluationLabel")}
                                 </span>
                                 <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed">
                                   {turn.feedback}
@@ -563,7 +552,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                       ))
                     ) : (
                       <div className="text-center py-6 text-neutral-scale900 dark:text-neutral-scale400 text-xs font-vazir">
-                        {isRTL ? "پرسشی برای این دانشجو ثبت نشده است." : "No questions recorded."}
+                        {t("noQuestionsRecorded")}
                       </div>
                     )}
                   </div>
@@ -572,9 +561,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="py-12 flex flex-col items-center justify-center gap-2 text-center text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale400">
                   <AlertCircle className="w-6 h-6 text-neutral-scale800 dark:text-neutral-scale500" />
                   <span>
-                    {isRTL
-                      ? "اطلاعات جلسه این دانشجو در دسترس نیست یا دانشجو هنوز وارد آزمون نشده است."
-                      : "Student session details are not available or student has not entered the exam yet."}
+                    {t("studentSessionUnavailableNotice")}
                   </span>
                 </div>
               )}
@@ -587,7 +574,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="bg-primery-50/60 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-primery-200/60 dark:border-neutral-scale1000 flex flex-col items-center text-center">
                   <Users className="w-4 h-4 text-primery-700 dark:text-primery-300 mb-1" />
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "کل دانشجویان" : "Total Students"}
+                    {t("totalStudents")}
                   </span>
                   <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {isRTL ? toPersianDigits(resultsData?.total_students ?? 0) : (resultsData?.total_students ?? 0)}
@@ -597,7 +584,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="bg-emerald-50/60 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-emerald-200/60 dark:border-neutral-scale1000 flex flex-col items-center text-center">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mb-1" />
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "تکمیل کرده‌ها" : "Completed"}
+                    {t("studentsCompleted")}
                   </span>
                   <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {isRTL ? toPersianDigits(resultsData?.completed_students ?? 0) : (resultsData?.completed_students ?? 0)}
@@ -607,7 +594,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="bg-primery-50/60 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-primery-200/60 dark:border-neutral-scale1000 flex flex-col items-center text-center">
                   <Award className="w-4 h-4 text-primery-700 dark:text-primery-300 mb-1" />
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "میانگین نمرات" : "Avg Score"}
+                    {t("averageScore")}
                   </span>
                   <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {resultsData?.average_score !== null && resultsData?.average_score !== undefined
@@ -619,7 +606,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                 <div className="bg-purple-50/60 dark:bg-neutral-scale1200 rounded-xl p-2.5 border border-purple-200/60 dark:border-neutral-scale1000 flex flex-col items-center text-center">
                   <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400 mb-1" />
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "درصد قبولی" : "Pass Rate"}
+                    {t("passPercentage")}
                   </span>
                   <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}>
                     {resultsData?.pass_rate !== null && resultsData?.pass_rate !== undefined
@@ -637,17 +624,17 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={isRTL ? "جستجوی دانشجو یا شماره دانشجویی..." : "Search student..."}
+                    placeholder={t("searchStudentOrIdPlaceholder")}
                     className="w-full h-9 pr-9 pl-3 text-xs font-vazir bg-neutral-scale50 dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl text-neutral-scale1800 dark:text-neutral-scale80 focus:outline-none focus:border-primery-700"
                   />
                 </div>
 
                 <div className="flex gap-1.5 overflow-x-auto pb-1 text-xs font-vazir no-scrollbar">
                   {[
-                    { id: "all", label: isRTL ? "همه" : "All" },
-                    { id: "completed", label: isRTL ? "تکمیل شده" : "Completed" },
-                    { id: "in_progress", label: isRTL ? "در حال آزمون" : "In Progress" },
-                    { id: "not_started", label: isRTL ? "منتظر نوبت" : "Pending" },
+                    { id: "all", label: t("all") },
+                    { id: "completed", label: t("completedCount") },
+                    { id: "in_progress", label: t("inProgress") },
+                    { id: "not_started", label: t("waitingSlot") },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -668,7 +655,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
               {/* Students List */}
               <div className="space-y-2">
                 <span className="font-vazir text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale80 block">
-                  {isRTL ? "فهرست نمرات و وضعیت دانشجویان" : "Student Scores & Attendance"}
+                  {t("studentScoresAttendance")}
                 </span>
 
                 {filteredStudents.length > 0 ? (
@@ -680,7 +667,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="w-8 h-8 rounded-full bg-primery-100 dark:bg-primery-900 text-primery-800 dark:text-primery-200 font-vazir font-bold text-xs flex items-center justify-center shrink-0">
-                            {s.student_name ? s.student_name.slice(0, 1) : "د"}
+                            {s.student_name ? s.student_name.slice(0, 1) : (isRTL ? "د" : "S")}
                           </div>
                           <div className="min-w-0">
                             <span className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 block truncate">
@@ -701,7 +688,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                             <div className="flex items-center gap-1.5">
                               {s.strikes > 0 && (
                                 <span className="font-vazir text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
-                                  {isRTL ? `${toPersianDigits(s.strikes)} اخطار` : `${s.strikes} strikes`}
+                                  {t("strikesCountText", "", { count: isRTL ? toPersianDigits(s.strikes) : s.strikes })}
                                 </span>
                               )}
                               <span className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-sm text-primery-800 dark:text-primery-200 bg-primery-100/60 dark:bg-primery-900/40 px-2 py-0.5 rounded-md`}>
@@ -711,12 +698,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                           ) : (
                             <span className="text-[11px] font-vazir text-neutral-scale900 dark:text-neutral-scale400">
                               {s.status === "started" || s.status === "active"
-                                ? isRTL
-                                ? "در حال آزمون"
-                                : "In progress"
-                                : isRTL
-                                ? "شرکت نکرده"
-                                : "Not started"}
+                                ? t("inProgress")
+                                : t("notAttended")}
                             </span>
                           )}
 
@@ -725,7 +708,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                               className={`w-2 h-2 rounded-full ${
                                 s.passed ? "bg-emerald-500" : "bg-amber-500"
                               }`}
-                              title={s.passed ? "قبول" : "نیاز به تلاش"}
+                              title={s.passed ? t("passed") : t("needsEffort")}
                             />
                           )}
                         </div>
@@ -741,9 +724,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
                             <span>
-                              {isRTL
-                                ? `مشاهده متن و مستندات آزمون (${toPersianDigits(s.turns_count)} سوال)`
-                                : `View Interview & Evidence (${s.turns_count} turns)`}
+                              {t("viewExamTranscriptsAndTurns", "", { count: isRTL ? toPersianDigits(s.turns_count) : s.turns_count })}
                             </span>
                           </button>
                         </div>
@@ -752,7 +733,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                   ))
                 ) : (
                   <div className="text-center py-8 text-neutral-scale900 dark:text-neutral-scale400 font-vazir text-xs">
-                    {isRTL ? "دانشجویی با این مشخصات یافت نشد." : "No students found."}
+                    {t("noStudentFoundQuery")}
                   </div>
                 )}
               </div>
@@ -769,9 +750,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4 text-sky-400" />
                 <span className="font-vazir font-bold text-xs text-white">
-                  {isRTL
-                    ? `مستند تصویری اخطار ${toPersianDigits(previewImage.strike_number || 1)}`
-                    : `Strike ${previewImage.strike_number || 1} Evidence`}
+                  {t("visualEvidenceForStrike", "", { strike: isRTL ? toPersianDigits(previewImage.strike_number || 1) : previewImage.strike_number || 1 })}
                 </span>
               </div>
               <button
@@ -795,12 +774,12 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
               <div className="flex items-center justify-between">
                 <span className="font-bold text-white flex items-center gap-1.5">
                   {previewImage.violation_type === "multiple_faces"
-                    ? (isRTL ? "حضور بیش از یک نفر در کادر دوربین" : "Multiple Faces")
+                    ? (t("multipleFacesAlert"))
                     : previewImage.violation_type === "no_face"
-                    ? (isRTL ? "عدم حضور چهره در کادر تصویر" : "No Face Detected")
+                    ? (t("noFaceViolation"))
                     : previewImage.violation_type === "gaze_out_of_bounds"
-                    ? (isRTL ? "انحراف دید از صفحه آزمون" : "Gaze Out of Bounds")
-                    : (isRTL ? "عدم انطباق چهره با هویت دانشجو" : "Face Mismatch")}
+                    ? (t("gazeDeviationViolation"))
+                    : (t("faceMismatchViolation"))}
                 </span>
                 <span className="font-mono text-[11px] text-slate-400">
                   {previewImage.created_at

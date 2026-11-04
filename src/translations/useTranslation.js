@@ -7,10 +7,14 @@ import { translations, getTranslation } from "./translations";
  */
 export const useTranslation = () => {
   const context = useContext(AppContext);
-  const language = context?.language || "fa";
-  const isRTL = context?.isRTL ?? (language === "fa");
+  const language =
+    context?.language ||
+    (typeof localStorage !== "undefined" && localStorage.getItem("language")) ||
+    "fa";
+  const isRTL = context?.isRTL ?? (language === "fa" || language === "ar");
 
-  const t = (key, fallback = "") => getTranslation(language, key, fallback);
+  const t = (key, fallback = "", params = null) =>
+    getTranslation(language, key, fallback, params);
 
   return {
     t,
@@ -19,3 +23,4 @@ export const useTranslation = () => {
     strings: translations[language] || translations.fa,
   };
 };
+

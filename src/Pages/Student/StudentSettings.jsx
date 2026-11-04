@@ -12,13 +12,13 @@ import { adminApi, userApi } from "@/api";
 const settingsItems = [
   {
     id: "biometrics",
-    title: "احراز هویت",
-    subtitle: "ثبت چهره",
+    titleKey: "biometricAuth",
+    subtitleKey: "faceRegistration",
     path: "/StudentSettings/Biometrics",
     icon: (
       <img
         className="w-[23px] h-[23px] object-contain dark:invert"
-        alt="احراز هویت چهره"
+        alt=""
         src="/face_logo.png"
       />
     ),
@@ -61,13 +61,13 @@ export const StudentSettings = () => {
 
   const firstName =
     currentUser?.first_name ||
-    (currentUser?.name ? currentUser.name.split(" ")[0] : "علیرضا");
+    (currentUser?.name ? currentUser.name.split(" ")[0] : t("defaultStudentFirstName"));
   const lastName =
     currentUser?.last_name ||
     (currentUser?.name
       ? currentUser.name.split(" ").slice(1).join(" ")
-      : "رضایی");
-  const fullName = `${firstName} ${lastName}`.trim() || "علیرضا رضایی";
+      : t("defaultStudentLastName"));
+  const fullName = `${firstName} ${lastName}`.trim() || `${t("defaultStudentFirstName")} ${t("defaultStudentLastName")}`;
   const email =
     currentUser?.email ||
     (currentUser?.username
@@ -228,7 +228,7 @@ export const StudentSettings = () => {
                   className={`flex items-center gap-3.5 w-full ${
                     isRTL ? "flex-row text-right" : "flex-row text-left"
                   }`}
-                  aria-label={`${item.title || t(item.titleKey)}, ${item.subtitle || t(item.subtitleKey)}`}
+                  aria-label={`${t(item.titleKey)}, ${t(item.subtitleKey)}`}
                 >
                   <div className="w-[24px] h-[24px] shrink-0 flex items-center justify-center">
                     {item.icon}
@@ -243,14 +243,14 @@ export const StudentSettings = () => {
                         isRTL ? "fa-body" : "en-body"
                       }`}
                     >
-                      {item.title || t(item.titleKey)}
+                      {t(item.titleKey)}
                     </div>
                     <div
                       className={`w-full truncate text-neutral-scale1100 dark:text-neutral-scale300 ${
                         isRTL ? "fa-caption-2" : "en-caption-2"
                       }`}
                     >
-                      {item.subtitle || t(item.subtitleKey)}
+                      {t(item.subtitleKey)}
                     </div>
                   </div>
                 </Link>

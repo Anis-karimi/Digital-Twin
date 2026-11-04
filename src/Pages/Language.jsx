@@ -24,6 +24,15 @@ const languageOptions = [
     direction: "rtl",
     lang: "fa",
   },
+  {
+    id: "arabic",
+    label: "العربية",
+    value: "ar",
+    labelClassName:
+      "fa-body text-left relative w-36 mt-[-1.00px] mr-[-5.00px] text-neutral-scale1800 dark:text-neutral-scale70",
+    direction: "rtl",
+    lang: "ar",
+  },
 ];
 
 const RadioIndicator = ({ checked }) => (
@@ -84,10 +93,10 @@ export const Language = () => {
       </header>
 
       <section
-        className="w-full h-[88px] flex px-3.5"
+        className="w-full flex px-3.5"
         aria-labelledby={`${groupId}-legend`}
       >
-        <div className="w-full h-[78px] relative bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] overflow-hidden p-3 flex items-center">
+        <div className="w-full relative bg-neutral-scale70 dark:bg-neutral-scale1300 border border-neutral-scale100 dark:border-neutral-scale1100 rounded-[13px] p-3.5 flex items-center">
           <fieldset className="border-0 m-0 p-0 w-full">
             <legend id={`${groupId}-legend`} className="sr-only">
               {t("selectLanguage")}
@@ -113,9 +122,9 @@ export const Language = () => {
                     <RadioIndicator checked={checked} />
                     <span
                       className={
-                        option.value === "fa"
-                          ? "fa-body text-neutral-scale1800 dark:text-neutral-scale70"
-                          : "en-body text-neutral-scale1800 dark:text-neutral-scale70"
+                        option.value === "fa" || option.value === "ar"
+                          ? "fa-body text-neutral-scale1800 dark:text-neutral-scale70 font-vazir"
+                          : "en-body text-neutral-scale1800 dark:text-neutral-scale70 font-inter"
                       }
                       dir={option.direction}
                       lang={option.lang}

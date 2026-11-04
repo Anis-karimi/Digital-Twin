@@ -5,7 +5,7 @@ import { AppContext } from "@/Context/AppContext";
 import { BookOpen, Users, FolderPlus, Settings as SettingsIcon, CalendarClock } from "lucide-react";
 
 export const AdminNavigationBar = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -18,35 +18,35 @@ export const AdminNavigationBar = () => {
   const navItems = [
     {
       id: "courses",
-      label: isRTL ? "دروس" : "Courses",
+      label: t("courses"),
       route: "/Admin",
       icon: BookOpen,
       iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "users",
-      label: isRTL ? "کاربران" : "Users",
+      label: t("users"),
       route: "/AdminUsers",
       icon: Users,
       iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "schedule",
-      label: isRTL ? "زمان‌بندی" : "Schedule",
+      label: t("schedule"),
       route: "/AdminExamsSchedule",
       icon: CalendarClock,
       iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "create",
-      label: isRTL ? "ثبت درس" : "New",
+      label: t("registerCourse"),
       route: "/AdminCreateCourse",
       icon: FolderPlus,
       iconClassName: "w-[18px] h-[18px]",
     },
     {
       id: "settings",
-      label: isRTL ? "تنظیمات" : "Settings",
+      label: t("settings"),
       route: "/AdminSettings",
       icon: SettingsIcon,
       iconClassName: "w-[18px] h-[18px]",

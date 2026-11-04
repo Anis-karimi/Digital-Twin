@@ -66,7 +66,7 @@ export const AdminCourseManagementModal = ({
         console.error("Failed to load course management data:", err);
         setNotification({
           type: "error",
-          message: isRTL ? "خطا در دریافت اطلاعات اعضای درس." : "Failed to load course members.",
+          message: t("errorFetchingCourseMembers"),
         });
       })
       .finally(() => {
@@ -86,9 +86,7 @@ export const AdminCourseManagementModal = ({
       const updated = await adminApi.assignCourseTeacher(course.course_id, selectedTeacherId);
       setNotification({
         type: "success",
-        message: isRTL
-          ? `استاد درس به «${updated.teacher_name}» تغییر یافت.`
-          : `Course instructor updated to ${updated.teacher_name}.`,
+        message: t("courseInstructorUpdatedTo", "", { name: updated.teacher_name }),
       });
 
       // Refresh members
@@ -100,7 +98,7 @@ export const AdminCourseManagementModal = ({
       console.error("Failed to assign teacher:", err);
       setNotification({
         type: "error",
-        message: err.message || (isRTL ? "خطا در انتساب استاد درس." : "Failed to assign teacher."),
+        message: err.message || (t("errorAssigningInstructor")),
       });
     } finally {
       setSavingTeacher(false);
@@ -117,9 +115,7 @@ export const AdminCourseManagementModal = ({
       const added = await adminApi.addCourseMember(course.course_id, selectedStudentId, "STUDENT");
       setNotification({
         type: "success",
-        message: isRTL
-          ? `دانشجو «${added.full_name}» با موفقیت به درس افزوده شد.`
-          : `Student "${added.full_name}" enrolled successfully.`,
+        message: t("studentEnrolledSuccess", "", { name: added.full_name }),
       });
 
       // Update state locally
@@ -136,7 +132,7 @@ export const AdminCourseManagementModal = ({
       console.error("Failed to add student:", err);
       setNotification({
         type: "error",
-        message: err.message || (isRTL ? "خطا در افزودن دانشجو به درس." : "Failed to enroll student."),
+        message: err.message || (t("errorAddingStudent")),
       });
     } finally {
       setAddingStudent(false);
@@ -148,9 +144,7 @@ export const AdminCourseManagementModal = ({
     if (user.role === "TEACHER" || user.user_id === course.teacher_id) {
       setNotification({
         type: "error",
-        message: isRTL
-          ? "امکان حذف مستقیم استاد درس وجود ندارد. ابتدا استاد دیگری تعیین نمایید."
-          : "Cannot remove course instructor. Please assign a replacement instructor first.",
+        message: t("removeInstructorNotAllowed"),
       });
       return;
     }
@@ -161,9 +155,7 @@ export const AdminCourseManagementModal = ({
       await adminApi.removeCourseMember(course.course_id, user.user_id);
       setNotification({
         type: "success",
-        message: isRTL
-          ? `کاربر «${user.full_name}» از درس حذف گردید.`
-          : `User "${user.full_name}" removed from course.`,
+        message: t("userRemovedFromCourse", "", { name: user.full_name }),
       });
 
       // Update local state
@@ -178,7 +170,7 @@ export const AdminCourseManagementModal = ({
       console.error("Failed to remove student:", err);
       setNotification({
         type: "error",
-        message: err.message || (isRTL ? "خطا در حذف دانشجو از درس." : "Failed to remove user."),
+        message: err.message || (t("errorRemovingStudent")),
       });
     } finally {
       setRemovingUserId(null);
@@ -205,10 +197,10 @@ export const AdminCourseManagementModal = ({
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-bold leading-tight font-vazir truncate">
-                {isRTL ? `مدیریت: ${course.title}` : `Manage: ${course.title}`}
+                {t("manageCourseTitle", "", { title: course.title })}
               </h2>
               <span className="text-[10px] text-white/70 block leading-tight truncate">
-                {isRTL ? "استاد و دانشجویان عضو" : "Instructor & Students"}
+                {t("instructorStudents")}
               </span>
             </div>
           </div>
@@ -247,7 +239,7 @@ export const AdminCourseManagementModal = ({
             <div className="py-12 flex flex-col items-center justify-center gap-3">
               <div className="w-7 h-7 border-3 border-primery-600 border-t-transparent rounded-full animate-spin" />
               <span className="text-xs text-neutral-scale600 dark:text-neutral-scale400">
-                {isRTL ? "در حال دریافت اعضای درس..." : "Loading course data..."}
+                {t("fetchingCourseMembers")}
               </span>
             </div>
           ) : (
@@ -258,11 +250,11 @@ export const AdminCourseManagementModal = ({
                   <div className="flex items-center gap-1.5">
                     <School className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                      {isRTL ? "استاد درس" : "Course Instructor"}
+                      {t("courseInstructorInput")}
                     </span>
                   </div>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
-                    {course.teacher_name || (isRTL ? "تعیین‌نشده" : "Not assigned")}
+                    {course.teacher_name || (t("notAssigned"))}
                   </span>
                 </div>
 
@@ -293,7 +285,7 @@ export const AdminCourseManagementModal = ({
                     ) : (
                       <Check className="w-3 h-3" />
                     )}
-                    <span>{isRTL ? "تغییر استاد درس" : "Assign Instructor"}</span>
+                    <span>{t("changeCourseInstructor")}</span>
                   </button>
                 </div>
               </section>
@@ -303,15 +295,13 @@ export const AdminCourseManagementModal = ({
                 <div className="flex items-center gap-1.5">
                   <UserPlus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                    {isRTL ? "افزودن دانشجو به این درس" : "Enroll Student"}
+                    {t("addStudentToCourse")}
                   </span>
                 </div>
 
                 {availableStudents.length === 0 ? (
                   <p className="text-[11px] text-neutral-scale600 dark:text-neutral-scale400 italic">
-                    {isRTL
-                      ? "تمامی دانشجویان سیستم در این درس ثبت‌نام شده‌اند."
-                      : "All system students are already enrolled in this course."}
+                    {t("allStudentsAlreadyEnrolled")}
                   </p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
@@ -341,7 +331,7 @@ export const AdminCourseManagementModal = ({
                       ) : (
                         <UserPlus className="w-3 h-3" />
                       )}
-                      <span>{isRTL ? "افزودن به درس" : "Enroll Student"}</span>
+                      <span>{t("enrollStudent")}</span>
                     </button>
                   </div>
                 )}
@@ -353,7 +343,7 @@ export const AdminCourseManagementModal = ({
                   <div className="flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-primery-700 dark:text-primery-400" />
                     <span className="text-xs font-bold text-neutral-scale1800 dark:text-neutral-scale70">
-                      {isRTL ? "دانشجویان ثبت‌نام‌شده" : "Enrolled Students"} ({isRTL ? toPersianDigits(studentMembers.length) : studentMembers.length})
+                      {t("studentsEnrolled")} ({isRTL ? toPersianDigits(studentMembers.length) : studentMembers.length})
                     </span>
                   </div>
                 </div>
@@ -370,7 +360,7 @@ export const AdminCourseManagementModal = ({
                       type="text"
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder={isRTL ? "فیلتر در لیست دانشجویان..." : "Filter enrolled students..."}
+                      placeholder={t("filterStudentsListPlaceholder")}
                       className={`w-full bg-white dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-lg py-1 text-xs text-neutral-scale1800 dark:text-neutral-scale70 ${
                         isRTL ? "pr-7 pl-2.5 text-right" : "pl-7 pr-2.5 text-left"
                       }`}
@@ -382,11 +372,11 @@ export const AdminCourseManagementModal = ({
                 <div className="max-h-[200px] overflow-y-auto flex flex-col gap-1.5 pr-0.5">
                   {studentMembers.length === 0 ? (
                     <div className="p-4 text-center border border-dashed border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl text-xs text-neutral-scale600 dark:text-neutral-scale400">
-                      {isRTL ? "هیچ دانشجویی هنوز به این درس اضافه نشده است." : "No students enrolled yet."}
+                      {t("noStudentsInCourseYet")}
                     </div>
                   ) : filteredStudents.length === 0 ? (
                     <div className="p-3 text-center text-xs text-neutral-scale600">
-                      {isRTL ? "موردی با این جستجو پیدا نشد." : "No matching students."}
+                      {t("noMatchingStudents")}
                     </div>
                   ) : (
                     filteredStudents.map((student) => {
@@ -416,14 +406,14 @@ export const AdminCourseManagementModal = ({
                             onClick={() => handleRemoveStudent(student)}
                             disabled={isRemoving}
                             className="bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-300 text-[10px] font-semibold px-2 py-1 rounded-md flex items-center gap-1 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
-                            title={isRTL ? "حذف دانشجو از درس" : "Remove from course"}
+                            title={t("removeStudentFromCourse")}
                           >
                             {isRemoving ? (
                               <div className="w-2.5 h-2.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                             ) : (
                               <Trash2 className="w-3 h-3" />
                             )}
-                            <span>{isRTL ? "حذف" : "Remove"}</span>
+                            <span>{t("delete")}</span>
                           </button>
                         </div>
                       );
@@ -442,7 +432,7 @@ export const AdminCourseManagementModal = ({
             onClick={onClose}
             className="bg-neutral-scale200 dark:bg-neutral-scale1000 hover:bg-neutral-scale300 text-neutral-scale900 dark:text-white text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all cursor-pointer"
           >
-            {isRTL ? "بستن" : "Close"}
+            {t("close")}
           </button>
         </div>
       </div>

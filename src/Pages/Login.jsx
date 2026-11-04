@@ -14,14 +14,16 @@ import {
   BookOpen,
   Search,
   ChevronDown,
+  Globe,
 } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
-import mainlogo from "@/assets/logo/mainlogo.svg"
+import mainlogo from "@/assets/logo/mainlogo.svg";
+import { toPersianDigits, toLocalizedDigits } from "@/utils/dateUtils";
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { isRTL, setRole, loginUser, currentUser, role, t } =
+  const { isRTL, setRole, loginUser, currentUser, role, t, language, setLanguage } =
     useContext(AppContext);
 
   const [directory, setDirectory] = useState([]);
@@ -115,12 +117,7 @@ export const Login = () => {
       }
     } catch (err) {
       console.error("Login failed:", err);
-      setErrorMessage(
-        t(
-          "loginErrorMessage",
-          "خطا در ورود به سامانه. لطفاً دوباره تلاش کنید.",
-        ),
-      );
+      setErrorMessage(t("loginErrorMessage"));
     } finally {
       setLoadingUser(null);
     }
@@ -165,18 +162,34 @@ export const Login = () => {
             ) : (
               <ArrowLeft className="w-3.5 h-3.5" />
             )}
-            <span>{t("backToApp", "بازگشت")}</span>
+            <span>{t("backToApp")}</span>
           </button>
 
-          {currentUser && (
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-vazir">
-              {`${t("activeUser", "کاربر فعال:")} ${
-                currentUser.first_name ||
-                currentUser.username ||
-                (isRTL ? "استاد" : "Teacher")
-              }`}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {currentUser && (
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-vazir">
+                {`${t("activeUser")} ${
+                  currentUser.first_name ||
+                  currentUser.username ||
+                  (t("roleTeacher"))
+                }`}
+              </span>
+            )}
+
+            <div className="flex items-center gap-1 bg-neutral-scale100 dark:bg-neutral-scale1200 px-2 py-0.5 rounded-lg border border-neutral-scale200 dark:border-neutral-scale1000">
+              <Globe className="w-3.5 h-3.5 text-neutral-scale600 dark:text-neutral-scale400" />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                aria-label={t("language")}
+                className="text-[11px] font-medium bg-transparent text-neutral-scale800 dark:text-neutral-scale200 cursor-pointer outline-none border-0 p-0"
+              >
+                <option value="fa" className="bg-white dark:bg-neutral-scale1300 text-black dark:text-white">فارسی</option>
+                <option value="en" className="bg-white dark:bg-neutral-scale1300 text-black dark:text-white">English</option>
+                <option value="ar" className="bg-white dark:bg-neutral-scale1300 text-black dark:text-white">العربية</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Header Branding */}
@@ -185,18 +198,16 @@ export const Login = () => {
           <div className="w-22 h-22 flex items-center justify-center">
             <img
               src={mainlogo}
-              alt={isRTL ? "دانای" : "DANAI"}
+              alt={t("digitalTwinName")}
               className="w-21 h-24 object-contain"
             />
           </div>
           <h1 className="text-lg font-bold dark:text-neutral-scale100 text-neutral-scale1800 font-vazir mt-1">
-            {t("loginToDigitalTwin", "ورود به سامانه دانای")}
+            {t("loginToDigitalTwin")}
           </h1>
 
           <p className="text-xs text-neutral-scale900 dark:text-neutral-scale400 font-vazir">
-            {isRTL
-              ? "انتخاب درس و ورود با نقش استاد یا دانشجویان دوره"
-              : "Select course and login as instructor or enrolled student"}
+            {t("selectCourseAndLoginAsInstructor")}
           </p>
         </div>
 
@@ -212,7 +223,7 @@ export const Login = () => {
           <label className="text-[11px] font-semibold text-neutral-scale900 dark:text-neutral-scale300 font-vazir flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-primery-600 dark:text-primery-400" />
-              <span>{isRTL ? "نام درس:" : "Select Course:"}</span>
+              <span>{t("selectCourseLogin")}</span>
             </span>
             {currentCourse?.department && (
               <span className="text-[10px] text-neutral-scale700 dark:text-neutral-scale500 font-vazir">
@@ -225,7 +236,7 @@ export const Login = () => {
             <div className="h-10 rounded-xl bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 flex items-center justify-center gap-2 text-xs text-neutral-scale800 dark:text-neutral-scale400 font-vazir">
               <Loader2 className="w-4 h-4 animate-spin text-primery-600" />
               <span>
-                {isRTL ? "در حال دریافت فهرست دروس..." : "Loading courses..."}
+                {t("loginCoursesLoading")}
               </span>
             </div>
           ) : (
@@ -240,7 +251,7 @@ export const Login = () => {
               >
                 {directory.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.title} {c.units ? `(${c.units} واحد)` : ""}
+                    {c.title} {c.units ? `(${t("unitsCountText", "", { count: isRTL ? toPersianDigits(c.units) : c.units })})` : ""}
                   </option>
                 ))}
               </select>
@@ -267,7 +278,7 @@ export const Login = () => {
             }`}
           >
             <GraduationCap className="w-4 h-4" />
-            <span>{isRTL ? "ورود با نقش استاد" : "Teacher Login"}</span>
+            <span>{t("teacherLogin")}</span>
           </button>
 
           <button
@@ -280,7 +291,7 @@ export const Login = () => {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>{isRTL ? "ورود با نقش دانشجویان" : "Students Login"}</span>
+            <span>{t("studentsLogin")}</span>
             {currentCourse?.students?.length > 0 && (
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-normal">
                 {currentCourse.students.length}
@@ -324,16 +335,16 @@ export const Login = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-neutral-scale1800 dark:text-neutral-scale100 font-vazir truncate">
-                        {teacherProfile.name || "دکتر محمد اله بخش"}
+                        {teacherProfile.name || t("drAllahbakhsh")}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-md border font-vazir shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                        {isRTL ? "استاد و هیئت علمی" : "Instructor"}
+                        {t("instructorFaculty")}
                       </span>
                     </div>
                     <p className="text-[11px] text-neutral-scale900 dark:text-neutral-scale400 font-vazir mt-0.5">
-                      {isRTL
-                        ? `ورود به پنل استاد و مدیریت دروس (${currentCourse?.title || "سیستم عامل و بلاکچین"})`
-                        : `Instructor portal: manage courses (${currentCourse?.title || "All assigned courses"})`}
+                      {t("instructorPortalManageCourses", "", {
+                        course: currentCourse?.title || t("operatingSystems"),
+                      })}
                     </p>
                   </div>
 
@@ -360,9 +371,7 @@ export const Login = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
-                  isRTL
-                    ? "جستجوی دانشجو بر اساس نام یا نام کاربری..."
-                    : "Search student by name or username..."
+                  t("searchStudentLoginPlaceholder")
                 }
                 className="w-full h-9.5 px-3 pl-8 rounded-xl bg-neutral-scale50 dark:bg-neutral-scale1400 border border-neutral-scale200 dark:border-neutral-scale1100 text-xs font-vazir placeholder:text-neutral-scale600 dark:placeholder:text-neutral-scale500 text-neutral-scale1800 dark:text-neutral-scale100 focus:outline-hidden focus:border-emerald-500 shadow-xs"
               />
@@ -428,12 +437,8 @@ export const Login = () => {
               ) : (
                 <div className="py-6 text-center text-xs text-neutral-scale800 dark:text-neutral-scale400 font-vazir">
                   {searchQuery
-                    ? isRTL
-                      ? "دانشجویی با این مشخصات یافت نشد."
-                      : "No student found matching query."
-                    : isRTL
-                      ? "هیچ دانشجویی برای این درس ثبت نشده است."
-                      : "No students enrolled in this course."}
+                    ? t("noStudentFoundQuery")
+                    : t("noStudentsCourseLogin")}
                 </div>
               )}
             </div>
@@ -454,12 +459,12 @@ export const Login = () => {
               <Shield className="w-3.5 h-3.5 text-purple-600" />
             )}
             <span>
-              {isRTL ? "ورود با نقش مدیر سیستم (Admin)" : "System Admin Login"}
+              {t("systemAdminLogin")}
             </span>
           </button>
 
           <span className="text-[10px] text-neutral-scale700 dark:text-neutral-scale500 font-vazir">
-            نسخه ۲.۴
+            {t("appVersionText", "", { version: isRTL ? "۲.۴" : "2.4" })}
           </span>
         </div>
       </div>

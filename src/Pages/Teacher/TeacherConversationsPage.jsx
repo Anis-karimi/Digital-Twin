@@ -19,7 +19,7 @@ import UserIcon from "@/assets/icons/user2.svg?react";
 import { lessonItems as defaultLessonItems } from "@/data/LessonsNavBar";
 
 export const TeacherConversationsPage = () => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -183,13 +183,7 @@ export const TeacherConversationsPage = () => {
       ================================================== */}
       <header
         className="absolute top-0 left-0 w-full h-[65px] flex z-20"
-        aria-label={
-          isRTL
-            ? activeTabId === "lessons"
-              ? "سربرگ صفحه"
-              : "سربرگ درس"
-            : "Page header"
-        }
+        aria-label={activeTabId === "lessons" ? t("pageHeader") : t("courseHeader")}
       >
         <div
           className="w-full h-[65px] flex items-center justify-between px-4 bg-primery-700 dark:bg-neutral-scale1300 border-b dark:border-neutral-scale1000"
@@ -200,7 +194,7 @@ export const TeacherConversationsPage = () => {
               isRTL ? "fa-display" : "en-display"
             } text-[#f7f7f7] text-center whitespace-nowrap mr-[5px]`}
           >
-            {isRTL ? "دانای" : "DANAI"}
+            {t("digitalTwinName")}
           </h1>
 
           <div className="flex items-center gap-3">
@@ -208,18 +202,14 @@ export const TeacherConversationsPage = () => {
             {location.pathname !== "/Teacher" && (
               <button
                 type="button"
-                aria-label={isRTL ? "دانشجویان" : "Students"}
+                aria-label={t("students")}
                 onClick={() =>
                   navigate(
                     `/TeacherContacts/${activeTabId !== "lessons" ? activeTabId : "os"}`,
                   )
                 }
                 className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
-                title={
-                  isRTL
-                    ? "مشاهده لیست و وضعیت آنلاین دانشجویان"
-                    : "View students & online status"
-                }
+                title={t("viewStudentsOnlineStatus")}
               >
                 <UserIcon className="w-6 h-6 text-neutral-scale70" />
               </button>
@@ -228,7 +218,7 @@ export const TeacherConversationsPage = () => {
             {/* Notifications */}
             <button
               type="button"
-              aria-label={isRTL ? "اعلان‌ها" : "Notifications"}
+              aria-label={t("notifications")}
               onClick={() => navigate("/TeacherNotification")}
               className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
             >
@@ -241,7 +231,7 @@ export const TeacherConversationsPage = () => {
             {/* More Menu */}
             <button
               type="button"
-              aria-label={isRTL ? "گزینه‌های بیشتر" : "More options"}
+              aria-label={t("moreOptions")}
               onClick={() => setIsMenuOpen(true)}
               className="relative flex h-6 w-6 items-center justify-center cursor-pointer transition-transform active:scale-95"
             >
@@ -255,7 +245,7 @@ export const TeacherConversationsPage = () => {
           LESSONS NAV BAR (Animated indicator tracking)
       ================================================== */}
       <section
-        aria-label={isRTL ? "نوار درس‌ها" : "Lessons Nav Bar"}
+        aria-label={t("lessonsNavBarAria")}
         className="absolute top-[60px] left-0 w-full z-20"
       >
         <LessonsNavBar
@@ -292,7 +282,7 @@ export const TeacherConversationsPage = () => {
       ================================================== */}
       <section
         ref={viewportRef}
-        aria-label={isRTL ? "بخش گفتگوها" : "Conversations track"}
+        aria-label={t("conversationsTrack")}
         className="absolute top-[105px] left-0 right-0 bottom-0 overflow-hidden"
       >
         <Swiper

@@ -21,7 +21,7 @@ export const ExamScheduleModal = ({
   exam,
   onSlotChanged,
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -52,9 +52,7 @@ export const ExamScheduleModal = ({
         if (!isMounted) return;
         console.error("Failed to fetch exam slots:", err);
         setError(
-          isRTL
-            ? "خطا در دریافت لیست نوبت‌های آزمون."
-            : "Failed to load exam time slots."
+          t("errorFetchingSlots")
         );
       })
       .finally(() => {
@@ -111,9 +109,7 @@ export const ExamScheduleModal = ({
       const detail =
         err?.response?.data?.detail ||
         err?.message ||
-        (isRTL
-          ? "این نوبت قبلاً رزرو شده یا خطایی رخ داد."
-          : "Failed to reschedule slot. Please select another slot.");
+        (t("slotAlreadyBookedOrError"));
       setError(detail);
     } finally {
       setSubmitting(false);
@@ -138,10 +134,10 @@ export const ExamScheduleModal = ({
             </div>
             <div className="flex flex-col">
               <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 font-vazir">
-                {isRTL ? "زمان‌بندی و تغییر نوبت حضور" : "Exam Time Scheduling"}
+                {t("scheduleAndChangeSlot")}
               </h2>
               <span className="text-[10.5px] text-neutral-400 font-vazir">
-                {exam?.title || "آزمون شفاهی"}
+                {exam?.title || t("oralExam")}
               </span>
             </div>
           </div>
@@ -162,29 +158,29 @@ export const ExamScheduleModal = ({
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300">
                 <CalendarDays className="w-3.5 h-3.5 text-[#2481cc]" />
-                <span className="font-semibold">{isRTL ? "تاریخ برگزاری:" : "Date:"}</span>
+                <span className="font-semibold">{t("date")}</span>
                 <span>{exam?.date || getTodayJalaliDate()}</span>
               </div>
               <span className="text-[11px] font-medium text-neutral-500">
-                {exam?.duration ? `${toPersianDigits(exam.duration)} دقیقه` : "۲۰ دقیقه"}
+                {exam?.duration
+                  ? t("minutesCountText", "", { count: isRTL ? toPersianDigits(exam.duration) : exam.duration })
+                  : t("minutesCountText", "", { count: isRTL ? "۲۰" : "20" })}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-xs pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
               <div className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300">
                 <Clock3 className="w-3.5 h-3.5 text-[#2481cc]" />
-                <span className="font-semibold">{isRTL ? "بازه کلی باز بودن آزمون:" : "Overall Window:"}</span>
-                <span className="font-bold text-[#2481cc] dark:text-[#52a2f6]">
-                  {toPersianDigits(slotsData?.window_start || exam?.windowStart || "10:00")} تا{" "}
+                <span className="font-semibold">{t("overallWindow")}</span>
+                <span className="font-bold text-[#2481cc] dark:text-[#52a2f6] dir-ltr inline-block">
+                  {toPersianDigits(slotsData?.window_start || exam?.windowStart || "10:00")} -{" "}
                   {toPersianDigits(slotsData?.window_end || exam?.windowEnd || "14:00")}
                 </span>
               </div>
             </div>
 
             <p className="text-[10.5px] text-neutral-500 dark:text-neutral-400 leading-relaxed pt-1">
-              {isRTL
-                ? "دانشجویان ملزم هستند صرفاً در بازه نوبت اختصاصی خود در جلسه آزمون حضور یابند. می‌توانید نوبت خود را به یکی از زمان‌های خالی جابه‌جا کنید."
-                : "Students are scheduled for individual interview slots. You may change your attendance slot to any available free time."}
+              {t("studentsMustAttendSlotNotice")}
             </p>
           </div>
 
@@ -194,11 +190,11 @@ export const ExamScheduleModal = ({
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="font-medium">
-                  {isRTL ? "نوبت رزرو شده فعلی شما:" : "Your current slot:"}
+                  {t("currentBookedSlot")}
                 </span>
               </div>
-              <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">
-                {toPersianDigits(slotsData.my_slot.start_time)} تا{" "}
+              <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300 dir-ltr inline-block">
+                {toPersianDigits(slotsData.my_slot.start_time)} -{" "}
                 {toPersianDigits(slotsData.my_slot.end_time)}
               </span>
             </div>
@@ -209,22 +205,22 @@ export const ExamScheduleModal = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#2481cc]" />
-                <span>{isRTL ? "انتخاب نوبت زمانی حضور:" : "Select Attendance Slot:"}</span>
+                <span>{t("bookingTimeSlot")}</span>
               </span>
 
               {/* Status Legend */}
               <div className="flex items-center gap-2 text-[10px] text-neutral-400">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {isRTL ? "نوبت شما" : "Your slot"}
+                  {t("yourSlot")}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-[#2481cc]" />
-                  {isRTL ? "خالی" : "Available"}
+                  {t("availableSlot")}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-neutral-400" />
-                  {isRTL ? "رزرو" : "Booked"}
+                  {t("bookedSlot")}
                 </span>
               </div>
             </div>
@@ -233,12 +229,12 @@ export const ExamScheduleModal = ({
               <div className="py-10 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-[#2481cc]" />
                 <span className="text-xs text-neutral-400">
-                  {isRTL ? "در حال دریافت نوبت‌ها..." : "Loading slots..."}
+                  {t("fetchingSlots")}
                 </span>
               </div>
             ) : slotsData?.slots?.length === 0 ? (
               <div className="py-6 text-center text-xs text-neutral-400">
-                {isRTL ? "نوبتی در این بازه تعریف نشده است." : "No slots available."}
+                {t("noSlotsInInterval")}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -267,25 +263,25 @@ export const ExamScheduleModal = ({
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="text-[10px] font-medium text-neutral-400">
-                          {isRTL ? `نوبت ${toPersianDigits(slot.slot_index + 1)}` : `Slot ${slot.slot_index + 1}`}
+                          {t("slotNumber", "", { num: isRTL ? toPersianDigits(slot.slot_index + 1) : slot.slot_index + 1 })}
                         </span>
 
                         {isMyCurrent ? (
                           <span className="text-[9.5px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-bold">
-                            {isRTL ? "نوبت شما" : "Yours"}
+                            {t("yourSlot")}
                           </span>
                         ) : isOtherBooked ? (
                           <Lock className="w-3 h-3 text-neutral-400" />
                         ) : (
                           <span className="text-[9.5px] px-1.5 py-0.2 rounded-full bg-[#edf5fd] dark:bg-[#182533] text-[#2481cc] dark:text-[#52a2f6] font-semibold">
-                            {isRTL ? "آزاد" : "Free"}
+                            {t("free")}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-baseline justify-center gap-1 font-bold text-xs mt-1 text-neutral-800 dark:text-neutral-100">
+                      <div className="flex items-baseline justify-center gap-1 font-bold text-xs mt-1 text-neutral-800 dark:text-neutral-100 dir-ltr">
                         <span>{toPersianDigits(slot.start_time)}</span>
-                        <span className="text-[10px] text-neutral-400 font-normal">تا</span>
+                        <span className="text-[10px] text-neutral-400 font-normal">-</span>
                         <span>{toPersianDigits(slot.end_time)}</span>
                       </div>
                     </button>
@@ -311,7 +307,7 @@ export const ExamScheduleModal = ({
             disabled={submitting}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200/60 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            {isRTL ? "انصراف" : "Cancel"}
+            {t("cancelComment")}
           </button>
 
           <button
@@ -323,12 +319,12 @@ export const ExamScheduleModal = ({
             {submitting ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>{isRTL ? "در حال تغییر نوبت..." : "Rescheduling..."}</span>
+                <span>{t("changingSlot")}</span>
               </>
             ) : (
               <>
                 <Clock3 className="w-3.5 h-3.5" />
-                <span>{isRTL ? "تأیید و جابه‌جایی نوبت" : "Confirm Slot"}</span>
+                <span>{t("confirmAndChangeSlot")}</span>
               </>
             )}
           </button>

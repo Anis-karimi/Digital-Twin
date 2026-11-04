@@ -12,7 +12,7 @@ import { useTheme } from "@/Context/ThemeContext";
 import { ExamSchedulingVisualizer } from "@/Components/ExamSchedulingVisualizer";
 
 export const AdminExamsSchedulePage = () => {
-  const { isRTL, language, toggleLanguage } = useContext(AppContext);
+  const { isRTL, language, toggleLanguage, t } = useContext(AppContext);
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -32,10 +32,10 @@ export const AdminExamsSchedulePage = () => {
                 isRTL ? "font-vazir" : "font-inter"
               }`}
             >
-              {isRTL ? "پایش زمان‌بندی آزمون‌ها" : "Exam Schedule Monitoring"}
+              {t("adminExamScheduleMonitor")}
             </h1>
             <p className="text-white/70 text-[10px] leading-tight truncate">
-              {isRTL ? "مدیریت تداخل زمانی و پایش اساتید" : "Master Schedule & Professor Tracking"}
+              {t("scheduleOverlapMonitor")}
             </p>
           </div>
         </div>
@@ -47,10 +47,10 @@ export const AdminExamsSchedulePage = () => {
             onClick={toggleLanguage}
             aria-label="Toggle language"
             className="h-7 px-2 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-neutral-scale1200 dark:hover:bg-neutral-scale1100 flex items-center gap-1 text-white text-[10px] font-bold transition-all cursor-pointer shrink-0"
-            title={language === "fa" ? "تغییر زبان به انگلیسی" : "Switch to Persian"}
+            title={t("switchToLanguageTooltip")}
           >
             <Globe className="w-3 h-3 text-white" />
-            <span className={isRTL ? "font-inter" : "font-vazir"}>{language === "fa" ? "EN" : "فا"}</span>
+            <span className="font-semibold uppercase">{language === "fa" ? "EN" : language === "en" ? "عر" : "فا"}</span>
           </button>
 
           {/* Theme Switcher Button */}

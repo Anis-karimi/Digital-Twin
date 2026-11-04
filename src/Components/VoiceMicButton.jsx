@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Mic } from "lucide-react";
 import { ThinkingOrb } from "thinking-orbs";
+import { useTranslation } from "@/translations/useTranslation";
 
 /**
  * Reusable Voice Microphone Button with Press-and-Hold Language Selector.
@@ -26,9 +27,11 @@ export const VoiceMicButton = ({
   iconClassName = "",
   badgeClassName = "",
   menuClassName = "",
-  isRTL = false,
+  isRTL: controlledIsRTL,
   title,
 }) => {
+  const { t, isRTL: contextIsRTL } = useTranslation();
+  const isRTL = controlledIsRTL !== undefined ? controlledIsRTL : contextIsRTL;
   const [internalLang, setInternalLang] = useState(() => {
     return localStorage.getItem("voice_lang") || "fa";
   });
@@ -132,12 +135,10 @@ export const VoiceMicButton = ({
   const badgeText = currentLang === "en" ? "En" : currentLang === "ar" ? "Ar" : "Fa";
 
   const defaultTitle = recording
-    ? isRTL ? "توقف ضبط صدا" : "Stop recording"
-    : currentLang === "en"
-    ? isRTL ? "ضبط صدا" : "Voice input"
+    ? t("stopRecording")
     : currentLang === "ar"
-    ? isRTL ? "تسجيل الصوت" : "Voice input"
-    : isRTL ? "ضبط صدا" : "Voice input";
+    ? t("voiceInputAr")
+    : t("voiceInput");
 
   const isAbsolute = className.includes("absolute");
 

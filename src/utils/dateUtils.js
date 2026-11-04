@@ -3,25 +3,55 @@
  * @description Robust Jalali (Solar Hijri) & Gregorian date conversion and formatting utilities.
  */
 
-// Persian digits converter
-export const toPersianDigits = (num) => {
-  if (num === null || num === undefined) return "";
-  const str = String(num);
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return str.replace(/[0-9]/g, (w) => persianDigits[+w]);
-};
+import { getTranslation } from "@/translations";
+
+// Digits mappings
+const PERSIAN_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+const ARABIC_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 
 // Convert Persian and Arabic digits to standard English ASCII digits
 export const toEnglishDigits = (str) => {
   if (str === null || str === undefined) return "";
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
   let res = String(str);
   for (let i = 0; i < 10; i++) {
-    res = res.replaceAll(persianDigits[i], String(i)).replaceAll(arabicDigits[i], String(i));
+    res = res.replaceAll(PERSIAN_DIGITS[i], String(i)).replaceAll(ARABIC_DIGITS[i], String(i));
   }
   return res;
 };
+
+/**
+ * Universal localized digits converter supporting Persian ('fa'), Arabic ('ar'), and English ('en').
+ * @param {string|number} num
+ * @param {string} [lang] - 'fa' | 'ar' | 'en' (defaults to active language or 'fa')
+ * @returns {string}
+ */
+export const toLocalizedDigits = (num, lang) => {
+  if (num === null || num === undefined) return "";
+  const str = String(num);
+  const currentLang =
+    lang ||
+    (typeof localStorage !== "undefined" && localStorage.getItem("language")) ||
+    "fa";
+
+  if (currentLang === "en") {
+    return toEnglishDigits(str);
+  }
+
+  const targetDigits = currentLang === "ar" ? ARABIC_DIGITS : PERSIAN_DIGITS;
+  return toEnglishDigits(str).replace(/[0-9]/g, (w) => targetDigits[+w]);
+};
+
+// Backwards compatibility alias: toPersianDigits maps to toLocalizedDigits
+export const toPersianDigits = toLocalizedDigits;
+export const toArabicDigits = (num) => toLocalizedDigits(num, "ar");
+
+// Global safety net for browser runtime so toPersianDigits is never undefined
+if (typeof window !== "undefined") {
+  window.toPersianDigits = toLocalizedDigits;
+  window.toLocalizedDigits = toLocalizedDigits;
+  window.toArabicDigits = toArabicDigits;
+  window.toEnglishDigits = toEnglishDigits;
+}
 
 // Returns today's date formatted as YYYY/MM/DD in Jalali
 export const getTodayJalaliDate = () => {
@@ -75,6 +105,22 @@ export const GREGORIAN_MONTH_NAMES = [
   "December",
 ];
 
+// Arabic month names (Gregorian calendar in Arabic)
+export const ARABIC_MONTH_NAMES = [
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
+];
+
 // Jalali week days (starts on Saturday)
 export const JALALI_WEEK_DAYS = [
   { short: "ش", full: "شنبه", index: 0 },
@@ -84,6 +130,17 @@ export const JALALI_WEEK_DAYS = [
   { short: "چ", full: "چهارشنبه", index: 4 },
   { short: "پ", full: "پنج‌شنبه", index: 5 },
   { short: "ج", full: "جمعه", index: 6 },
+];
+
+// Arabic week days (starts on Saturday)
+export const ARABIC_WEEK_DAYS = [
+  { short: "س", full: "السبت", index: 0 },
+  { short: "أ", full: "الأحد", index: 1 },
+  { short: "إ", full: "الإثنين", index: 2 },
+  { short: "ث", full: "الثلاثاء", index: 3 },
+  { short: "ر", full: "الأربعاء", index: 4 },
+  { short: "خ", full: "الخميس", index: 5 },
+  { short: "ج", full: "الجمعة", index: 6 },
 ];
 
 // Gregorian week days (starts on Monday)
@@ -275,17 +332,27 @@ export function getTodayIsoDate() {
 /**
  * Formats an ISO date string for display in UI.
  * @param {string} isoString YYYY-MM-DD
- * @param {boolean} isRTL Persian or English
+ * @param {boolean|string} langOrIsRTL Language code ('fa' | 'ar' | 'en') or boolean isRTL
  * @returns {string}
  */
-export function formatDisplayDate(isoString, isRTL = true) {
-  const parsed = parseIsoDate(isoString);
-  if (!parsed) return isRTL ? "انتخاب تاریخ" : "Select date";
+export function formatDisplayDate(isoString, langOrIsRTL = true) {
+  const currentLang =
+    typeof langOrIsRTL === "string"
+      ? langOrIsRTL
+      : langOrIsRTL === false
+        ? "en"
+        : (typeof localStorage !== "undefined" && localStorage.getItem("language")) || "fa";
 
-  if (isRTL) {
+  const parsed = parseIsoDate(isoString);
+  if (!parsed) return getTranslation(currentLang, "selectDate", "Select date");
+
+  if (currentLang === "fa") {
     const { jy, jm, jd } = gregorianToJalali(parsed.gy, parsed.gm, parsed.gd);
     const monthName = JALALI_MONTH_NAMES[jm - 1] || "";
-    return `${toPersianDigits(jd)} ${monthName} ${toPersianDigits(jy)}`;
+    return `${toLocalizedDigits(jd, "fa")} ${monthName} ${toLocalizedDigits(jy, "fa")}`;
+  } else if (currentLang === "ar") {
+    const monthName = ARABIC_MONTH_NAMES[parsed.gm - 1] || "";
+    return `${toLocalizedDigits(parsed.gd, "ar")} ${monthName} ${toLocalizedDigits(parsed.gy, "ar")}`;
   } else {
     const dateObj = new Date(parsed.gy, parsed.gm - 1, parsed.gd);
     return dateObj.toLocaleDateString("en-GB", {

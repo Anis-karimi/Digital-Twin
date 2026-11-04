@@ -12,7 +12,7 @@ import { isPersianText } from "@/utils/textUtils";
 
 export const TeacherCourses = () => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
   const [courses, setCourses] = useState(defaultCourses);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export const TeacherCourses = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
             <ArrowLeft
@@ -54,7 +54,7 @@ export const TeacherCourses = () => {
                 : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
-            {isRTL ? "اطلاعات دروس" : "Courses Information"}
+            {t("coursesInformation")}
           </h1>
         </div>
       </header>
@@ -73,9 +73,7 @@ export const TeacherCourses = () => {
                   : "en-body-medium font-inter text-left"
               } text-primery-800 dark:text-neutral-scale70`}
             >
-              {isRTL
-                ? "برای بارگذاری فایل، یک درس را انتخاب کنید"
-                : "Select a course to upload your file"}
+              {t("selectCourseToUpload")}
             </p>
 
             <div className="flex flex-col w-full gap-[12px] mt-[16px] px-3.5">
@@ -116,7 +114,7 @@ export const TeacherCourses = () => {
                             isRTL ? "text-right" : "text-left [direction:rtl]"
                           }`}
                         >
-                          {course.titleFa || course.title || "سیستم عامل"}
+                          {course.titleFa || course.title || t("operatingSystemsCourse")}
                         </span>
 
                         {/* Privacy / Access Level */}
@@ -127,13 +125,7 @@ export const TeacherCourses = () => {
                               : "en-caption-1 font-inter"
                           } text-neutral-scale1000 dark:text-neutral-scale300 capitalize`}
                         >
-                          {isRTL
-                            ? course.accessLevel === "public"
-                              ? "عمومی"
-                              : "خصوصی"
-                            : course.accessLevel === "public"
-                              ? "Public"
-                              : "Private"}
+                          {course.accessLevel === "public" ? t("publicCourse") : t("privateCourse")}
                         </span>
 
                         {/* Description - Auto-detect Persian font */}

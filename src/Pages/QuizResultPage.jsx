@@ -134,7 +134,7 @@ export const QuizResultPage = ({
     (stateData?.exam?.topic && String(stateData.exam.topic).trim()) ||
     (stateData?.exam?.title && String(stateData.exam.title).trim()) ||
     (typeof window !== "undefined" && sessionStorage.getItem("lastQuizTopic")?.trim()) ||
-    (isRTL ? "ارائه سیستم‌های عامل" : "Operating Systems Presentation");
+    (t("operatingSystemsPresentation"));
 
   const totalAnswers = correctCount + incorrectCount;
   const unansweredCount = Math.max(0, totalQuestions - totalAnswers);
@@ -177,7 +177,7 @@ export const QuizResultPage = ({
   const handleDownload = async () => {
     if (isDownloadingPdf) return;
     setIsDownloadingPdf(true);
-    setStatusMessage(t("downloadingPdf") || "در حال آماده‌سازی کارنامه...");
+    setStatusMessage(t("downloadingPdf"));
 
     let fontFixStyle = null;
     try {
@@ -294,7 +294,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     titleBox.style.gap = "2px";
 
     const title = document.createElement("h1");
-    title.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+    title.textContent = t("quizResultTitle");
     title.style.fontSize = "22px";
     title.style.lineHeight = "1.5";
     title.style.margin = "0";
@@ -304,8 +304,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     titleBox.appendChild(title);
 
     const subtitle = document.createElement("div");
-    subtitle.textContent =
-      t("quizResultSubtitle") || "خلاصه عملکرد و درصد پاسخ‌های شما";
+    subtitle.textContent = t("quizResultSubtitle");
     subtitle.style.fontSize = "11.5px";
     subtitle.style.lineHeight = "1.7";
     subtitle.style.color = "#64748b";
@@ -328,7 +327,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     topicBadge.dir = isRTL ? "rtl" : "ltr";
 
     const topicLabel = document.createElement("span");
-    topicLabel.textContent = isRTL ? "موضوع آزمون: " : "Quiz Topic: ";
+    topicLabel.textContent = t("quizTopic1");
     topicLabel.style.color = "#2563eb";
     topicLabel.style.fontWeight = "700";
 
@@ -352,7 +351,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
 
     const dateStamp = document.createElement("div");
     dateStamp.textContent =
-      `${isRTL ? "تاریخ آزمون: " : "Date: "}` +
+      `${t("date")}` +
       new Date().toLocaleDateString(isRTL ? "fa-IR" : "en-US");
     dateStamp.style.fontSize = "11.5px";
     dateStamp.style.color = "#64748b";
@@ -363,7 +362,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     if (totalPages > 1) {
       const pageStamp = document.createElement("div");
       pageStamp.textContent =
-        `${isRTL ? "صفحه 1 از " : "Page 1 of "}${totalPages}`;
+        `${t("page1Of")}${totalPages}`;
       pageStamp.style.fontSize = "11px";
       pageStamp.style.color = "#94a3b8";
       pageStamp.style.fontWeight = "600";
@@ -406,7 +405,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     miniTitleBox.style.minWidth = "0";
 
     const miniTitle = document.createElement("h2");
-    miniTitle.textContent = t("quizResultTitle") || "کارنامه آزمون هوشمند";
+    miniTitle.textContent = t("quizResultTitle");
     miniTitle.style.fontSize = "15px";
     miniTitle.style.margin = "0";
     miniTitle.style.fontWeight = "800";
@@ -425,7 +424,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
     miniTopicBadge.dir = isRTL ? "rtl" : "ltr";
 
     const miniTopicLabel = document.createElement("span");
-    miniTopicLabel.textContent = isRTL ? "موضوع: " : "Topic: ";
+    miniTopicLabel.textContent = t("examTopicPrefix");
     miniTopicLabel.style.color = "#2563eb";
     miniTopicLabel.style.fontWeight = "700";
 
@@ -445,8 +444,8 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
 
     const miniPageStamp = document.createElement("div");
     miniPageStamp.textContent =
-      `${isRTL ? "صفحه " : "Page "}${pageNum} ` +
-      `${isRTL ? "از " : "of "}${totalPages}`;
+      `${t("page")}${pageNum} ` +
+      `${t("fromHour")}${totalPages}`;
     miniPageStamp.style.fontSize = "11.5px";
     miniPageStamp.style.color = "#334155";
     miniPageStamp.style.fontWeight = "700";
@@ -472,28 +471,28 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
 
         const summaryCards = [
           {
-            label: t("totalQuestions") || "کل سوالات",
+            label: t("totalQuestions"),
             value: totalQuestions,
             bg: "#f8fafc",
             border: "#cbd5e1",
             color: "#334155",
           },
           {
-            label: t("correctCount") || "پاسخ‌های صحیح",
+            label: t("correctCount"),
             value: correctCount,
             bg: "#f0fdf4",
             border: "#86efac",
             color: "#15803d",
           },
           {
-            label: t("incorrectCount") || "پاسخ‌های نادرست",
+            label: t("incorrectCount"),
             value: incorrectCount,
             bg: "#fef2f2",
             border: "#fca5a5",
             color: "#b91c1c",
           },
           {
-            label: t("accuracyRate") || "درصد موفقیت",
+            label: t("accuracyRate"),
             value: `${correctPercentage}%`,
             bg: "#eff6ff",
             border: "#93c5fd",
@@ -536,10 +535,10 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
         const headerRow = document.createElement("tr");
 
         const columnDefs = [
-          { title: t("question") || "سوال", width: "30%", align: isRTL ? "right" : "left" },
-          { title: t("yourAnswer") || "پاسخ شما", width: "15%", align: isRTL ? "right" : "left" },
-          { title: t("correctAnswer") || "پاسخ صحیح", width: "15%", align: isRTL ? "right" : "left" },
-          { title: t("explainAnswer") || "توضیح هوش مصنوعی", width: "29%", align: isRTL ? "right" : "left" },
+          { title: t("question"), width: "30%", align: isRTL ? "right" : "left" },
+          { title: t("yourAnswer"), width: "15%", align: isRTL ? "right" : "left" },
+          { title: t("correctAnswer"), width: "15%", align: isRTL ? "right" : "left" },
+          { title: t("explainAnswer"), width: "29%", align: isRTL ? "right" : "left" },
         ];
 
         columnDefs.forEach((col) => {
@@ -653,10 +652,8 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
         const expContent =
           (explanations[index] || "").trim() ||
           (isCorrect
-            ? (isRTL ? "پاسخ کاملاً صحیح است." : "Correct answer.")
-            : (isRTL
-                ? `گزینه صحیح (${correctAnswer}) است.`
-                : `The correct option is (${correctAnswer}).`));
+            ? t("correctAnswer1")
+            : t("correctOptionIs", "", { option: correctAnswer }));
 
         tdExp.innerHTML = markdownToCleanHtml(expContent, { isRTL });
         row.appendChild(tdExp);
@@ -809,7 +806,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
       setStatusMessage(t("pdfDownloadedSuccess"));
     } catch (err) {
       console.error("PDF generation failed:", err);
-      setStatusMessage(t("errorGettingExplanation") || "خطا در ساخت کارنامه PDF");
+      setStatusMessage(t("errorGeneratingPdf"));
     } finally {
       if (fontFixStyle && fontFixStyle.parentNode) {
         fontFixStyle.parentNode.removeChild(fontFixStyle);
@@ -942,7 +939,7 @@ const createHeader = (isFirstPage, pageNum, totalPages) => {
           {effectiveTopic && (
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primery-50 dark:bg-primery-950/40 border border-primery-200/60 dark:border-primery-800/40 text-primery-700 dark:text-sky-300 text-xs font-semibold">
               <span className="text-neutral-500 dark:text-neutral-400 font-normal">
-                {isRTL ? "موضوع آزمون:" : "Quiz Topic:"}
+                {t("quizTopic1")}
               </span>
               <span className="font-bold">{effectiveTopic}</span>
             </div>

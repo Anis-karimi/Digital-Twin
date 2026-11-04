@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, BookOpen, Clock, CheckCircle2, AlertCircle, Bell, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Clock, CheckCircle2, AlertCircle, Bell, Check } from "lucide-react";
 import "@/styles/Allpages.css";
 import "@/styles/fonts.css";
 import { useEffect, useState, useContext } from "react";
@@ -7,32 +7,32 @@ import { notificationsApi } from "@/api";
 import { AppContext } from "@/Context/AppContext";
 import { toPersianDigits } from "@/utils/dateUtils";
 
-function formatRelativeTime(dateStr, isRTL) {
-  if (!dateStr) return isRTL ? "چند لحظه پیش" : "Just now";
+function formatRelativeTime(dateStr, t, isRTL) {
+  if (!dateStr) return t("fewMomentsAgo");
   try {
     const date = new Date(dateStr);
     const now = new Date();
     const diffSec = Math.floor((now - date) / 1000);
 
-    if (diffSec < 60) return isRTL ? "چند لحظه پیش" : "Just now";
+    if (diffSec < 60) return t("fewMomentsAgo");
     if (diffSec < 3600) {
       const m = Math.floor(diffSec / 60);
-      return isRTL ? `${toPersianDigits(m)} دقیقه پیش` : `${m}m ago`;
+      return t("minutesAgo", { m: isRTL ? toPersianDigits(m) : m });
     }
     if (diffSec < 86400) {
       const h = Math.floor(diffSec / 3600);
-      return isRTL ? `${toPersianDigits(h)} ساعت پیش` : `${h}h ago`;
+      return t("hoursAgo", { h: isRTL ? toPersianDigits(h) : h });
     }
     const d = Math.floor(diffSec / 86400);
-    return isRTL ? `${toPersianDigits(d)} روز پیش` : `${d}d ago`;
+    return t("daysAgo", { d: isRTL ? toPersianDigits(d) : d });
   } catch {
-    return isRTL ? "اخیراً" : "Recently";
+    return t("recently");
   }
 }
 
 export const StudentNotification = () => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const [activeTab, setActiveTab] = useState("my_notifications"); // "my_notifications" | "system"
   const [notifications, setNotifications] = useState([]);
@@ -70,7 +70,7 @@ export const StudentNotification = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           >
             <BackIcon className="!w-6 !h-6 text-neutral-scale70" />
@@ -82,7 +82,7 @@ export const StudentNotification = () => {
                 isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
               }`}
             >
-              {isRTL ? "مرکز اعلان‌ها" : "Notifications"}
+              {t("notificationsCenter")}
             </h1>
 
             {notifications.length > 0 && (
@@ -105,7 +105,7 @@ export const StudentNotification = () => {
               : "bg-white dark:bg-neutral-scale1300 text-neutral-scale1000 dark:text-neutral-scale400 border border-neutral-scale200 dark:border-neutral-scale1100 hover:bg-neutral-scale50"
           }`}
         >
-          <span>{isRTL ? "اعلان‌های من" : "My Notifications"}</span>
+          <span>{t("myNotifications")}</span>
           {notifications.length > 0 && (
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-vazir font-bold ${
@@ -128,7 +128,7 @@ export const StudentNotification = () => {
               : "bg-white dark:bg-neutral-scale1300 text-neutral-scale1000 dark:text-neutral-scale400 border border-neutral-scale200 dark:border-neutral-scale1100 hover:bg-neutral-scale50"
           }`}
         >
-          <span>{isRTL ? "پیام‌های سیستم" : "System Messages"}</span>
+          <span>{t("systemMessages")}</span>
         </button>
       </div>
 
@@ -141,8 +141,8 @@ export const StudentNotification = () => {
           notifications.length > 0 ? (
             <div className="flex flex-col gap-2.5">
               {notifications.map((notif) => {
-                const courseTitle = notif.course_title || (isRTL ? "درس تخصصی" : "Course");
-                const timeAgo = formatRelativeTime(notif.date, isRTL);
+                const courseTitle = notif.course_title || t("courses");
+                const timeAgo = formatRelativeTime(notif.date, t, isRTL);
 
                 return (
                   <div
@@ -158,7 +158,7 @@ export const StudentNotification = () => {
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
                         <div className="flex items-center justify-between gap-1">
                           <h4 className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                            {notif.title || (isRTL ? "تأیید درخواست عضویت" : "Join Request Approved")}
+                            {notif.title || t("membershipRequestApproved")}
                           </h4>
                           <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale500 font-vazir shrink-0 flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5" />
@@ -167,14 +167,14 @@ export const StudentNotification = () => {
                         </div>
 
                         <p className="text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale300 leading-relaxed">
-                          {notif.message || (isRTL ? `درخواست عضویت شما در درس «${courseTitle}» تأیید شد.` : `Your membership request for ${courseTitle} was approved.`)}
+                          {notif.message || t("courseMembershipApprovedNotice", "", { title: courseTitle })}
                         </p>
 
                         {/* Target Course Pill */}
                         <div className="mt-0.5 flex items-center gap-1.5 text-xs text-primery-800 dark:text-primery-300 font-vazir bg-primery-50 dark:bg-primery-950/40 border border-primery-100 dark:border-primery-900/60 px-2.5 py-1 rounded-lg w-fit max-w-full">
                           <BookOpen className="w-3.5 h-3.5 text-primery-600 dark:text-primery-400 shrink-0" />
                           <span className="truncate">
-                            {isRTL ? `درس: ${courseTitle}` : `Course: ${courseTitle}`}
+                            {`${t("courses")}: ${courseTitle}`}
                           </span>
                         </div>
                       </div>
@@ -184,7 +184,7 @@ export const StudentNotification = () => {
                     <div className="flex items-center justify-between pt-1 border-t border-neutral-scale100 dark:border-neutral-scale1100/60">
                       <span className="flex items-center gap-1 text-[11px] font-vazir text-emerald-600 dark:text-emerald-400 font-semibold">
                         <Check className="w-3.5 h-3.5" />
-                        <span>{isRTL ? "تأیید شده توسط استاد" : "Approved by Instructor"}</span>
+                        <span>{t("approvedByInstructor")}</span>
                       </span>
 
                       <button
@@ -192,7 +192,7 @@ export const StudentNotification = () => {
                         onClick={() => navigate(`/CourseInformation/${notif.course_id}`)}
                         className="h-8 px-3.5 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
                       >
-                        <span>{isRTL ? "مشاهده درس" : "View Course"}</span>
+                        <span>{t("viewCourseBtn")}</span>
                         <ForwardIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -208,13 +208,11 @@ export const StudentNotification = () => {
               </div>
 
               <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
-                {isRTL ? "هیچ اعلانی وجود ندارد" : "No notifications"}
+                {t("noNotifications")}
               </h4>
 
               <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
-                {isRTL
-                  ? "زمانی که درخواست‌های عضویت شما در دروس خصوصی توسط استاد تأیید شوند، اعلان تأیید در این بخش نمایش داده می‌شود."
-                  : "When your join requests for private courses are approved by the instructor, confirmation will appear here."}
+                {t("membershipRequestsDescStudent")}
               </p>
             </div>
           )
@@ -226,13 +224,11 @@ export const StudentNotification = () => {
             </div>
 
             <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
-              {isRTL ? "پیام سیستمی جدیدی ثبت نشده است" : "No system messages"}
+              {t("noSystemMessages")}
             </h4>
 
             <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
-              {isRTL
-                ? "اطلاعیه‌ها، به‌روزرسانی‌های سامانه و اعلانات مدیر در این بخش قرار می‌گیرند."
-                : "System announcements and updates will be listed in this tab."}
+              {t("systemMessagesDesc")}
             </p>
           </div>
         )}

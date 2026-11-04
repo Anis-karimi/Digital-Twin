@@ -6,9 +6,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslation } from "@/translations/useTranslation";
 import { biometricsApi } from "@/api/new/biometrics.api";
 
 export function useNeutralCalibration(options = {}) {
+  const { t } = useTranslation();
   const {
     userId = "default",
     captureFrameBlob,
@@ -21,7 +23,7 @@ export function useNeutralCalibration(options = {}) {
   const [progress, setProgress] = useState(0);
   const [isFaceMissing, setIsFaceMissing] = useState(false);
   const [isNeutralCalibrated, setIsNeutralCalibrated] = useState(false);
-  const [statusText, setStatusText] = useState("کالیبره‌نشده");
+  const [statusText, setStatusText] = useState(() => t("notCalibrated"));
   const [sampleCount, setSampleCount] = useState(0);
 
   const pendingPromisesRef = useRef([]);
@@ -37,7 +39,7 @@ export function useNeutralCalibration(options = {}) {
     try {
       const data = await biometricsApi.getNeutralCalibrationStatus(userId);
       setIsNeutralCalibrated(data?.is_calibrated || false);
-      setStatusText(data?.is_calibrated ? "کالیبراسیون حالت خنثی فعال است" : "کالیبره‌نشده");
+      setStatusText(data?.is_calibrated ? t("neutralCalibrationActive") : t("notCalibrated"));
     } catch (e) {
       console.warn("Could not check neutral calibration status:", e);
     }
@@ -59,7 +61,7 @@ export function useNeutralCalibration(options = {}) {
     setIsFaceMissing(false);
     setProgress(0);
     setCountdownSec(3);
-    setStatusText("لطفاً چهره خود را در حالت کاملاً آرام و طبیعی (خنثی) نگه دارید...");
+    setStatusText(t("keepFaceCalmNatural"));
     pendingPromisesRef.current = [];
     setSampleCount(0);
 
@@ -113,7 +115,7 @@ export function useNeutralCalibration(options = {}) {
           timerRef.current = null;
         }
 
-        setStatusText("در حال محاسبه و ثبت بردار مبنا در دیتابیس...");
+        setStatusText(t("computingAndSavingBaseline"));
         try {
           // Wait for pending sample inferences to complete
           if (pendingPromisesRef.current.length > 0) {
@@ -136,7 +138,7 @@ export function useNeutralCalibration(options = {}) {
 
           setIsNeutralCalibrated(true);
           setProgress(100);
-          setStatusText("کالیبراسیون احساسات خنثی با موفقیت در دیتابیس ثبت شد");
+          setStatusText(t("neutralCalibrationSavedSuccess"));
           if (onCalibrationComplete) {
             onCalibrationComplete();
           }
@@ -144,7 +146,7 @@ export function useNeutralCalibration(options = {}) {
           console.warn("Server neutral calibration fallback applied:", err);
           setIsNeutralCalibrated(true);
           setProgress(100);
-          setStatusText("کالیبراسیون احساسات خنثی با موفقیت ثبت شد");
+          setStatusText(t("neutralCalibrationSavedSuccess"));
           if (onCalibrationComplete) {
             onCalibrationComplete();
           }
@@ -167,7 +169,7 @@ export function useNeutralCalibration(options = {}) {
     setProgress(0);
     setCountdownSec(3);
     setIsNeutralCalibrated(false);
-    setStatusText("کالیبره‌نشده");
+    setStatusText(t("notCalibrated"));
     setSampleCount(0);
   }, []);
 

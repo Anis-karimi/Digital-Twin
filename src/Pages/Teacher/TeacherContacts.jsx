@@ -213,7 +213,7 @@ export const TeacherContacts = () => {
                           className={`absolute bottom-0 ${
                             isRTL ? "left-0" : "right-0"
                           } w-3 h-3 bg-emerald-500 border-2 border-white dark:border-neutral-scale1300 rounded-full shadow-sm`}
-                          title={isRTL ? "آنلاین" : "Online"}
+                          title={t("online")}
                         />
                       )}
                     </div>
@@ -258,23 +258,15 @@ export const TeacherContacts = () => {
                       >
                         {displayStatus ||
                           (student.is_online || student.status === "online"
-                            ? isRTL
-                              ? "آنلاین"
-                              : "Online"
-                            : isRTL
-                              ? "اخیراً آنلاین بوده"
-                              : "Last seen recently")}
+                            ? t("online")
+                            : t("lastSeenRecently"))}
                       </div>
                     </div>
 
                     {/* Three dots menu button */}
                     <button
                       type="button"
-                      aria-label={
-                        isRTL
-                          ? `گزینه‌های ${student.title}`
-                          : `Options for ${student.title}`
-                      }
+                      aria-label={`${t("moreOptions")} ${student.title}`}
                       aria-expanded={openMenu === index}
                       onClick={(e) => {
                         e.stopPropagation();

@@ -29,11 +29,11 @@ import { useGazeCalibration } from "@/features/biometrics/hooks/useGazeCalibrati
 import { useNeutralCalibration } from "@/features/biometrics/hooks/useNeutralCalibration";
 import { detectClientFace, detectFaceWithFallback } from "@/features/biometrics/utils/clientFaceDetector";
 
-const WIZARD_STEPS = [
-  { id: 1, title: "۱. ثبت چهره", short: "ثبت چهره" },
-  { id: 2, title: "۲. کالیبراسیون نگاه", short: "نگاه" },
-  { id: 3, title: "۳. مبنای خنثی احساسات", short: "حالت خنثی" },
-  { id: 4, title: "۴. تایید نهایی", short: "تایید نهایی" },
+const getWizardSteps = (t) => [
+  { id: 1, title: t("stepRegisterFace"), short: t("shortRegisterFace") },
+  { id: 2, title: t("stepGazeCalibration"), short: t("shortGaze") },
+  { id: 3, title: t("stepNeutralFace"), short: t("shortNeutral") },
+  { id: 4, title: t("stepFinalVerification"), short: t("shortFinal") },
 ];
 
 export function StudentBiometricsPage() {
@@ -42,7 +42,8 @@ export function StudentBiometricsPage() {
   const returnTo = location.state?.returnTo;
   const returnExam = location.state?.exam;
   const isRequiredForExam = location.state?.reason === "biometrics_required" || Boolean(returnTo);
-  const { currentUser, isRTL } = useContext(AppContext);
+  const { currentUser, isRTL, t } = useContext(AppContext);
+  const WIZARD_STEPS = useMemo(() => getWizardSteps(t), [t]);
 
   const candidateIds = useMemo(() => {
     return biometricsApi.getCandidateBiometricIds(currentUser);
@@ -201,7 +202,7 @@ export function StudentBiometricsPage() {
       startCamera();
     }
     if (faceStatusRef.current !== "face_locked" || !faceBoxRef.current) {
-      showBottomError("صورت خود را در مرکز کادر قرار دهید تا کالیبراسیون آغاز شود");
+      showBottomError(t("centerFaceToStartCalibration"));
       return;
     }
     autoGazeTriggeredRef.current = true;
@@ -278,12 +279,12 @@ export function StudentBiometricsPage() {
       setScanProgress(0);
       showBottomError(
         resetSuccess
-          ? "اطلاعات قبلی با موفقیت بازنشانی شد. می‌توانید فرآیند ثبت را انجام دهید."
-          : "فرآیند ثبت مجدد فعال شد. می‌توانید اسکن جدید را انجام دهید.",
+          ? t("biometricsResetSuccess")
+          : t("biometricsReRegistrationReady"),
         4000
       );
     } catch (err) {
-      showBottomError(err?.message || "امکان حذف اطلاعات وجود ندارد.");
+      showBottomError(err?.message || t("unableToDeleteBiometrics"));
     } finally {
       setIsResetting(false);
     }
@@ -402,7 +403,7 @@ export function StudentBiometricsPage() {
               consecutiveQualityFramesRef.current = Math.min(22, consecutiveQualityFramesRef.current + 1);
               const prog = Math.min(100, Math.round((consecutiveQualityFramesRef.current / 18) * 100));
               setScanProgress(prog);
-              setScanFeedback(`در حال تطبیق و اسکن چهره (${prog}%)...`);
+              setScanFeedback(t("matchingAndScanningFace", "", { prog }));
 
               // Capture crisp high-res frame at 50% progress
               if (prog >= 50 && !bestFrameBlobRef.current) {
@@ -459,7 +460,7 @@ export function StudentBiometricsPage() {
             setScanProgress(prog);
             bestFrameBlobRef.current = null;
             bestSharpnessRef.current = 0;
-            setScanFeedback("صورت خود را در کادر قرار دهید");
+            setScanFeedback(t("placeFaceInFrame"));
           }
         }
       } catch (err) {
@@ -502,11 +503,11 @@ export function StudentBiometricsPage() {
     if (isLoading) return;
     setErrorMsg("");
     setIsLoading(true);
-    setScanFeedback("در حال ارسال و ثبت نهایی...");
+    setScanFeedback(t("submittingFinalRegistration"));
     try {
       const blob = candidateBlob || (await captureFrameBlob(0.92, 960, 960));
       if (!blob) {
-        throw new Error("خطا در تصویر دوربین. لطفاً دسترسی دوربین را بررسی فرمایید.");
+        throw new Error(t("cameraImageErrorCheckAccess"));
       }
       const res = await biometricsApi.enrollStudentFace(studentId, blob, "balanced", "opencv");
       if (res?.status === "enrolled" || res?.user_id) {
@@ -518,17 +519,17 @@ export function StudentBiometricsPage() {
         } catch {}
         setEnrollStatus({
           success: true,
-          message: "چهره و بردار اصالت با موفقیت تایید شد",
+          message: t("faceAndLivenessVerified"),
         });
         setScanProgress(100);
-        setScanFeedback("تأیید شد");
+        setScanFeedback(t("verified"));
         await loadProfile(false);
         // Automatically transition to Step 2 after 1.2s
         setTimeout(() => {
           setCurrentStep(2);
         }, 1200);
       } else {
-        const msg = res?.detail || "خطا در ثبت چهره. لطفاً مستقیم به دوربین نگاه کنید.";
+        const msg = res?.detail || t("faceRegisterError");
         showBottomError(msg, 3500);
         setScanFeedback(msg);
         cooldownUntilRef.current = Date.now() + 3500;
@@ -539,7 +540,7 @@ export function StudentBiometricsPage() {
         autoEnrollTriggeredRef.current = false;
       }
     } catch (err) {
-      const msg = err?.message || "خطای ارتباط با سامانه در ثبت چهره.";
+      const msg = err?.message || t("faceScanConnectionError");
       showBottomError(msg, 3500);
       setScanFeedback(msg);
       cooldownUntilRef.current = Date.now() + 3500;
@@ -557,12 +558,12 @@ export function StudentBiometricsPage() {
     if (isLoading) return;
     autoEnrollTriggeredRef.current = true;
     setScanProgress(100);
-    setScanFeedback("در حال تصویربرداری و ارسال چهره...");
+    setScanFeedback(t("capturingAndSendingFace"));
     try {
       const blob = await captureFrameBlob(0.92, 960, 960);
       await handleEnrollFace(blob);
     } catch (err) {
-      showBottomError("خطا در تصویربرداری از دوربین");
+      showBottomError(t("cameraCaptureError"));
     }
   };
 
@@ -684,17 +685,17 @@ export function StudentBiometricsPage() {
           <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center pointer-events-auto">
             <AlertTriangle className="w-12 h-12 text-rose-400 mb-3" />
             <p className="text-sm font-bold text-white mb-1 font-vazir">
-              دسترسی به دوربین برقرار نشد
+              {t("cameraAccessFailed")}
             </p>
             <p className="text-xs text-slate-400 mb-4 font-vazir max-w-xs">
-              برای احراز هویت و شرکت در آزمون، دسترسی دوربین الزامی است.
+              {t("cameraRequiredNotice")}
             </p>
             <button
               type="button"
               onClick={startCamera}
               className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-all"
             >
-              اتصال مجدد دوربین
+              {t("reconnectCamera")}
             </button>
           </div>
         )}
@@ -711,10 +712,10 @@ export function StudentBiometricsPage() {
           type="button"
           onClick={() => navigate(returnTo ? "/StudentExams" : "/StudentSettings")}
           className="liquid-glass-card liquid-glass-pill flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white text-xs font-vazir transition-all active:scale-95 cursor-pointer shadow-lg hover:border-white/40"
-          aria-label={returnTo ? "بازگشت به آزمون‌ها" : "بازگشت به تنظیمات"}
+          aria-label={returnTo ? t("backToExams") : t("backToSettings")}
         >
           <BackIcon className="w-4 h-4 text-white" />
-          <span>{returnTo ? "آزمون‌ها" : "تنظیمات"}</span>
+          <span>{returnTo ? t("exams") : t("settings")}</span>
         </button>
 
         {/* Center: Apple Face ID Dynamic Circular Island & Progress */}
@@ -794,7 +795,7 @@ export function StudentBiometricsPage() {
             {isCurrentStepFinished ? (
               <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
                 <Check className="w-3 h-3 stroke-[3]" />
-                <span>تأیید شد</span>
+                <span>{t("verified")}</span>
               </span>
             ) : currentActiveProgress > 0 ? (
               <span className="text-sky-300 font-mono font-bold">
@@ -820,8 +821,8 @@ export function StudentBiometricsPage() {
           </div>
           <span className="leading-relaxed">
             {returnExam?.title
-              ? `برای ورود به آزمون «${returnExam.title}»، ابتدا ۳ مرحله احراز هویت بیومتریک را تکمیل نمایید.`
-              : "برای ورود به آزمون، تکمیل هر ۳ مرحله احراز هویت بیومتریک الزامی است."}
+              ? t("biometricsRequiredForExamTitle", "", { title: returnExam.title })
+              : t("biometricsRequiredForAllExams")}
           </span>
         </div>
       )}
@@ -918,7 +919,7 @@ export function StudentBiometricsPage() {
               {neutralCountdown}
             </span>
             <span className="text-xs text-sky-200 mt-1.5 font-vazir bg-black/60 px-3 py-0.5 rounded-full backdrop-blur-md border border-white/10">
-              ثانیه
+              {t("seconds")}
             </span>
           </div>
         )}
@@ -956,30 +957,30 @@ export function StudentBiometricsPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold font-vazir text-white">
-                پروفایل بیومتریک تکمیل شد
+                {t("biometricProfileComplete")}
               </h3>
               <p className="text-[11px] font-vazir text-emerald-200/90 mt-0.5">
-                تمامی الگوهای چهره، نگاه و حالت خنثی با موفقیت کالیبره شدند
+                {t("allBiometricsCalibratedSuccess")}
               </p>
             </div>
 
             <div className="space-y-1.5 pt-1 text-right">
               <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
-                <span className="text-white/80">۱. ثبت بردار چهره</span>
+                <span className="text-white/80">{t("step1FaceVector")}</span>
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                  <Check className="w-3 h-3 stroke-[3]" /> {t("verified")}
                 </span>
               </div>
               <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
-                <span className="text-white/80">۲. کالیبراسیون نگاه</span>
+                <span className="text-white/80">{t("step2GazeCalibration")}</span>
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                  <Check className="w-3 h-3 stroke-[3]" /> {t("verified")}
                 </span>
               </div>
               <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-vazir">
-                <span className="text-white/80">۳. مبنای خنثی احساسات</span>
+                <span className="text-white/80">{t("step3NeutralAffect")}</span>
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                  <Check className="w-3 h-3 stroke-[3]" /> تایید شد
+                  <Check className="w-3 h-3 stroke-[3]" /> {t("verified")}
                 </span>
               </div>
             </div>
@@ -1009,7 +1010,7 @@ export function StudentBiometricsPage() {
                   <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
-                  چهره با موفقیت ثبت شد
+                  {t("faceRegisteredSuccess")}
                 </span>
               </div>
             ) : faceStatus === "no_face" ? (
@@ -1019,7 +1020,7 @@ export function StudentBiometricsPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-amber-100 tracking-wide">
-                  صورت خود را در مرکز کادر قرار دهید
+                  {t("placeFaceInCenter")}
                 </span>
               </div>
             ) : (
@@ -1030,8 +1031,8 @@ export function StudentBiometricsPage() {
                 </div>
                 <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
                   {scanProgress > 0
-                    ? "در حال آنالیز و اسکن بیومتریک چهره..."
-                    : "صورت خود را در مرکز کادر قرار دهید"}
+                    ? t("analyzingFace")
+                    : t("placeFaceInCenter")}
                 </span>
                 {scanProgress > 0 && (
                   <span className="text-[11px] font-mono font-bold text-sky-300 mr-1 bg-sky-950/60 px-1.5 py-0.5 rounded-md border border-sky-400/30">
@@ -1048,7 +1049,7 @@ export function StudentBiometricsPage() {
                   <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
-                  کالیبراسیون نگاه با موفقیت انجام شد
+                  {t("gazeCalibrationSuccess")}
                 </span>
               </div>
             ) : isGazeCalibrating ? (
@@ -1059,7 +1060,7 @@ export function StudentBiometricsPage() {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-400" />
                   </div>
                   <span className="text-xs font-semibold font-vazir text-rose-200 tracking-wide">
-                    صورت در کادر نیست - کالیبراسیون موقتاً متوقف شد
+                    {t("faceOutOfFramePaused")}
                   </span>
                 </div>
               ) : (
@@ -1069,7 +1070,7 @@ export function StudentBiometricsPage() {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
                   </div>
                   <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
-                    {`در حال کالیبراسیون نگاه (${gazeTarget?.label || "نقطه " + gazeSubStep})`}
+                    {t("gazeCalibratingPoint", "", { point: gazeTarget?.label || t("pointN", "", { n: gazeSubStep }) })}
                   </span>
                   <span className="text-[11px] font-mono font-bold text-sky-300 mr-1 bg-sky-950/60 px-1.5 py-0.5 rounded-md border border-sky-400/30">
                     {Math.round(gazeProgress)}%
@@ -1083,7 +1084,7 @@ export function StudentBiometricsPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-amber-100 tracking-wide">
-                  برای شروع کالیبراسیون، صورت خود را در مرکز کادر قرار دهید
+                  {t("placeFaceInCenterToStart")}
                 </span>
               </div>
             ) : (
@@ -1093,7 +1094,7 @@ export function StudentBiometricsPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-sky-100 tracking-wide">
-                  چهره شناسایی شد. در حال آغاز کالیبراسیون نگاه...
+                  {t("faceDetectedStartingGaze")}
                 </span>
               </div>
             )
@@ -1105,7 +1106,7 @@ export function StudentBiometricsPage() {
                   <Check className="w-2.5 h-2.5 text-emerald-300 stroke-[3]" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
-                  مبنای خنثی احساسات با موفقیت ثبت شد
+                  {t("neutralBaselineSuccess")}
                 </span>
               </div>
             ) : isNeutralCalibrating ? (
@@ -1116,7 +1117,7 @@ export function StudentBiometricsPage() {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
                   </div>
                   <span className="text-xs font-semibold font-vazir text-amber-100 tracking-wide">
-                    چهره از کادر خارج شد! لطفاً روبه‌روی دوربین قرار بگیرید
+                    {t("faceOutOfFrameLookCamera")}
                   </span>
                 </div>
               ) : (
@@ -1126,7 +1127,7 @@ export function StudentBiometricsPage() {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                   </div>
                   <span className="text-xs font-semibold font-vazir text-cyan-100 tracking-wide">
-                    {`در حال ثبت مبنای خنثی... چهره را ثابت نگه دارید (${neutralCountdown} ثانیه)`}
+                    {t("recordingNeutralKeepSteady", "", { seconds: neutralCountdown })}
                   </span>
                   <span className="text-[11px] font-mono font-bold text-cyan-300 mr-1 bg-cyan-950/60 px-1.5 py-0.5 rounded-md border border-cyan-400/30">
                     {Math.round(neutralProgress)}%
@@ -1140,14 +1141,14 @@ export function StudentBiometricsPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
                 </div>
                 <span className="text-xs font-semibold font-vazir text-amber-100 tracking-wide">
-                  برای شروع، صورت خود را در مرکز کادر قرار دهید
+                  {t("placeFaceInCenterToStart")}
                 </span>
               </div>
             ) : (
               <div className="liquid-glass-info liquid-glass-pill px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl">
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
                 <span className="text-xs font-semibold font-vazir text-cyan-100 tracking-wide">
-                  حالت چهره را کاملاً آرام و خنثی نگه دارید و دکمه شروع را بزنید
+                  {t("keepFaceCalmAndNeutral")}
                 </span>
               </div>
             )
@@ -1159,8 +1160,8 @@ export function StudentBiometricsPage() {
               </div>
               <span className="text-xs font-semibold font-vazir text-emerald-100 tracking-wide">
                 {profileStatus?.ready_for_exam
-                  ? "تمامی اطلاعات بیومتریک با موفقیت تایید شد"
-                  : "بررسی نهایی وضعیت و ورود به آزمون"}
+                  ? t("allBiometricsApprovedSuccess")
+                  : t("finalCheckAndEnterExam")}
               </span>
             </div>
           )}
@@ -1197,7 +1198,7 @@ export function StudentBiometricsPage() {
             disabled={currentStep === 1}
             onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
             className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
-            title="مرحله قبل"
+            title={t("previousStep")}
           >
             <ArrowRight className="w-4 h-4" />
           </button>
@@ -1210,17 +1211,17 @@ export function StudentBiometricsPage() {
                   type="button"
                   onClick={handleRescanFace}
                   className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
-                  title="اسکن مجدد چهره"
+                  title={t("rescanFace")}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>اسکن مجدد</span>
+                  <span>{t("rescan")}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
                   className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>مرحله بعد: کالیبراسیون نگاه</span>
+                  <span>{t("nextStepGaze")}</span>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -1228,14 +1229,14 @@ export function StudentBiometricsPage() {
               <div className="flex-1 flex items-center gap-2">
                 <div className="flex-1 h-10 px-4 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold font-vazir flex items-center justify-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
-                  <span>چهره تایید شد</span>
+                  <span>{t("faceApproved")}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
                   className="h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>مرحله بعد</span>
+                  <span>{t("nextStep")}</span>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -1249,15 +1250,15 @@ export function StudentBiometricsPage() {
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>در حال ثبت چهره...</span>
+                    <span>{t("registeringFace")}</span>
                   </>
                 ) : (
                   <>
                     <Camera className="w-4 h-4" />
                     <span>
                       {scanProgress > 0
-                        ? `در حال اسکن خودکار (${Math.round(scanProgress)}%)...`
-                        : "شروع اسکن و ثبت چهره"}
+                        ? t("autoScanningPercent", "", { progress: Math.round(scanProgress) })
+                        : t("startFaceScan")}
                     </span>
                   </>
                 )}
@@ -1273,17 +1274,17 @@ export function StudentBiometricsPage() {
                   type="button"
                   onClick={handleStartGaze}
                   className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
-                  title="کالیبراسیون مجدد نگاه"
+                  title={t("recalibrateGaze")}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>کالیبراسیون مجدد</span>
+                  <span>{t("recalibrate")}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
                   className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>مرحله بعد: مبنای خنثی</span>
+                  <span>{t("nextStepNeutral")}</span>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -1297,12 +1298,12 @@ export function StudentBiometricsPage() {
                 {isGazeCalibrating ? (
                   <>
                     <RefreshCw className="w-4 h-4 text-sky-200 animate-spin" />
-                    <span>در حال کالیبراسیون نگاه ({Math.round(gazeProgress)}%)...</span>
+                    <span>{t("calibratingGazePercent", "", { progress: Math.round(gazeProgress) })}</span>
                   </>
                 ) : (
                   <>
                     <Target className="w-4 h-4" />
-                    <span>شروع کالیبراسیون نگاه</span>
+                    <span>{t("startGazeCalibration")}</span>
                   </>
                 )}
               </button>
@@ -1317,17 +1318,17 @@ export function StudentBiometricsPage() {
                   type="button"
                   onClick={handleStartNeutral}
                   className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs font-vazir"
-                  title="ضبط مجدد مبنای خنثی"
+                  title={t("neutralResetNotice")}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>ثبت مجدد</span>
+                  <span>{t("reregister")}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(4)}
                   className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <span>مرحله بعد: تایید نهایی</span>
+                  <span>{t("nextStep")}: {t("stepFinalVerification")}</span>
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -1341,12 +1342,12 @@ export function StudentBiometricsPage() {
                 {isNeutralCalibrating ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>در حال ثبت مبنا ({neutralCountdown} ثانیه)...</span>
+                    <span>{t("recordingBaselineSeconds", "", { seconds: neutralCountdown })}</span>
                   </>
                 ) : (
                   <>
                     <Smile className="w-4 h-4" />
-                    <span>شروع کالیبراسیون حالت خنثی (۳ ثانیه)</span>
+                    <span>{t("startNeutralCalibration")}</span>
                   </>
                 )}
               </button>
@@ -1360,10 +1361,10 @@ export function StudentBiometricsPage() {
                 type="button"
                 onClick={handleRescanFace}
                 className="h-10 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-vazir font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
-                title="شروع مجدد اسکن و ثبت چهره"
+                title={t("restartFaceScan")}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>اسکن مجدد</span>
+                <span>{t("rescan")}</span>
               </button>
               <button
                 type="button"
@@ -1371,7 +1372,7 @@ export function StudentBiometricsPage() {
                 className="flex-1 h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white text-xs font-bold font-vazir shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>{returnTo ? "تایید و ورود به آزمون" : "تایید و ورود به آزمون‌ها"}</span>
+                <span>{returnTo ? t("confirmAndEnterExam") : t("confirmAndEnterExams")}</span>
               </button>
             </div>
           )}
@@ -1382,7 +1383,7 @@ export function StudentBiometricsPage() {
             disabled={currentStep === 4 || !isStepDone(currentStep)}
             onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
             className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0"
-            title="مرحله بعد"
+            title={t("nextStep")}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -1394,7 +1395,7 @@ export function StudentBiometricsPage() {
         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-6 select-none pointer-events-none">
           <div className="absolute top-20 text-center px-4 max-w-xs">
             <span className="text-xs px-3.5 py-1 rounded-full bg-sky-600/90 text-white font-bold backdrop-blur-md shadow-md border border-white/20">
-              مرحله {gazeSubStep} از {gazeTotalSteps}
+              {t("stepOf", "", { current: gazeSubStep, total: gazeTotalSteps })}
             </span>
             <h3 className="text-base font-bold text-white mt-2 font-vazir drop-shadow-md">
               {gazeTarget.label}
@@ -1403,7 +1404,7 @@ export function StudentBiometricsPage() {
             {isGazeFaceMissing ? (
               <div className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-500/35 border-2 border-rose-400 text-rose-100 text-xs font-bold font-vazir animate-pulse shadow-xl">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-300" />
-                <span>چهره در کادر نیست - رو به دوربین باشید</span>
+                <span>{t("faceOutOfFrameFaceCamera")}</span>
               </div>
             ) : (
               <p className="text-xs text-sky-200 mt-1 font-vazir drop-shadow">
@@ -1467,13 +1468,13 @@ export function StudentBiometricsPage() {
 
             <div className="space-y-2">
               <h3 className="text-base font-bold font-vazir text-white drop-shadow">
-                اطلاعات بیومتریک شما ثبت شده است
+                {t("biometricsAlreadyRegisteredTitle")}
               </h3>
               <p className="text-xs font-vazir text-white/80 leading-relaxed px-1">
                 {profileStatus?.can_edit !== false ? (
-                  "اطلاعات چهره و کالیبراسیون شما موجود است. می‌توانید فرآیند اسکن و ثبت را مجدداً انجام دهید یا وارد صفحه آزمون شوید."
+                  t("biometricsRegisteredOptions")
                 ) : (
-                  "تمامی اطلاعات بیومتریک شما در سامانه ثبت و تایید شده است."
+                  t("biometricsFullyVerified")
                 )}
               </p>
             </div>
@@ -1488,7 +1489,7 @@ export function StudentBiometricsPage() {
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-sky-500/25 active:scale-95"
               >
                 <Camera className="w-4 h-4" />
-                <span>شروع اسکن و ثبت مجدد چهره</span>
+                <span>{t("startRescanAndRegister")}</span>
               </button>
 
               <button
@@ -1500,7 +1501,7 @@ export function StudentBiometricsPage() {
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-vazir text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/25 active:scale-95"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>{returnTo ? "تایید و ورود به آزمون" : "تایید و ورود به صفحه آزمون‌ها"}</span>
+                <span>{returnTo ? t("confirmAndEnterExam") : t("confirmAndGoToExamsPage")}</span>
               </button>
 
               {profileStatus?.can_edit !== false && (
@@ -1511,7 +1512,7 @@ export function StudentBiometricsPage() {
                   className="w-full h-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 text-rose-300 hover:text-white font-vazir text-[11px] font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`} />
-                  <span>{isResetting ? "در حال حذف..." : "حذف داده‌های ثبت‌شده از سرور"}</span>
+                  <span>{isResetting ? t("deletingBiometrics") : t("deleteBiometricsFromServer")}</span>
                 </button>
               )}
 
@@ -1520,7 +1521,7 @@ export function StudentBiometricsPage() {
                 onClick={() => setShowReRegistrationModal(false)}
                 className="text-[11px] text-white/50 hover:text-white/80 transition-colors cursor-pointer pt-1 inline-block"
               >
-                مشاهده وضعیت جزئیات ثبت‌شده
+                {t("viewRegisteredDetails")}
               </button>
             </div>
           </div>

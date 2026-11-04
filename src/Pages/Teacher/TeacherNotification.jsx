@@ -26,26 +26,26 @@ function getInitials(name) {
   return name.slice(0, 2);
 }
 
-function formatRelativeTime(dateStr, isRTL) {
-  if (!dateStr) return isRTL ? "چند لحظه پیش" : "Just now";
+function formatRelativeTime(dateStr, t, isRTL) {
+  if (!dateStr) return t("fewMomentsAgo");
   try {
     const date = new Date(dateStr);
     const now = new Date();
     const diffSec = Math.floor((now - date) / 1000);
 
-    if (diffSec < 60) return isRTL ? "چند لحظه پیش" : "Just now";
+    if (diffSec < 60) return t("fewMomentsAgo");
     if (diffSec < 3600) {
       const m = Math.floor(diffSec / 60);
-      return isRTL ? `${toPersianDigits(m)} دقیقه پیش` : `${m}m ago`;
+      return t("minutesAgo", { m: isRTL ? toPersianDigits(m) : m });
     }
     if (diffSec < 86400) {
       const h = Math.floor(diffSec / 3600);
-      return isRTL ? `${toPersianDigits(h)} ساعت پیش` : `${h}h ago`;
+      return t("hoursAgo", { h: isRTL ? toPersianDigits(h) : h });
     }
     const d = Math.floor(diffSec / 86400);
-    return isRTL ? `${toPersianDigits(d)} روز پیش` : `${d}d ago`;
+    return t("daysAgo", { d: isRTL ? toPersianDigits(d) : d });
   } catch {
-    return isRTL ? "اخیراً" : "Recently";
+    return t("recently");
   }
 }
 
@@ -106,9 +106,7 @@ export const TeacherNotification = () => {
       await notificationsApi.acceptJoinRequest(id);
       setJoinRequests((prev) => prev.filter((r) => r.id !== id));
       showToast(
-        isRTL
-          ? `عضویت «${request.student_name || request.name}» در درس با موفقیت تأیید شد.`
-          : `Approved join request for ${request.student_name || request.name}.`,
+        t("membershipApprovedToast"),
         "success"
       );
     } catch (error) {
@@ -116,7 +114,7 @@ export const TeacherNotification = () => {
       // Optimistic removal fallback
       setJoinRequests((prev) => prev.filter((r) => r.id !== id));
       showToast(
-        isRTL ? "درخواست عضویت تأیید شد." : "Join request accepted.",
+        t("membershipApprovedToast"),
         "success"
       );
     } finally {
@@ -132,16 +130,14 @@ export const TeacherNotification = () => {
       await notificationsApi.rejectJoinRequest(id);
       setJoinRequests((prev) => prev.filter((r) => r.id !== id));
       showToast(
-        isRTL
-          ? `درخواست عضویت «${request.student_name || request.name}» رد شد.`
-          : `Declined join request for ${request.student_name || request.name}.`,
+        t("membershipRejectedToast"),
         "info"
       );
     } catch (error) {
       console.error("Failed to reject join request:", error);
       setJoinRequests((prev) => prev.filter((r) => r.id !== id));
       showToast(
-        isRTL ? "درخواست عضویت رد شد." : "Join request rejected.",
+        t("membershipRejectedToast"),
         "info"
       );
     } finally {
@@ -180,7 +176,7 @@ export const TeacherNotification = () => {
           <button
             onClick={() => navigate(-1)}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 cursor-pointer flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           >
             <BackIcon className="!w-6 !h-6 text-neutral-scale70" />
@@ -192,7 +188,7 @@ export const TeacherNotification = () => {
                 isRTL ? "fa-title-1 font-vazir text-right" : "en-title-1 font-inter text-left"
               }`}
             >
-              {isRTL ? "مرکز اعلان‌ها" : "Notifications"}
+              {t("notificationsCenter")}
             </h1>
 
             {mainCount > 0 && (
@@ -216,13 +212,7 @@ export const TeacherNotification = () => {
           }`}
         >
           <span>
-            {isStudent
-              ? isRTL
-                ? "اعلان‌های من"
-                : "My Notifications"
-              : isRTL
-              ? "درخواست‌های عضویت"
-              : "Join Requests"}
+            {isStudent ? t("myNotifications") : t("membershipRequests")}
           </span>
           {mainCount > 0 && (
             <span
@@ -248,7 +238,7 @@ export const TeacherNotification = () => {
               : "bg-white dark:bg-neutral-scale1300 text-neutral-scale1000 dark:text-neutral-scale400 border border-neutral-scale200 dark:border-neutral-scale1100 hover:bg-neutral-scale50"
           }`}
         >
-          <span>{isRTL ? "پیام‌های سیستم" : "System Messages"}</span>
+          <span>{t("systemMessages")}</span>
         </button>
       </div>
 
@@ -263,8 +253,8 @@ export const TeacherNotification = () => {
             studentNotifications.length > 0 ? (
               <div className="flex flex-col gap-2.5">
                 {studentNotifications.map((notif) => {
-                  const courseTitle = notif.course_title || (isRTL ? "درس تخصصی" : "Course");
-                  const timeAgo = formatRelativeTime(notif.date, isRTL);
+                  const courseTitle = notif.course_title || t("course");
+                  const timeAgo = formatRelativeTime(notif.date, t, isRTL);
 
                   return (
                     <div
@@ -280,7 +270,7 @@ export const TeacherNotification = () => {
                         <div className="flex-1 min-w-0 flex flex-col gap-1">
                           <div className="flex items-center justify-between gap-1">
                             <h4 className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70 truncate">
-                              {notif.title || (isRTL ? "تأیید درخواست عضویت" : "Join Request Approved")}
+                              {notif.title || t("membershipRequestApproved")}
                             </h4>
                             <span className="text-[10px] text-neutral-scale800 dark:text-neutral-scale500 font-vazir shrink-0 flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" />
@@ -289,14 +279,14 @@ export const TeacherNotification = () => {
                           </div>
 
                           <p className="text-xs font-vazir text-neutral-scale1000 dark:text-neutral-scale300 leading-relaxed">
-                            {notif.message || (isRTL ? `درخواست عضویت شما در درس «${courseTitle}» تأیید شد.` : `Your membership request for ${courseTitle} was approved.`)}
+                            {notif.message || t("membershipApprovedToast")}
                           </p>
 
                           {/* Target Course Pill */}
                           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-primery-800 dark:text-primery-300 font-vazir bg-primery-50 dark:bg-primery-950/40 border border-primery-100 dark:border-primery-900/60 px-2.5 py-1 rounded-lg w-fit max-w-full">
                             <BookOpen className="w-3.5 h-3.5 text-primery-600 dark:text-primery-400 shrink-0" />
                             <span className="truncate">
-                              {isRTL ? `درس: ${courseTitle}` : `Course: ${courseTitle}`}
+                              {t("course")}: {courseTitle}
                             </span>
                           </div>
                         </div>
@@ -306,7 +296,7 @@ export const TeacherNotification = () => {
                       <div className="flex items-center justify-between pt-1 border-t border-neutral-scale100 dark:border-neutral-scale1100/60">
                         <span className="flex items-center gap-1 text-[11px] font-vazir text-emerald-600 dark:text-emerald-400 font-semibold">
                           <Check className="w-3.5 h-3.5" />
-                          <span>{isRTL ? "تأیید شده توسط استاد" : "Approved by Instructor"}</span>
+                          <span>{t("approvedByInstructor")}</span>
                         </span>
 
                         <button
@@ -314,7 +304,7 @@ export const TeacherNotification = () => {
                           onClick={() => navigate(`/CourseInformation/${notif.course_id}`)}
                           className="h-8 px-3.5 rounded-xl bg-primery-700 hover:bg-primery-800 text-white font-vazir text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
                         >
-                          <span>{isRTL ? "مشاهده درس" : "View Course"}</span>
+                          <span>{t("viewCourseBtn")}</span>
                           <ForwardIcon className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -330,13 +320,11 @@ export const TeacherNotification = () => {
                 </div>
 
                 <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
-                  {isRTL ? "هیچ اعلانی وجود ندارد" : "No notifications"}
+                  {t("noNotifications")}
                 </h4>
 
                 <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
-                  {isRTL
-                    ? "زمانی که درخواست عضویت شما در دروس خصوصی توسط استاد تأیید شود، اعلان تأیید در این بخش نمایش داده می‌شود."
-                    : "When your join requests for private courses are approved by the instructor, confirmation will appear here."}
+                  {t("membershipRequestsDescStudent")}
                 </p>
               </div>
             )
@@ -345,9 +333,9 @@ export const TeacherNotification = () => {
             joinRequests.length > 0 ? (
               <div className="flex flex-col gap-2.5">
                 {joinRequests.map((request, idx) => {
-                  const name = request.student_name || request.name || (isRTL ? "دانشجو" : "Student");
-                  const courseName = request.course_title || request.subject || (isRTL ? "درس تخصصی" : "Course");
-                  const timeAgo = formatRelativeTime(request.requested_at, isRTL);
+                  const name = request.student_name || request.name || t("studentLabel");
+                  const courseName = request.course_title || request.subject || t("course");
+                  const timeAgo = formatRelativeTime(request.requested_at, t, isRTL);
                   const colorBg = avatarColors[idx % avatarColors.length];
                   const initials = getInitials(name);
                   const isBusy = processingId === request.id;
@@ -393,7 +381,7 @@ export const TeacherNotification = () => {
                           <div className="mt-1 flex items-center gap-1.5 text-xs text-primery-800 dark:text-primery-300 font-vazir bg-primery-50 dark:bg-primery-950/40 border border-primery-100 dark:border-primery-900/60 px-2.5 py-1 rounded-lg w-fit max-w-full">
                             <BookOpen className="w-3.5 h-3.5 text-primery-600 dark:text-primery-400 shrink-0" />
                             <span className="truncate">
-                              {isRTL ? `درخواست عضویت در: ${courseName}` : `Requested to join: ${courseName}`}
+                              {t("course")}: {courseName}
                             </span>
                           </div>
                         </div>
@@ -408,7 +396,7 @@ export const TeacherNotification = () => {
                           className="flex-1 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-vazir text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          <span>{isRTL ? "تأیید عضویت" : "Accept"}</span>
+                          <span>{t("approve")}</span>
                         </button>
 
                         <button
@@ -418,7 +406,7 @@ export const TeacherNotification = () => {
                           className="h-8 px-3 rounded-xl bg-neutral-scale100 dark:bg-neutral-scale1200 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 text-neutral-scale1100 dark:text-neutral-scale300 border border-neutral-scale200 dark:border-neutral-scale1100 font-vazir text-xs font-medium flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                         >
                           <X className="w-3.5 h-3.5" />
-                          <span>{isRTL ? "رد" : "Decline"}</span>
+                          <span>{t("reject")}</span>
                         </button>
                       </div>
                     </div>
@@ -433,13 +421,11 @@ export const TeacherNotification = () => {
                 </div>
 
                 <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
-                  {isRTL ? "هیچ درخواست عضویتی وجود ندارد" : "No pending join requests"}
+                  {t("noMembershipRequests")}
                 </h4>
 
                 <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
-                  {isRTL
-                    ? "زمانی که دانشجویان برای دروس خصوصی شما درخواست عضویت ارسال کنند، اعلان آنها در اینجا نمایش داده می‌شود."
-                    : "When students request to join your private courses, their requests will appear here."}
+                  {t("membershipRequestsDescTeacher")}
                 </p>
               </div>
             )
@@ -452,13 +438,11 @@ export const TeacherNotification = () => {
             </div>
 
             <h4 className="font-vazir font-semibold text-xs text-neutral-scale1800 dark:text-neutral-scale100">
-              {isRTL ? "پیام سیستمی جدیدی ثبت نشده است" : "No system messages"}
+              {t("noSystemMessages")}
             </h4>
 
             <p className="font-vazir text-[11px] text-neutral-scale900 dark:text-neutral-scale500 mt-1 max-w-[240px]">
-              {isRTL
-                ? "اطلاعیه‌ها، به‌روزرسانی‌های نگارش و اعلانات مدیر سامانه در این بخش قرار می‌گیرند."
-                : "System announcements and updates will be listed in this tab."}
+              {t("systemMessagesDesc")}
             </p>
           </div>
         )}

@@ -1,2 +1,2 @@
-export { translations, getTranslation } from "./translations";
+export { translations, getTranslation, t } from "./translations";
 export { useTranslation } from "./useTranslation";

@@ -1,5 +1,6 @@
 import { Sparkles, Activity, ShieldCheck } from "lucide-react";
 import { LiquidCircularGauge } from "./LiquidCircularGauge";
+import { useTranslation } from "@/translations/useTranslation";
 
 /**
  * LiquidGaugesTrio
@@ -22,9 +23,12 @@ export const LiquidGaugesTrio = ({
   certainty = 82,
   stress = 32,
   composure = 92,
-  isRTL = true,
+  isRTL: controlledIsRTL,
   className = "",
 }) => {
+  const { t, isRTL: contextIsRTL } = useTranslation();
+  const isRTL = controlledIsRTL !== undefined ? controlledIsRTL : contextIsRTL;
+
   const isHighStress = stress > 65;
   const isMediumStress = stress > 40 && stress <= 65;
 
@@ -32,46 +36,26 @@ export const LiquidGaugesTrio = ({
   const isMediumFocus = composure >= 45 && composure < 65;
 
   const stressStatus = isHighStress
-    ? isRTL
-      ? "بالا"
-      : "High"
+    ? t("statusHigh")
     : isMediumStress
-    ? isRTL
-      ? "متوسط"
-      : "Fair"
-    : isRTL
-    ? "آرام"
-    : "Calm";
+    ? t("statusFair")
+    : t("statusCalm");
 
   const masteryStatus =
     certainty >= 80
-      ? isRTL
-        ? "عالی"
-        : "Great"
+      ? t("statusGreat")
       : certainty >= 60
-      ? isRTL
-        ? "خوب"
-        : "Good"
-      : isRTL
-      ? "متوسط"
-      : "Fair";
+      ? t("statusGood")
+      : t("statusFair");
 
   const composureStatus =
     composure >= 80
-      ? isRTL
-        ? "پایدار"
-        : "Steady"
+      ? t("steady")
       : composure >= 65
-      ? isRTL
-        ? "مطلوب"
-        : "Normal"
+      ? t("statusNormal")
       : composure >= 45
-      ? isRTL
-        ? "انحراف"
-        : "Drifting"
-      : isRTL
-      ? "هشدار"
-      : "Alert";
+      ? t("drifting")
+      : t("alert");
 
   return (
     <div
@@ -100,7 +84,7 @@ export const LiquidGaugesTrio = ({
             <div className="flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-sky-300 shrink-0 drop-shadow-[0_0_5px_rgba(56,189,248,0.6)]" />
               <span className="text-[11px] font-bold text-white font-vazir truncate [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
-                {isRTL ? "تسلط" : "Mastery"}
+                {t("mastery")}
               </span>
             </div>
             <div className="flex items-center gap-1 mt-0.5">
@@ -135,7 +119,7 @@ export const LiquidGaugesTrio = ({
                 }`}
               />
               <span className="text-[11px] font-bold text-white font-vazir truncate [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
-                {isRTL ? "استرس" : "Stress"}
+                {t("stress")}
               </span>
             </div>
             <div className="flex items-center gap-1 mt-0.5">
@@ -186,7 +170,7 @@ export const LiquidGaugesTrio = ({
                 }`}
               />
               <span className="text-[11px] font-bold text-white font-vazir truncate [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
-                {isRTL ? "تمرکز" : "Focus"}
+                {t("focus")}
               </span>
             </div>
             <div className="flex items-center gap-1 mt-0.5">

@@ -1,3 +1,4 @@
+import { getTranslation } from "@/translations";
 import { useContext, useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
@@ -39,7 +40,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
   ) {
     return {
       status: "ended",
-      label: isRTL ? "پایان یافته" : "Ended",
+      label: getTranslation(isRTL ? "fa" : "en", "finished", "Ended"),
       colorClass:
         "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
       badgeClass:
@@ -134,7 +135,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
     if (now < examStartDateTime) {
       return {
         status: "upcoming",
-        label: isRTL ? "شروع نشده" : "Upcoming",
+        label: getTranslation(isRTL ? "fa" : "en", "notStarted", "Upcoming"),
         colorClass:
           "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
         badgeClass:
@@ -149,7 +150,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
     } else if (now >= examStartDateTime && now <= examEndDateTime) {
       return {
         status: "active",
-        label: isRTL ? "در حال برگزاری" : "Active",
+        label: getTranslation(isRTL ? "fa" : "en", "inProgress", "Active"),
         colorClass:
           "border-success-500 dark:border-success-600 bg-green-50 dark:bg-green-950/30",
         badgeClass:
@@ -164,7 +165,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
     } else {
       return {
         status: "ended",
-        label: isRTL ? "پایان یافته" : "Ended",
+        label: getTranslation(isRTL ? "fa" : "en", "finished", "Ended"),
         colorClass:
           "border-neutral-scale600 dark:border-neutral-scale1500 bg-neutral-scale90 dark:bg-neutral-scale900 opacity-80 grayscale-[30%]",
         badgeClass:
@@ -182,7 +183,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
   // Default fallback: upcoming (considered active as start and end time have not passed)
   return {
     status: "upcoming",
-    label: isRTL ? "شروع نشده" : "Upcoming",
+    label: getTranslation(isRTL ? "fa" : "en", "notStarted", "Upcoming"),
     colorClass:
       "border-primery-500 dark:border-primery-800 bg-blue-100 dark:bg-blue-950/30",
     badgeClass:
@@ -198,7 +199,7 @@ export const getExamTimingState = (exam, isRTL = true) => {
 
 export const TeacherExams = () => {
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -263,8 +264,8 @@ export const TeacherExams = () => {
                       : String(g),
                   )
                   .filter(Boolean)
-                  .join("، ")
-              : q.description || "مباحث آزمون";
+                  .join(isRTL ? "، " : ", ")
+              : q.description || t("examTopicsDefault");
 
           const effectiveDate =
             q.exam_date ||
@@ -275,14 +276,16 @@ export const TeacherExams = () => {
             quiz_id: q.quiz_id || q.id,
             assignment_id: q.assignment_id || q.quiz_id || q.id,
             title: q.title,
-            course: "سیستم عامل",
-            topic: topic || "مباحث آزمون",
+            course: t("operatingSystems"),
+            topic: topic || t("examTopicsDefault"),
             date: effectiveDate,
             exam_date: effectiveDate,
             start_at: q.start_at,
             end_at: q.end_at,
             time: timeDisplay,
-            duration: `${q.duration_minutes || 10} دقیقه هر دانشجو`,
+            duration: t("examDurationPerStudent", "", {
+              minutes: isRTL ? toPersianDigits(q.duration_minutes || 10) : (q.duration_minutes || 10),
+            }),
             duration_minutes: q.duration_minutes || 10,
             active: q.is_active ?? true,
             is_active: q.is_active ?? true,
@@ -310,9 +313,7 @@ export const TeacherExams = () => {
     setActiveTab("active");
     setFilterStatus("all");
     setSuccessMessage(
-      isRTL
-        ? "آزمون جدید با موفقیت ایجاد شد و در لیست آزمون‌های فعال قرار گرفت!"
-        : "New exam created successfully!",
+      t("examCreatedSuccess"),
     );
     if (newExam) {
       setExams((prev) => deduplicateExams([newExam, ...prev]));
@@ -335,9 +336,7 @@ export const TeacherExams = () => {
     setEditingExam(null);
     setIsCreatingExam(false);
     setSuccessMessage(
-      isRTL
-        ? "مشخصات آزمون با موفقیت ویرایش شد!"
-        : "Exam updated successfully!",
+      t("examUpdatedSuccess"),
     );
     if (updatedExam) {
       const uId = String(
@@ -423,7 +422,7 @@ export const TeacherExams = () => {
                   : navigate(-1)
             }
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="text-white w-8 h-8 flex items-center justify-center cursor-pointer shrink-0"
           >
             <ArrowLeft
@@ -441,16 +440,10 @@ export const TeacherExams = () => {
             } truncate whitespace-nowrap`}
           >
             {editingExam
-              ? isRTL
-                ? "ویرایش آزمون"
-                : "Edit Exam"
+              ? t("editExam")
               : isCreatingExam
-                ? isRTL
-                  ? "ساخت آزمون جدید"
-                  : "Create New Exam"
-                : isRTL
-                  ? "آزمون‌ها"
-                  : "Exams"}
+                ? t("createNewExam")
+                : t("exams")}
           </h1>
         </div>
       </header>
@@ -480,7 +473,7 @@ export const TeacherExams = () => {
           <div className="w-full h-full px-3.5 overflow-y-auto overflow-x-hidden pt-[15px]">
             <CreateExamAccordion
               courseId="c0000000-0000-4000-8000-000000000001"
-              courseTitle="سیستم عامل"
+              courseTitle={t("operatingSystems")}
               isEditMode={Boolean(editingExam)}
               initialExam={editingExam}
               onExamCreated={handleExamCreated}
@@ -506,7 +499,7 @@ export const TeacherExams = () => {
                           : "en-body-medium font-inter text-left"
                       }`}
                     >
-                      {isRTL ? "آزمون‌های درس" : "Course Exams"}
+                      {t("courseExams")}
                     </p>
                     <span className="text-[11px] font-vazir font-semibold px-2 py-0.5 rounded-full bg-neutral-scale200 dark:bg-neutral-scale1100 text-neutral-scale900 dark:text-neutral-scale300">
                       {toPersianDigits(displayedExams.length)}
@@ -530,7 +523,7 @@ export const TeacherExams = () => {
                           : "en-caption-1 font-inter"
                       }
                     >
-                      {isRTL ? "افزودن آزمون" : "Add Exam"}
+                      {t("addExam")}
                     </span>
                   </button>
                 </div>
@@ -547,10 +540,10 @@ export const TeacherExams = () => {
                           setIsSortOpen(false);
                         }}
                         className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                        title={isRTL ? "فیلتر وضعیت" : "Filter status"}
+                        title={t("filterStatus")}
                       >
                         <Filter className="w-3.5 h-3.5" />
-                        <span>{isRTL ? "فیلتر" : "Filter"}</span>
+                        <span>{t("filter")}</span>
                         {filterStatus !== "all" && (
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400" />
                         )}
@@ -576,7 +569,7 @@ export const TeacherExams = () => {
                               }`}
                             >
                               <span>
-                                {isRTL ? "همه وضعیت‌ها" : "All statuses"}
+                                {t("allStatuses")}
                               </span>
                               {filterStatus === "all" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -597,7 +590,7 @@ export const TeacherExams = () => {
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-success-500" />
                                 <span>
-                                  {isRTL ? "در حال برگزاری (سبز)" : "Active"}
+                                  {t("inProgressGreen")}
                                 </span>
                               </span>
                               {filterStatus === "active" && (
@@ -619,7 +612,7 @@ export const TeacherExams = () => {
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-primery-500" />
                                 <span>
-                                  {isRTL ? "شروع نشده (آبی)" : "Upcoming"}
+                                  {t("notStartedBlue")}
                                 </span>
                               </span>
                               {filterStatus === "upcoming" && (
@@ -641,7 +634,7 @@ export const TeacherExams = () => {
                               <span className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-neutral-scale700" />
                                 <span>
-                                  {isRTL ? "پایان یافته (خاکستری)" : "Ended"}
+                                  {t("finishedGray")}
                                 </span>
                               </span>
                               {filterStatus === "ended" && (
@@ -662,21 +655,15 @@ export const TeacherExams = () => {
                           setIsFilterOpen(false);
                         }}
                         className="flex items-center gap-1.5 h-[30px] px-2.5 rounded-[8px] border transition-all cursor-pointer text-xs font-vazir bg-white dark:bg-neutral-scale1200 border-neutral-scale300 dark:border-neutral-scale1000 text-neutral-scale1400 dark:text-neutral-scale200 hover:bg-neutral-50 dark:hover:bg-neutral-scale1100"
-                        title={isRTL ? "مرتب‌سازی" : "Sort"}
+                        title={t("sort")}
                       >
                         <ArrowUpDown className="w-3.5 h-3.5" />
                         <span>
                           {sortOrder === "date_desc"
-                            ? isRTL
-                              ? "جدیدترین تاریخ"
-                              : "Newest date"
+                            ? t("newestDate")
                             : sortOrder === "date_asc"
-                              ? isRTL
-                                ? "نزدیک‌ترین تاریخ"
-                                : "Earliest date"
-                              : isRTL
-                                ? "عنوان آزمون"
-                                : "Title"}
+                              ? t("nearestDate")
+                              : t("alphabeticalTitle")}
                         </span>
                       </button>
 
@@ -696,7 +683,7 @@ export const TeacherExams = () => {
                               className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
                               <span>
-                                {isRTL ? "جدیدترین تاریخ" : "Newest date"}
+                                {t("newestDate")}
                               </span>
                               {sortOrder === "date_desc" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -711,7 +698,7 @@ export const TeacherExams = () => {
                               className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
                               <span>
-                                {isRTL ? "نزدیک‌ترین تاریخ" : "Earliest date"}
+                                {t("nearestDate")}
                               </span>
                               {sortOrder === "date_asc" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -726,7 +713,7 @@ export const TeacherExams = () => {
                               className="flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                             >
                               <span>
-                                {isRTL ? "عنوان آزمون (الفبایی)" : "Title"}
+                                {t("alphabeticalTitle")}
                               </span>
                               {sortOrder === "title" && (
                                 <Check className="w-3.5 h-3.5" />
@@ -754,16 +741,10 @@ export const TeacherExams = () => {
                         >
                           <span className="text-[10px] font-vazir font-medium">
                             {filterStatus === "active"
-                              ? isRTL
-                                ? "در حال برگزاری"
-                                : "Active"
+                              ? t("inProgress")
                               : filterStatus === "upcoming"
-                                ? isRTL
-                                  ? "شروع نشده"
-                                  : "Upcoming"
-                                : isRTL
-                                  ? "پایان یافته"
-                                  : "Ended"}
+                                ? t("notStarted")
+                                : t("finished")}
                           </span>
 
                           <button
@@ -776,7 +757,7 @@ export const TeacherExams = () => {
                                   ? "hover:bg-blue-200 dark:hover:bg-blue-900"
                                   : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
                             }`}
-                            aria-label={isRTL ? "حذف فیلتر" : "Remove filter"}
+                            aria-label={t("removeFilter")}
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -794,12 +775,8 @@ export const TeacherExams = () => {
                     <CalendarDays className="w-8 h-8 text-neutral-400" />
                     <span className="text-xs font-vazir text-neutral-500 dark:text-neutral-400">
                       {filterStatus !== "all"
-                        ? isRTL
-                          ? "هیچ آزمونی با این وضعیت یافت نشد."
-                          : "No exams match this filter."
-                        : isRTL
-                          ? "هنوز هیچ آزمونی تعریف نشده است."
-                          : "No exams created yet."}
+                        ? t("noExamsMatchStatus")
+                        : t("noExamsDefinedYet")}
                     </span>
                   </div>
                 )}
@@ -920,7 +897,7 @@ export const TeacherExams = () => {
                               : "en-caption-1 font-inter text-left"
                           }`}
                         >
-                          {isRTL ? "مبحث آزمون:" : "Exam Topic:"}
+                          {t("examTopicPrefix")}
                         </span>
 
                         <bdi
@@ -1037,7 +1014,7 @@ export const TeacherExams = () => {
                                   : "en-caption-1 font-inter"
                               }
                             >
-                              {isRTL ? "ویرایش" : "Edit"}
+                              {t("edit")}
                             </span>
                           </button>
                         )}
@@ -1080,7 +1057,7 @@ export const TeacherExams = () => {
                                   : "en-caption-1 font-inter"
                               }
                             >
-                              {isRTL ? "نتایج" : "Results"}
+                              {t("results")}
                             </span>
                           </button>
                         )}

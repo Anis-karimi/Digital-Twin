@@ -32,7 +32,7 @@ export const ExamProctoringCamera = ({
   onFaceStatusChange,
   className = "",
 }) => {
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -54,9 +54,7 @@ export const ExamProctoringCamera = ({
     try {
       if (!navigator?.mediaDevices?.getUserMedia) {
         throw new Error(
-          isRTL
-            ? "مرورگر شما از وب‌کم پشتیبانی نمی‌کند یا اتصال امن (HTTPS) نیاز است."
-            : "Browser does not support camera or HTTPS is required."
+          t("browserDoesNotSupportCameraOr")
         );
       }
 
@@ -91,22 +89,16 @@ export const ExamProctoringCamera = ({
 
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         setCameraError(
-          isRTL
-            ? "دسترسی به دوربین مسدود شده است. لطفاً برای تأیید حضور در آزمون، دسترسی وب‌کم را در بالای مرورگر فعال کنید."
-            : "Camera permission denied. Please grant webcam access to verify attendance."
+          t("cameraPermissionDeniedPleaseGrantWebcam")
         );
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         setCameraError(
-          isRTL
-            ? "هیچ دوربینی بر روی دستگاه شما پیدا نشد."
-            : "No camera device found on this system."
+          t("noCameraDeviceFoundOnThis")
         );
       } else {
         setCameraError(
           err.message ||
-            (isRTL
-              ? "امکان راه‌اندازی دوربین وجود ندارد."
-              : "Unable to start camera preview.")
+            (t("unableToStartCameraPreview"))
         );
       }
     }
@@ -283,7 +275,7 @@ export const ExamProctoringCamera = ({
               className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-600 text-white text-[11px] font-medium hover:bg-amber-700 active:scale-95 transition-all cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
-              <span>{isRTL ? "تلاش مجدد برای دوربین" : "Retry Camera"}</span>
+              <span>{t("retryCamera1")}</span>
             </button>
           </div>
         </div>
@@ -306,10 +298,10 @@ export const ExamProctoringCamera = ({
             <div className="flex flex-col">
               <span className="font-vazir font-semibold text-xs text-neutral-scale1600 dark:text-neutral-scale100 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                {isRTL ? "دوربین تأیید هویت فعال است" : "Proctoring Camera Active"}
+                {t("proctoringCameraActive")}
               </span>
               <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                {isRTL ? "حضور شما در آزمون احراز گردید" : "Attendance presence monitored"}
+                {t("attendancePresenceMonitored")}
               </span>
             </div>
           </div>
@@ -317,10 +309,10 @@ export const ExamProctoringCamera = ({
           <button
             type="button"
             onClick={() => setIsCollapsed(false)}
-            aria-label={isRTL ? "بزرگ‌نمایی کادر تصویر" : "Expand preview"}
+            aria-label={t("expandPreview")}
             className="p-1 rounded-lg hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1000 text-neutral-scale1100 dark:text-neutral-scale300 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-vazir"
           >
-            <span>{isRTL ? "نمایش" : "View"}</span>
+            <span>{t("overview")}</span>
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -332,20 +324,20 @@ export const ExamProctoringCamera = ({
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="font-vazir font-semibold text-xs text-neutral-scale1600 dark:text-neutral-scale100">
-                {isRTL ? "تصویر احراز حضور در آزمون" : "Exam Presence Verification"}
+                {t("examPresenceVerification")}
               </span>
             </div>
 
             <div className="flex items-center gap-1">
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-vazir font-medium flex items-center gap-1">
                 <UserCheck className="w-3 h-3" />
-                <span>{isRTL ? "تأیید حضور" : "Present"}</span>
+                <span>{t("present")}</span>
               </span>
 
               <button
                 type="button"
                 onClick={() => setIsCollapsed(true)}
-                title={isRTL ? "کوچک‌سازی پیش‌نمایش" : "Minimize"}
+                title={t("minimize")}
                 className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-neutral-scale200 dark:hover:bg-neutral-scale1100 text-neutral-scale1100 dark:text-neutral-scale300 transition-all cursor-pointer"
               >
                 <ChevronUp className="w-4 h-4" />
@@ -358,7 +350,7 @@ export const ExamProctoringCamera = ({
             {isRequesting ? (
               <div className="flex flex-col items-center gap-2 text-white/80 font-vazir text-xs">
                 <RefreshCw className="w-5 h-5 animate-spin text-primery-400" />
-                <span>{isRTL ? "در حال اتصال به دوربین..." : "Starting camera..."}</span>
+                <span>{t("startingCamera")}</span>
               </div>
             ) : (
               <>
@@ -375,7 +367,7 @@ export const ExamProctoringCamera = ({
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="w-20 h-28 border border-white/35 rounded-[50%] ring-1 ring-white/15 animate-pulse flex items-center justify-center">
                     <span className="text-[9px] font-vazir text-white/60 bg-black/40 px-1.5 py-0.5 rounded-full backdrop-blur-xs">
-                      {isRTL ? "محل چهره" : "Face"}
+                      {t("face")}
                     </span>
                   </div>
                 </div>
@@ -383,7 +375,7 @@ export const ExamProctoringCamera = ({
                 {/* Subtitle Badge */}
                 <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between pointer-events-none">
                   <span className="text-[10px] font-vazir text-white/90 bg-black/55 backdrop-blur-xs px-2 py-0.5 rounded-md">
-                    {isRTL ? "تصویر شما به صورت زنده نمایش داده می‌شود" : "Live front view"}
+                    {t("liveFrontView")}
                   </span>
                   <span className="text-[10px] font-vazir text-emerald-400 bg-black/55 backdrop-blur-xs px-1.5 py-0.5 rounded-md flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />

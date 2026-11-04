@@ -5,10 +5,12 @@
  * with strict concurrency guards to avoid request stacking.
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useContext } from "react";
+import { AppContext } from "@/Context/AppContext";
 import { biometricsApi } from "@/api/new/biometrics.api";
 
 export function useBiometricTelemetry(options = {}) {
+  const { t } = useContext(AppContext) || {};
   const {
     intervalMs = 1000,
     userId = "default",
@@ -72,7 +74,7 @@ export function useBiometricTelemetry(options = {}) {
         opts.onTelemetryUpdate(data);
       }
     } catch (err) {
-      setError(err?.message || "ارسال تله‌متری با خطا مواجه شد");
+      setError(err?.message || (t ? t("telemetrySendError") : "Failed to send biometric telemetry"));
       if (opts.onError) opts.onError(err);
     } finally {
       isBusyRef.current = false;

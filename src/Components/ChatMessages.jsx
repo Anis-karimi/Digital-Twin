@@ -184,13 +184,13 @@ export const ChatMessages = ({
                         }`}
                         title={
                           isMine
-                            ? (t("addStudentComment") || "کامنت گذاشتن روی پیام دانشجو")
-                            : (t("addComment") || "کامنت گذاشتن")
+                            ? t("addStudentComment")
+                            : t("addComment")
                         }
                         aria-label={
                           isMine
-                            ? (t("addStudentComment") || "کامنت گذاشتن روی پیام دانشجو")
-                            : (t("addComment") || "کامنت گذاشتن")
+                            ? t("addStudentComment")
+                            : t("addComment")
                         }
                       >
                         <QuoteSvg className="w-3 h-3 shrink-0" />
@@ -222,8 +222,8 @@ export const ChatMessages = ({
                             }`}
                             title={
                               message.feedback === "like"
-                                ? t("studentLiked") || "پسندیده"
-                                : t("studentDisliked") || "نپسندیده"
+                                ? t("studentLiked")
+                                : t("studentDisliked")
                             }
                           >
                             {message.feedback === "like" ? (
@@ -278,7 +278,7 @@ export const ChatMessages = ({
               isRTL ? "fa-body" : "en-body"
             }`}
           >
-            {isRTL ? `در حال پاسخ‌گویی${thinkingDots}` : `Thinking${thinkingDots}`}
+            {t("thinkingWithDots", "", { dots: thinkingDots })}
           </div>
         </div>
       )}

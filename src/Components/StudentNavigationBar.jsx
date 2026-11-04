@@ -66,7 +66,7 @@ export const StudentNavigationBar = ({ swipeIndex = null, activeTabId = null }) 
     },
     {
       id: "explore",
-      label: t("explor") || (isRTL ? "کاوش" : "Explore"),
+      label: t("explore", t("explor", "Explore")),
       route: "/StudentExplore",
       icon: Search,
       iconActive: Search,

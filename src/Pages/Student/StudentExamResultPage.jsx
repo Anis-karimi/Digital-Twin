@@ -22,18 +22,13 @@ import {
   Bot,
 } from "lucide-react";
 import "@/styles/fonts.css";
-
-const toPersianDigits = (num) => {
-  if (num === null || num === undefined) return "";
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return String(num).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
-};
+import { toPersianDigits, toLocalizedDigits } from "@/utils/dateUtils";
 
 export const StudentExamResultPage = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isRTL } = useContext(AppContext);
+  const { isRTL, t } = useContext(AppContext);
 
   const examFromState = location.state?.exam || null;
   const assignmentId = id || examFromState?.assignment_id || examFromState?.id;
@@ -77,8 +72,8 @@ export const StudentExamResultPage = () => {
           // Fallback minimal display if session is missing
           if (isMounted) {
             setReport({
-              exam_title: examFromState.title || "آزمون شفاهی",
-              course: examFromState.course || "سیستم عامل",
+              exam_title: examFromState.title || t("oralExam"),
+              course: examFromState.course || t("operatingSystems"),
               score: examFromState.score ?? 85,
               passed: examFromState.passed ?? true,
               duration_seconds: (examFromState.duration || 15) * 60,
@@ -88,16 +83,14 @@ export const StudentExamResultPage = () => {
             });
           }
         } else {
-          throw new Error(isRTL ? "اطلاعات کارنامه آزمون یافت نشد." : "Exam report data not found.");
+          throw new Error(t("examReportDataNotFound"));
         }
       } catch (err) {
         console.error("Failed to load exam result detail:", err);
         if (isMounted) {
           setError(
             err.message ||
-              (isRTL
-                ? "دریافت جزئیات کارنامه با خطا مواجه شد. لطفاً مجدداً تلاش کنید."
-                : "Failed to load exam report.")
+              (t("errorFetchingScoreReport"))
           );
         }
       } finally {
@@ -127,7 +120,7 @@ export const StudentExamResultPage = () => {
           <button
             onClick={() => navigate("/StudentExams")}
             type="button"
-            aria-label={isRTL ? "بازگشت" : "Go back"}
+            aria-label={t("back")}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all text-white cursor-pointer"
           >
             <ArrowLeft className={`w-6 h-6 ${isRTL ? "rotate-180" : ""}`} />
@@ -140,7 +133,7 @@ export const StudentExamResultPage = () => {
                 : "en-title-1 font-inter text-left"
             } truncate whitespace-nowrap`}
           >
-            {isRTL ? "کارنامه آزمون شفاهی" : "Oral Exam Report"}
+            {t("oralExamReport")}
           </h1>
         </div>
       </header>
@@ -151,9 +144,7 @@ export const StudentExamResultPage = () => {
           <div className="h-64 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-primery-700 dark:text-primery-400 animate-spin" />
             <p className="font-vazir text-xs text-neutral-scale1100 dark:text-neutral-scale400">
-              {isRTL
-                ? "در حال دریافت کارنامه و تحلیل هوش مصنوعی..."
-                : "Loading report..."}
+              {t("fetchingScoreReport")}
             </p>
           </div>
         ) : error ? (
@@ -164,7 +155,7 @@ export const StudentExamResultPage = () => {
               onClick={() => navigate("/StudentExams")}
               className="mt-2 px-3 py-1.5 bg-primery-700 text-white rounded-lg text-xs font-vazir cursor-pointer"
             >
-              {isRTL ? "بازگشت به آزمون‌ها" : "Back to Exams"}
+              {t("backToExams")}
             </button>
           </div>
         ) : (
@@ -182,17 +173,17 @@ export const StudentExamResultPage = () => {
               </div>
 
               <h2 className="font-vazir font-bold text-base text-neutral-scale1800 dark:text-neutral-scale70 mb-0.5">
-                {report?.exam_title || "آزمون شفاهی سیستم عامل"}
+                {report?.exam_title || t("oralExam")}
               </h2>
               <span className="font-vazir text-xs text-neutral-scale1000 dark:text-neutral-scale400 mb-3">
-                {report?.course || "سیستم عامل"}
+                {report?.course || t("operatingSystems")}
               </span>
 
               {/* Score & Pass Badge */}
               <div className="w-full bg-primery-50 dark:bg-primery-950/40 border border-primery-200 dark:border-primery-900 rounded-xl p-3 flex items-center justify-around">
                 <div className="flex flex-col items-center">
                   <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 mb-0.5">
-                    {isRTL ? "نمره ارزیابی" : "Evaluation Score"}
+                    {t("finalScore")}
                   </span>
                   <span
                     className={`${isRTL ? "font-vazir" : "font-inter"} text-2xl font-black text-primery-800 dark:text-primery-200`}
@@ -205,7 +196,7 @@ export const StudentExamResultPage = () => {
 
                 <div className="flex flex-col items-center">
                   <span className="font-vazir text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 mb-0.5">
-                    {isRTL ? "وضعیت نهایی" : "Final Status"}
+                    {t("finalStatus")}
                   </span>
                   <div
                     className={`font-vazir text-xs font-bold flex items-center gap-1 mt-1 ${
@@ -221,12 +212,8 @@ export const StudentExamResultPage = () => {
                     )}
                     <span>
                       {isPassed
-                        ? isRTL
-                          ? "قبول شده"
-                          : "Passed"
-                        : isRTL
-                          ? "نیاز به تقویت"
-                          : "Needs Review"}
+                        ? t("passedStatus")
+                        : t("needImprovementStatus")}
                     </span>
                   </div>
                 </div>
@@ -236,7 +223,7 @@ export const StudentExamResultPage = () => {
               <div className="w-full grid grid-cols-3 gap-2 mt-3 text-right">
                 <div className="bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl p-2 border border-neutral-scale200 dark:border-neutral-scale1100 flex flex-col items-center text-center">
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "تسلط مفاهیم" : "Mastery"}
+                    {t("topicsMastery")}
                   </span>
                   <span
                     className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
@@ -254,7 +241,7 @@ export const StudentExamResultPage = () => {
 
                 <div className="bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl p-2 border border-neutral-scale200 dark:border-neutral-scale1100 flex flex-col items-center text-center">
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "پوشش سرفصل‌ها" : "Coverage"}
+                    {t("syllabusCoverage")}
                   </span>
                   <span
                     className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
@@ -264,21 +251,19 @@ export const StudentExamResultPage = () => {
                       ? isRTL
                         ? `${toPersianDigits(Math.round(report.overall_coverage * 100))}٪`
                         : `${Math.round(report.overall_coverage * 100)}%`
-                      : isRTL
-                        ? "۱۰۰٪"
-                        : "100%"}
+                      : t("100")}
                   </span>
                 </div>
 
                 <div className="bg-neutral-scale50 dark:bg-neutral-scale1200 rounded-xl p-2 border border-neutral-scale200 dark:border-neutral-scale1100 flex flex-col items-center text-center">
                   <span className="font-vazir text-[10px] text-neutral-scale1000 dark:text-neutral-scale400">
-                    {isRTL ? "مدت آزمون" : "Duration"}
+                    {t("examDuration")}
                   </span>
                   <span
                     className={`${isRTL ? "font-vazir" : "font-inter"} font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale80 mt-0.5`}
                   >
                     {isRTL ? toPersianDigits(durationMins) : durationMins}{" "}
-                    {isRTL ? "دقیقه" : "min"}
+                    {t("minutesSuffix")}
                   </span>
                 </div>
               </div>
@@ -291,9 +276,7 @@ export const StudentExamResultPage = () => {
                   <div className="flex items-center gap-1.5 mb-2.5 text-primery-700 dark:text-primery-300 font-vazir font-bold text-xs">
                     <Sparkles className="w-4 h-4" />
                     <span>
-                      {isRTL
-                        ? "تحلیل و توصیه‌های هوش مصنوعی"
-                        : "AI Feedback & Recommendations"}
+                      {t("aiAnalysisAndRecommendations")}
                     </span>
                   </div>
 
@@ -316,12 +299,8 @@ export const StudentExamResultPage = () => {
                               }`}
                             >
                               {rec.priority === "high"
-                                ? isRTL
-                                  ? "اولویت بالا"
-                                  : "High"
-                                : isRTL
-                                  ? "پیشنهادی"
-                                  : "Suggested"}
+                                ? t("highPriority")
+                                : t("suggestedPriority")}
                             </span>
                           )}
                         </div>
@@ -346,7 +325,7 @@ export const StudentExamResultPage = () => {
                 <div className="flex items-center gap-1.5 mb-2.5 text-neutral-scale1800 dark:text-neutral-scale80 font-vazir font-bold text-xs">
                   <Target className="w-4 h-4 text-primery-700 dark:text-primery-300" />
                   <span>
-                    {isRTL ? "ارزیابی به تفکیک مباحث" : "Topic Mastery"}
+                    {t("topicsBreakdown")}
                   </span>
                 </div>
 
@@ -385,14 +364,12 @@ export const StudentExamResultPage = () => {
                 <div className="flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4 text-primery-700 dark:text-primery-300" />
                   <span>
-                    {isRTL
-                      ? "ریز گفت‌وگو و ارزیابی سوالات"
-                      : "Interview Dialogue Review"}
+                    {t("qAndASection")}
                   </span>
                 </div>
                 <span className="text-[11px] text-neutral-scale1000 dark:text-neutral-scale400 font-normal">
                   {Array.isArray(report?.turns)
-                    ? `${isRTL ? toPersianDigits(report.turns.length) : report.turns.length} ${isRTL ? "پرسش و پاسخ" : "Turns"}`
+                    ? `${isRTL ? toPersianDigits(report.turns.length) : report.turns.length} ${t("turns")}`
                     : ""}
                 </span>
               </div>
@@ -439,9 +416,7 @@ export const StudentExamResultPage = () => {
                               <Bot className="w-4 h-4 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                               <div className="flex-1">
                                 <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                  {isRTL
-                                    ? "پرسش ارزیاب هوش مصنوعی:"
-                                    : "Question:"}
+                                  {t("aiEvaluatorQuestion")}
                                 </span>
                                 <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed">
                                   {turn.question}
@@ -454,13 +429,11 @@ export const StudentExamResultPage = () => {
                               <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                               <div className="flex-1">
                                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5">
-                                  {isRTL ? "پاسخ ثبت‌شده شما:" : "Your Answer:"}
+                                  {t("yourRecordedAnswer")}
                                 </span>
                                 <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed bg-white dark:bg-neutral-scale1200 p-2 rounded-lg border border-neutral-scale200 dark:border-neutral-scale1000">
                                   {turn.answer ||
-                                    (isRTL
-                                      ? "پاسخی ثبت نشد."
-                                      : "No answer recorded.")}
+                                    (t("noResponseRecorded"))}
                                 </p>
                               </div>
                             </div>
@@ -471,9 +444,7 @@ export const StudentExamResultPage = () => {
                                 <Sparkles className="w-3.5 h-3.5 text-primery-700 dark:text-primery-300 shrink-0 mt-0.5" />
                                 <div className="flex-1">
                                   <span className="text-[10px] font-bold text-primery-700 dark:text-primery-300 block mb-0.5">
-                                    {isRTL
-                                      ? "بازخورد هوش مصنوعی:"
-                                      : "AI Evaluation Feedback:"}
+                                    {t("aiFeedbackLabel")}
                                   </span>
                                   <p className="text-[11px] text-neutral-scale1800 dark:text-neutral-scale80 leading-relaxed">
                                     {turn.feedback}
@@ -489,9 +460,7 @@ export const StudentExamResultPage = () => {
                 </div>
               ) : (
                 <div className="text-center py-6 text-neutral-scale900 dark:text-neutral-scale400 text-xs font-vazir">
-                  {isRTL
-                    ? "ریز گفت‌وگو برای این جلسه ثبت نشده یا آزمون بدون نوبت پایان یافته است."
-                    : "No dialogue turns found for this exam."}
+                  {t("noTranscriptRecorded")}
                 </div>
               )}
             </div>
