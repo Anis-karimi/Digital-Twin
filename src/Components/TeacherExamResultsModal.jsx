@@ -29,22 +29,18 @@ import {
   RotateCw,
 } from "lucide-react";
 import "@/styles/fonts.css";
-import { getTodayJalaliDate } from "@/utils/dateUtils";
+import { getTodayJalaliDate, toLocalizedDigits, toEnglishDigits } from "@/utils/dateUtils";
 
-const toPersianDigits = (num) => {
-  if (num === null || num === undefined) return "";
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return String(num).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
-};
+const toPersianDigits = toLocalizedDigits;
 
 const buildFallbackResults = (exam, isRTL, courseStudents = [], t = (k) => k) => {
   const durMins = Number(exam?.duration_minutes) || 10;
   const gapMins = Number(exam?.gap_minutes) || 5;
-  const timeStr = exam?.time || "10:00 - 11:30";
+  const cleanTimeStr = toEnglishDigits(exam?.time || "10:00 - 11:30");
   let startTime = "10:00";
   let endTime = "11:30";
-  if (typeof timeStr === "string" && timeStr.includes("-")) {
-    const parts = timeStr.split("-").map((p) => p.trim());
+  if (typeof cleanTimeStr === "string" && cleanTimeStr.includes("-")) {
+    const parts = cleanTimeStr.split("-").map((p) => p.trim());
     if (parts[0]) startTime = parts[0];
     if (parts[1]) endTime = parts[1];
   }
@@ -58,8 +54,10 @@ const buildFallbackResults = (exam, isRTL, courseStudents = [], t = (k) => k) =>
       ? courseStudents.map((s) => s.id)
       : [];
 
-  const [sH, sM] = startTime.split(":").map(Number);
-  let curMinute = (sH || 10) * 60 + (sM || 0);
+  const timeParts = startTime.split(":").map(Number);
+  const sH = !isNaN(timeParts[0]) ? timeParts[0] : 10;
+  const sM = !isNaN(timeParts[1]) ? timeParts[1] : 0;
+  let curMinute = sH * 60 + sM;
 
   const fallbackStudents = studentList.map((sid) => {
     const sIdStr = String(sid);
@@ -217,11 +215,8 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
 
   useEffect(() => {
     if (!isOpen) return;
-    const timer = setTimeout(() => {
-      loadResults();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [isOpen, loadResults]);
+    loadResults();
+  }, [isOpen, assignmentId, loadResults]);
 
   const handleOpenStudentDetail = async (student) => {
     if (!student.session_id) return;
@@ -277,9 +272,15 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
   return (
     <div
       dir={isRTL ? "rtl" : "ltr"}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs select-text animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs select-text"
     >
-      <div className="bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 w-full max-w-xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-neutral-scale1300 border border-neutral-scale200 dark:border-neutral-scale1100 w-full max-w-xl max-h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+      >
         {/* Header */}
         <header className="p-4 bg-primery-700 dark:bg-neutral-scale1200 text-white flex items-center justify-between border-b dark:border-neutral-scale1000 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">

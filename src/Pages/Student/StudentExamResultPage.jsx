@@ -138,8 +138,8 @@ export const StudentExamResultPage = () => {
         </div>
       </header>
 
-      {/* Main Body */}
-      <section className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar">
+      {/* Main Body with safe bottom padding for floating footer navigation bar */}
+      <section className="flex-1 overflow-y-auto px-4 pt-4 pb-[115px] space-y-4 no-scrollbar">
         {loading ? (
           <div className="h-64 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-primery-700 dark:text-primery-400 animate-spin" />
@@ -464,6 +464,9 @@ export const StudentExamResultPage = () => {
                 </div>
               )}
             </div>
+
+            {/* Safe bottom spacer ensuring full visibility above floating navigation menu */}
+            <div className="h-6 w-full shrink-0" aria-hidden="true" />
           </>
         )}
       </section>

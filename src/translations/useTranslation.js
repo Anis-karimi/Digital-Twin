@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useCallback } from "react";
 import { AppContext } from "@/Context/AppContext";
 import { translations, getTranslation } from "./translations";
 
@@ -13,8 +13,11 @@ export const useTranslation = () => {
     "fa";
   const isRTL = context?.isRTL ?? (language === "fa" || language === "ar");
 
-  const t = (key, fallback = "", params = null) =>
-    getTranslation(language, key, fallback, params);
+  const t = useCallback(
+    (key, fallback = "", params = null) =>
+      getTranslation(language, key, fallback, params),
+    [language]
+  );
 
   return {
     t,
