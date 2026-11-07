@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import "@/styles/fonts.css";
 import { getTodayJalaliDate, toLocalizedDigits, toEnglishDigits } from "@/utils/dateUtils";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
 
 const toPersianDigits = toLocalizedDigits;
 
@@ -428,7 +429,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
                                 {inc.image_url ? (
                                   <>
                                     <img
-                                      src={inc.image_url}
+                                      src={resolveMediaUrl(inc.image_url)}
                                       alt={`Strike ${inc.strike_number || iIdx + 1}`}
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     />
@@ -765,7 +766,7 @@ export const TeacherExamResultsModal = ({ isOpen, onClose, exam }) => {
 
             <div className="p-3 bg-black flex items-center justify-center max-h-[60vh] overflow-hidden">
               <img
-                src={previewImage.image_url}
+                src={resolveMediaUrl(previewImage.image_url)}
                 alt="Incident Snapshot"
                 className="max-h-[55vh] w-auto object-contain rounded-lg border border-white/10 shadow"
               />

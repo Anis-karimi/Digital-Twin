@@ -35,7 +35,10 @@ export const resolveMediaUrl = (url) => {
     }
   }
 
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  let cleanPath = url.startsWith("/") ? url : `/${url}`;
+  if (cleanPath.startsWith("/uploads/")) {
+    cleanPath = `/bot/v1${cleanPath}`;
+  }
   return `${base}${cleanPath}`;
 };
 
