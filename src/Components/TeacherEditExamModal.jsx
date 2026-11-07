@@ -3,7 +3,7 @@ import { AppContext } from "@/Context/AppContext";
 import { examsApi } from "@/api/new/exams.api";
 import { DatePickerModal } from "@/Components/Common/DatePickerModal";
 import { ClockPickerModal } from "@/Components/Common/ClockPickerModal";
-import { getTodayJalaliDate, isoToJalaliDate } from "@/utils/dateUtils";
+import { getTodayJalaliDate, isoToJalaliDate, toPersianDigits, toLocalizedDigits } from "@/utils/dateUtils";
 import {
   X,
   FileText,
@@ -15,20 +15,16 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Languages,
 } from "lucide-react";
 import "@/styles/fonts.css";
 
-const toPersianDigits = (num) => {
-  if (num === null || num === undefined) return "";
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return String(num).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
-};
-
 export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
-  const { isRTL, t } = useContext(AppContext);
+  const { isRTL, t, language } = useContext(AppContext);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [examLanguage, setExamLanguage] = useState("fa");
   const [examDate, setExamDate] = useState(() => getTodayJalaliDate());
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:30");
@@ -100,9 +96,10 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
       initialGoals = [t("examTopicsDefault")];
     }
     setGoals(initialGoals);
+    setExamLanguage(exam.language || (language === "ar" ? "ar" : language === "en" ? "en" : "fa"));
     setIsActive(exam.active ?? exam.is_active ?? true);
     setError(null);
-  }, [exam, isOpen, t]);
+  }, [exam, isOpen, t, language]);
 
   const handleAddGoal = () => {
     const trimmed = newGoalInput.trim();
@@ -135,6 +132,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
     const payload = {
       title: title.trim(),
       description: description.trim() || undefined,
+      language: examLanguage,
       exam_date: examDate,
       start_at: startTime,
       end_at: endTime,
@@ -147,7 +145,7 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
     try {
       await examsApi.updateExam(assignmentId, payload);
       if (onSuccess) {
-        onSuccess({ ...exam, ...payload, id: assignmentId, quiz_id: assignmentId });
+        onSuccess({ ...exam, ...payload, id: assignmentId, quiz_id: assignmentId, language: examLanguage });
       }
       onClose();
     } catch (err) {
@@ -210,6 +208,49 @@ export const TeacherEditExamModal = ({ isOpen, onClose, exam, onSuccess }) => {
                 className="w-full h-10 px-3 text-xs font-vazir bg-neutral-scale50 dark:bg-neutral-scale1200 border border-neutral-scale200 dark:border-neutral-scale1000 rounded-xl text-neutral-scale1800 dark:text-neutral-scale80 focus:outline-none focus:border-primery-700"
                 required
               />
+            </div>
+
+            {/* Exam Language Selector */}
+            <div className="space-y-1">
+              <label className="font-vazir font-bold text-xs text-neutral-scale1800 dark:text-neutral-scale70 flex items-center gap-1.5">
+                <Languages className="w-3.5 h-3.5 text-[#2481cc]" />
+                <span>{t("examGoalsLanguage")}</span>
+              </label>
+              <div className="flex items-center bg-neutral-scale100 dark:bg-neutral-scale1200 p-1 rounded-xl border border-neutral-scale200 dark:border-neutral-scale1000 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setExamLanguage("fa")}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    examLanguage === "fa"
+                      ? "bg-[#2481cc] text-white font-bold shadow-xs"
+                      : "text-neutral-scale900 dark:text-neutral-scale300 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  {t("persianLang")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExamLanguage("ar")}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    examLanguage === "ar"
+                      ? "bg-[#2481cc] text-white font-bold shadow-xs"
+                      : "text-neutral-scale900 dark:text-neutral-scale300 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  {t("arabicLang")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExamLanguage("en")}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    examLanguage === "en"
+                      ? "bg-[#2481cc] text-white font-bold shadow-xs"
+                      : "text-neutral-scale900 dark:text-neutral-scale300 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  English
+                </button>
+              </div>
             </div>
 
             {/* Date and Timing Grid */}

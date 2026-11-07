@@ -90,7 +90,7 @@ export const CreateExamAccordion = ({
   isEditMode = false,
   onExamUpdated,
 }) => {
-  const { isRTL, t } = useContext(AppContext);
+  const { isRTL, t, language } = useContext(AppContext);
   const courseTitle = providedCourseTitle || t("osCourse");
   const BLOOM_LEVELS = useMemo(() => getBloomLevels(t), [t]);
   const GOAL_TYPES = useMemo(() => getGoalTypes(t), [t]);
@@ -166,6 +166,8 @@ export const CreateExamAccordion = ({
   });
   const [examLanguage, setExamLanguage] = useState(() => {
     if (initialExam?.language) return initialExam.language;
+    if (language === "ar") return "ar";
+    if (language === "en") return "en";
     return "fa";
   });
   const [goalCount, setGoalCount] = useState(() => initialGoalsList.length || 2);
@@ -1091,23 +1093,19 @@ export const CreateExamAccordion = ({
                   {t("examGoalsLanguage")}
                 </span>
                 <span className="text-[10px] text-neutral-400 leading-tight">
-                  {isRTL
-                    ? examLanguage === "fa"
-                      ? t("persianSpecializedWithEn")
-                      : examLanguage === "en"
-                      ? t("examTopicsInterviewEn")
-                      : t("smartDetectionFromSource")
-                    : examLanguage === "fa"
-                    ? "Persian with canonical English technical terms preserved"
+                  {examLanguage === "fa"
+                    ? t("persianSpecializedWithEn")
+                    : examLanguage === "ar"
+                    ? t("arabicSpecializedWithEn")
                     : examLanguage === "en"
-                    ? "Full English oral interview & assessment"
-                    : "Auto-detect from source reference"}
+                    ? t("examTopicsInterviewEn")
+                    : t("smartDetectionFromSource")}
                 </span>
               </div>
             </div>
 
             {/* Language Selector Buttons */}
-            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg border border-neutral-200/70 dark:border-neutral-700/70 self-start sm:self-auto shrink-0">
+            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg border border-neutral-200/70 dark:border-neutral-700/70 self-start sm:self-auto shrink-0 flex-wrap gap-0.5">
               <button
                 type="button"
                 onClick={() => setExamLanguage("fa")}
@@ -1118,6 +1116,17 @@ export const CreateExamAccordion = ({
                 }`}
               >
                 {t("persianLang")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setExamLanguage("ar")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                  examLanguage === "ar"
+                    ? "bg-[#2481cc] text-white shadow-sm font-bold"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                {t("arabicLang")}
               </button>
               <button
                 type="button"

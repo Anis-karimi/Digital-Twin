@@ -1260,6 +1260,9 @@ export const translations = {
     profShort: "است",
     operatingSystemsDescription: "مطالعه مفاهیم و الگوریتم‌های مدیریت منابع سخت‌افزاری و نرم‌افزاری (هسته، حافظه، پردازش، ورودی/خروجی، فایل‌سیستم و زمان‌بندی)",
     arabic: "عربی",
+    arabicLang: "عربی",
+    examTopicsInterviewAr: "آزمون، سرفصل‌ها و مصاحبه به زبان عربی",
+    arabicSpecializedWithEn: "عربی تخصصی (همراه با ذکر نام اصلی انگلیسی اصطلاحات جهت فهم دقیق)",
   },
 
   // -------------------------------------------------------------
@@ -2514,6 +2517,9 @@ export const translations = {
     profShort: "Pr",
     operatingSystemsDescription: "Study of concepts and algorithms for hardware and software resource management (kernel, memory, processing, I/O, filesystem, and scheduling)",
     arabic: "Arabic",
+    arabicLang: "Arabic",
+    examTopicsInterviewAr: "Exam, topics and interview in Arabic",
+    arabicSpecializedWithEn: "Technical Arabic (with canonical English technical terms preserved)",
   },
 
   // -------------------------------------------------------------
@@ -3768,6 +3774,9 @@ export const translations = {
     profShort: "أستاذ",
     operatingSystemsDescription: "دراسة مفاهيم وخوارزميات إدارة الموارد البرمجية والمادية (النواة، الذاكرة، المعالجة، الإدخال/الإخراج، نظام الملفات والجدولة)",
     arabic: "العربية",
+    arabicLang: "العربية",
+    examTopicsInterviewAr: "الاختبار، والمحاور والمقابلة باللغة العربية",
+    arabicSpecializedWithEn: "العربية التخصصية (مع المصطلحات الإنجليزية الأصلية للدقة)",
   },
 };
 
@@ -3809,4 +3818,3 @@ export const t = (key, fallback = "", params = null) => {
 if (typeof window !== "undefined") {
   window.t = t;
 }
-
